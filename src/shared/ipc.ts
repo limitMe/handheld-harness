@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { ACTION_IDS, type ActionId } from './actions'
+import type { BindingLayer, BindingValue } from './input'
 import type {
   ChatMessage,
   CommandInfo,
@@ -53,6 +55,22 @@ export const UiSettingsSchema = z.object({
 })
 export type UiSettings = z.infer<typeof UiSettingsSchema>
 
+const BindingValueSchema = z.union([z.enum(ACTION_IDS as [ActionId, ...ActionId[]]), z.null()])
+const BindingRowsSchema = z.record(z.string(), z.record(z.string(), BindingValueSchema))
+
+/** User key-binding layer persisted in `settings.input` (spec 10). */
+export const BindingLayerSchema = z.object({
+  contexts: BindingRowsSchema.default({}),
+  keyboard: BindingRowsSchema.default({}),
+})
+export type { BindingLayer, BindingValue }
+
+/** Partial override used by `settings.update`; missing rows keep their current value. */
+export const BindingPatchSchema = z.object({
+  contexts: BindingRowsSchema.optional(),
+  keyboard: BindingRowsSchema.optional(),
+})
+
 export const SettingsSchema = z.object({
   schemaVersion: z.literal(1),
   window: z.object({
@@ -60,6 +78,7 @@ export const SettingsSchema = z.object({
   }),
   engine: EngineSettingsSchema.default({}),
   ui: UiSettingsSchema.default({ zoom: 1 }),
+  input: BindingLayerSchema.default({ contexts: {}, keyboard: {} }),
 })
 export type Settings = z.infer<typeof SettingsSchema>
 
@@ -80,6 +99,7 @@ export const SettingsPatchSchema = z.object({
       zoom: z.number().optional(),
     })
     .optional(),
+  input: BindingPatchSchema.optional(),
 })
 export type SettingsPatch = z.infer<typeof SettingsPatchSchema>
 
@@ -88,6 +108,7 @@ export const DEFAULT_SETTINGS: Settings = {
   window: { mode: 'windowed' },
   engine: {},
   ui: { zoom: 1 },
+  input: { contexts: {}, keyboard: {} },
 }
 
 export const LogWriteRequestSchema = z.object({

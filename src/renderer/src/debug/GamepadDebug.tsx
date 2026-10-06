@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { actionLabel } from '@shared/actions'
+import { useInputDebugStore } from '../input'
 import { Button, Overlay } from '../ui'
 import type { DebugOverlayProps } from './types'
 
@@ -77,6 +79,10 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
   const [events, setEvents] = useState<string[]>([])
   const [vibrationResult, setVibrationResult] = useState<string | null>(null)
   const [recording, setRecording] = useState(false)
+
+  const contexts = useInputDebugStore((state) => state.contexts)
+  const actions = useInputDebugStore((state) => state.actions)
+  const clearActions = useInputDebugStore((state) => state.clear)
 
   const previousRef = useRef('')
   const lastChangeRef = useRef(0)
@@ -185,7 +191,9 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
         <Button onClick={recordTenSeconds} disabled={recording}>
           {recording ? 'Recording...' : 'Record 10s'}
         </Button>
-        {vibrationResult ? <span className="self-center text-text-muted">{vibrationResult}</span> : null}
+        {vibrationResult ? (
+          <span className="self-center text-text-muted">{vibrationResult}</span>
+        ) : null}
       </div>
 
       {pads.length === 0 ? (
@@ -197,8 +205,8 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
               #{pad.index} · {pad.id}
             </h3>
             <p className="text-code text-text-muted">
-              mapping: {pad.mapping || 'non-standard'} · connected: {String(pad.connected)} · timestamp:{' '}
-              {pad.timestamp}
+              mapping: {pad.mapping || 'non-standard'} · connected: {String(pad.connected)} ·
+              timestamp: {pad.timestamp}
             </p>
             <div className="mt-3 grid grid-cols-2 gap-1 text-code sm:grid-cols-3">
               {pad.buttons.map((button, i) => (
@@ -217,6 +225,30 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
           </section>
         ))
       )}
+
+      <section className="rounded-card bg-card p-4 text-on-card">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-base font-semibold">Input actions</h3>
+          <Button onClick={clearActions}>Clear</Button>
+        </div>
+        <p className="mt-2 text-code text-text-muted">
+          contexts: {contexts.length === 0 ? '(none)' : contexts.join(' ▸ ')}
+        </p>
+        {actions.length === 0 ? (
+          <p className="text-code text-text-muted">
+            No actions yet. Press a gamepad button or key.
+          </p>
+        ) : (
+          <ul className="mt-2 flex flex-col gap-1 text-code">
+            {actions.map((entry) => (
+              <li key={entry.seq} className={entry.handled ? 'text-accent' : 'text-text-muted'}>
+                {actionLabel(entry.action)} · {entry.phase} · {entry.source}:{entry.control}
+                {entry.handled ? ` → ${entry.contextId}` : ' (unhandled)'}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="rounded-card bg-card p-4 text-on-card">
         <h3 className="text-base font-semibold">Connection events</h3>

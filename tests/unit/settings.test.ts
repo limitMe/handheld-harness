@@ -68,4 +68,20 @@ describe('settings store', () => {
     expect(reloaded.lastSession).toBeNull()
     expect(reloaded.zoom).toBe(1.2)
   })
+
+  it('merges input bindings deeply and preserves explicit unbinds', () => {
+    const target = makeDir()
+    const store = createSettingsStore(target)
+
+    store.update({ input: { contexts: { currentWork: { A: 'input.send' } } } })
+    store.update({ input: { contexts: { currentWork: { B: 'input.send' } } } })
+    expect(store.get().input.contexts.currentWork).toEqual({ A: 'input.send', B: 'input.send' })
+
+    store.update({ input: { contexts: { currentWork: { A: null } } } })
+    expect(store.get().input.contexts.currentWork).toEqual({ A: null, B: 'input.send' })
+    expect(createSettingsStore(target).get().input.contexts.currentWork).toEqual({
+      A: null,
+      B: 'input.send',
+    })
+  })
 })

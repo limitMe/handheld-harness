@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { DEFAULT_SETTINGS, SettingsSchema, type Settings, type SettingsPatch } from '../shared/ipc'
+import type { BindingLayer, BindingValue } from '../shared/input'
 
 export interface SettingsStore {
   get(): Settings
@@ -13,6 +14,29 @@ function defaults(): Settings {
     window: { ...DEFAULT_SETTINGS.window },
     engine: { ...DEFAULT_SETTINGS.engine },
     ui: { ...DEFAULT_SETTINGS.ui },
+    input: { contexts: {}, keyboard: {} },
+  }
+}
+
+function mergeRows(
+  base: Record<string, Record<string, BindingValue>>,
+  patch: Record<string, Record<string, BindingValue>>,
+): Record<string, Record<string, BindingValue>> {
+  const out = { ...base }
+  for (const [context, rows] of Object.entries(patch)) {
+    out[context] = { ...(out[context] ?? {}), ...rows }
+  }
+  return out
+}
+
+function mergeBindingLayers(
+  base: BindingLayer,
+  patch: Partial<BindingLayer> | undefined,
+): BindingLayer {
+  if (!patch) return base
+  return {
+    contexts: mergeRows(base.contexts, patch.contexts ?? {}),
+    keyboard: mergeRows(base.keyboard, patch.keyboard ?? {}),
   }
 }
 
@@ -63,6 +87,7 @@ export function createSettingsStore(userDataDir: string): SettingsStore {
         window: { ...current.window, ...patch.window },
         engine: { ...current.engine, ...patch.engine },
         ui: { ...current.ui, ...patch.ui },
+        input: mergeBindingLayers(current.input, patch.input),
       })
       persist(next)
       current = next

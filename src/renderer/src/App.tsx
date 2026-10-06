@@ -3,6 +3,7 @@ import StatusBar from './components/StatusBar'
 import GamepadDebug from './debug/GamepadDebug'
 import MicDebug from './debug/MicDebug'
 import EngineDebug from './engine/EngineDebug'
+import { useInputContext } from './input'
 import { useWorkbenchStore } from './state/store'
 import { keyParts } from './state/types'
 import { ConfirmDialog } from './ui'
@@ -15,6 +16,9 @@ export default function App() {
   const [engineOpen, setEngineOpen] = useState(false)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+
+  // The app's only screen for now; spec 13 will register its own handlers here.
+  useInputContext('currentWork', {})
 
   const initialize = useWorkbenchStore((state) => state.initialize)
   const sessions = useWorkbenchStore((state) => state.sessions)
@@ -29,7 +33,9 @@ export default function App() {
     void initialize()
   }, [initialize])
 
-  const title = current ? (sessions[`${current.engineId}:${current.sessionId}`]?.title ?? 'Task') : 'New task'
+  const title = current
+    ? (sessions[`${current.engineId}:${current.sessionId}`]?.title ?? 'Task')
+    : 'New task'
 
   const entries = useMemo<TaskSwitcherEntry[]>(() => {
     return Object.entries(sessions)
@@ -41,7 +47,8 @@ export default function App() {
             ref,
             summary,
             hasPending:
-              (pendingPermissions[key]?.length ?? 0) > 0 || (pendingQuestions[key]?.length ?? 0) > 0,
+              (pendingPermissions[key]?.length ?? 0) > 0 ||
+              (pendingQuestions[key]?.length ?? 0) > 0,
           },
         ]
       })
