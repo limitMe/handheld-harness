@@ -6,6 +6,7 @@ import type {
   PermissionReply,
   SessionRef,
 } from '@shared/engine'
+import { showToast } from '../ui/Toast'
 import { parseSlashCommand } from '../workbench/commands'
 import { applyEngineEvent } from './applyEngineEvent'
 import { initialWorkbenchState, sessionKey, type WorkbenchState } from './types'
@@ -175,9 +176,11 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
 
     if (command && (await isKnownCommand(current.engineId, command.name))) {
       await bridge.runCommand(current, command.name, command.args)
+      showToast('Sent')
       return
     }
     await bridge.prompt(current, { text })
+    showToast('Sent')
   },
 
   async abortCurrent() {

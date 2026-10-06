@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import StatusBar from './components/StatusBar'
 import GamepadDebug from './debug/GamepadDebug'
 import MicDebug from './debug/MicDebug'
 import EngineDebug from './engine/EngineDebug'
+import { useEngineStatus } from './engine/useEngineStatus'
 import { FocusDebugOverlay } from './focus'
 import { CONTEXT_ORDER, onPress, useInputContext } from './input'
 import { useWorkbenchStore } from './state/store'
 import { keyParts } from './state/types'
-import { ConfirmDialog } from './ui'
+import { ConfirmDialog, showToast } from './ui'
 import { CurrentWork } from './workbench/CurrentWork'
 import { TaskSwitcher, type TaskSwitcherEntry } from './workbench/TaskSwitcher'
 
@@ -42,6 +43,17 @@ export default function App() {
   useEffect(() => {
     void initialize()
   }, [initialize])
+
+  const engineStatus = useEngineStatus()
+  const previousEngineState = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    const state = engineStatus?.state
+    const previous = previousEngineState.current
+    if (state === 'ready' && (previous === 'reconnecting' || previous === 'down')) {
+      showToast('Engine reconnected')
+    }
+    previousEngineState.current = state
+  }, [engineStatus])
 
   const title = current
     ? (sessions[`${current.engineId}:${current.sessionId}`]?.title ?? 'Task')

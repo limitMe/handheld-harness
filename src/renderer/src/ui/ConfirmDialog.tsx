@@ -40,6 +40,8 @@ function ConfirmActions({
     id: 'confirm-dialog-cancel',
     elementRef: cancelRef,
     onActivate: () => onOpenChange(false),
+    // B / Escape cancels from either button (spec 12).
+    onCancel: () => onOpenChange(false),
   })
   const confirm = useFocusable({
     id: 'confirm-dialog-confirm',
@@ -48,6 +50,7 @@ function ConfirmActions({
       onConfirm()
       onOpenChange(false)
     },
+    onCancel: () => onOpenChange(false),
   })
 
   return (
