@@ -1,11 +1,47 @@
 import { useState } from 'react'
 import type { QuestionRequest } from '@shared/engine'
-import { Button } from '../ui'
+import { FOCUS_ORDER } from '../focus'
+import { FocusableButton } from './FocusableButton'
 
 export interface QuestionCardProps {
   request: QuestionRequest
   onReply: (answers: string[][]) => void
   onReject: () => void
+}
+
+function OptionButton({
+  id,
+  order,
+  label,
+  description,
+  selected,
+  onToggle,
+}: {
+  id: string
+  order: number
+  label: string
+  description?: string
+  selected: boolean
+  onToggle: () => void
+}) {
+  return (
+    <FocusableButton
+      focusId={id}
+      order={order}
+      onActivate={onToggle}
+      className={`min-h-11 justify-start ${selected ? 'border-accent text-accent' : ''}`}
+      aria-pressed={selected}
+      onClick={onToggle}
+    >
+      <span className="text-text-muted">{selected ? '◉' : '○'}</span>
+      <span className="flex flex-col items-start">
+        <span>{label}</span>
+        {description ? (
+          <span className="text-code font-normal text-text-muted">{description}</span>
+        ) : null}
+      </span>
+    </FocusableButton>
+  )
 }
 
 export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) {
@@ -40,42 +76,48 @@ export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) 
           ) : null}
           <p className="font-semibold">{question.question}</p>
           <div className="flex flex-col gap-2">
-            {question.options.map((option) => {
+            {question.options.map((option, optionIndex) => {
               const selected = (selections[questionIndex] ?? []).includes(option.label)
+              const id = `question-${request.id}-${questionIndex}-${option.label}`
               return (
-                <Button
+                <OptionButton
                   key={option.label}
-                  className={`min-h-11 justify-start ${selected ? 'border-accent text-accent' : ''}`}
-                  aria-pressed={selected}
-                  onClick={() => toggle(questionIndex, option.label, question.multiple === true)}
-                >
-                  <span className="text-text-muted">{selected ? '◉' : '○'}</span>
-                  <span className="flex flex-col items-start">
-                    <span>{option.label}</span>
-                    {option.description ? (
-                      <span className="text-code font-normal text-text-muted">
-                        {option.description}
-                      </span>
-                    ) : null}
-                  </span>
-                </Button>
+                  id={id}
+                  order={FOCUS_ORDER.cards + questionIndex * 10 + optionIndex + 1}
+                  label={option.label}
+                  description={option.description}
+                  selected={selected}
+                  onToggle={() => toggle(questionIndex, option.label, question.multiple === true)}
+                />
               )
             })}
           </div>
         </div>
       ))}
       <div className="flex flex-wrap gap-3">
-        <Button
+        <FocusableButton
+          focusId={`question-${request.id}-submit`}
+          order={FOCUS_ORDER.cards + 100}
+          onActivate={() => {
+            if (canSubmit) onReply(selections)
+          }}
           data-testid="question-submit"
           className="min-h-11"
           disabled={!canSubmit}
           onClick={() => onReply(selections)}
         >
           Submit
-        </Button>
-        <Button data-testid="question-reject" className="min-h-11" onClick={onReject}>
+        </FocusableButton>
+        <FocusableButton
+          focusId={`question-${request.id}-reject`}
+          order={FOCUS_ORDER.cards + 101}
+          onActivate={onReject}
+          data-testid="question-reject"
+          className="min-h-11"
+          onClick={onReject}
+        >
           Ignore
-        </Button>
+        </FocusableButton>
       </div>
     </div>
   )

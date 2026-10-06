@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { ChatPart } from '@shared/engine'
+import { useFocusable } from '../focus'
 import { MarkdownView } from './Markdown'
 
 function ToolStateIcon({ state }: { state: Extract<ChatPart, { type: 'tool' }>['state'] }) {
@@ -15,17 +16,62 @@ function ToolStateIcon({ state }: { state: Extract<ChatPart, { type: 'tool' }>['
   }
 }
 
-function ToolPart({ part }: { part: Extract<ChatPart, { type: 'tool' }> }) {
+const SCROLL_STEP = 48
+
+type TextPartType = Extract<ChatPart, { type: 'text' }>
+type ToolPartType = Extract<ChatPart, { type: 'tool' }>
+type ReasoningPartType = Extract<ChatPart, { type: 'reasoning' }>
+
+/** Each visible part is a focus stop, so the transcript can be scrolled/selected with the D-pad. */
+function TextPart({
+  part,
+  streaming,
+  order,
+}: {
+  part: TextPartType
+  streaming: boolean
+  order: number
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const focus = useFocusable({ id: `part-${part.id}`, elementRef: ref, order })
+  return (
+    <div ref={ref} {...focus.props}>
+      <MarkdownView text={part.text} streaming={streaming} />
+    </div>
+  )
+}
+
+function ToolPart({ part, order }: { part: ToolPartType; order: number }) {
   const [expanded, setExpanded] = useState(false)
+  const output = useRef<HTMLPreElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const label = part.title ?? part.inputSummary ?? part.tool
   const detail = part.error ?? part.output ?? part.inputSummary ?? 'No output'
+  const focus = useFocusable({
+    id: `tool-${part.id}`,
+    elementRef: buttonRef,
+    order,
+    activatable: true,
+    onActivate: () => setExpanded(true),
+    onNavigate: (direction) => {
+      const element = output.current
+      if (!element) return 'pass'
+      if (direction === 'up') element.scrollTop -= SCROLL_STEP
+      else if (direction === 'down') element.scrollTop += SCROLL_STEP
+      else if (direction === 'left') element.scrollLeft -= SCROLL_STEP
+      else element.scrollLeft += SCROLL_STEP
+      return 'handled'
+    },
+  })
   return (
     <div className="overflow-hidden rounded-md border border-surface-raised bg-card">
       <button
+        ref={buttonRef}
+        {...focus.props}
         type="button"
         aria-expanded={expanded}
         onClick={() => setExpanded((value) => !value)}
-        className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-code text-on-card transition-colors duration-fast ease-standard hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
+        className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-code text-on-card transition-colors duration-fast ease-standard hover:bg-surface-raised"
       >
         <span className="text-text-muted">{expanded ? '▾' : '▸'}</span>
         <span className="font-mono">{part.tool}</span>
@@ -33,7 +79,10 @@ function ToolPart({ part }: { part: Extract<ChatPart, { type: 'tool' }> }) {
         <ToolStateIcon state={part.state} />
       </button>
       {expanded ? (
-        <pre className="max-h-[40vh] overflow-auto border-t border-surface-raised px-3 py-2 text-code whitespace-pre-wrap text-text-muted">
+        <pre
+          ref={output}
+          className="max-h-[40vh] overflow-auto border-t border-surface-raised px-3 py-2 text-code whitespace-pre-wrap text-text-muted"
+        >
           {detail}
         </pre>
       ) : null}
@@ -41,43 +90,79 @@ function ToolPart({ part }: { part: Extract<ChatPart, { type: 'tool' }> }) {
   )
 }
 
-function ReasoningPart({ text }: { text: string }) {
+function ReasoningPart({ part, order }: { part: ReasoningPartType; order: number }) {
+  const ref = useRef<HTMLDetailsElement>(null)
+  const focus = useFocusable({
+    id: `part-${part.id}`,
+    elementRef: ref,
+    order,
+    onActivate: () => {
+      if (ref.current) ref.current.open = !ref.current.open
+    },
+  })
   return (
-    <details className="rounded-md border border-surface-raised bg-card">
+    <details
+      ref={ref}
+      {...focus.props}
+      className="rounded-md border border-surface-raised bg-card"
+    >
       <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-3 py-2 text-code text-text-muted">
         Thinking
       </summary>
       <div className="max-h-[40vh] overflow-auto border-t border-surface-raised px-3 py-2 text-text-muted">
-        <MarkdownView text={text} />
+        <MarkdownView text={part.text} />
       </div>
     </details>
   )
 }
 
+function TagPart({
+  part,
+  order,
+  children,
+}: {
+  part: ChatPart
+  order: number
+  children: ReactNode
+}) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const focus = useFocusable({ id: `part-${part.id}`, elementRef: ref, order })
+  return (
+    <span
+      ref={ref}
+      {...focus.props}
+      className="inline-block rounded-md bg-card px-2 py-1 text-code text-text-muted"
+    >
+      {children}
+    </span>
+  )
+}
+
 export interface PartViewProps {
   part: ChatPart
+  order: number
   streaming?: boolean
 }
 
-export function PartView({ part, streaming = false }: PartViewProps) {
+export function PartView({ part, order, streaming = false }: PartViewProps) {
   switch (part.type) {
     case 'text':
-      return <MarkdownView text={part.text} streaming={streaming} />
+      return <TextPart part={part} order={order} streaming={streaming} />
     case 'reasoning':
-      return <ReasoningPart text={part.text} />
+      return <ReasoningPart part={part} order={order} />
     case 'tool':
-      return <ToolPart part={part} />
+      return <ToolPart part={part} order={order} />
     case 'file':
       return (
-        <span className="inline-block rounded-md bg-card px-2 py-1 text-code text-text-muted">
+        <TagPart part={part} order={order}>
           {part.filename ?? part.mime}
-        </span>
+        </TagPart>
       )
     case 'other':
       return (
-        <span className="inline-block rounded-md bg-card px-2 py-1 text-code text-text-muted">
+        <TagPart part={part} order={order}>
           {part.rawType}
-        </span>
+        </TagPart>
       )
   }
 }

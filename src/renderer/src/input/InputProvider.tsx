@@ -146,7 +146,7 @@ export function InputProvider({ children }: { children: ReactNode }) {
 
   const api = useMemo<InputApi>(
     () => ({
-      pushContext: (id, getHandlers) => router.pushContext(id, getHandlers),
+      pushContext: (id, getHandlers, order) => router.pushContext(id, getHandlers, order),
       captureNextControl: () =>
         new Promise<CapturedControl>((resolve) => {
           captureRef.current = resolve

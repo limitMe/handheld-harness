@@ -16,8 +16,8 @@
 | 02 | [Agent 引擎适配层（OpenCode）](02-agent-engine-opencode.md) | A | 已完成 |
 | 03 | [最小可用工作台](03-workbench-mvp.md) | A | 已完成 |
 | 04 | [自举开发闭环](04-dogfooding-loop.md) | A | 待执行 |
-| 10 | [输入系统与键位映射](10-input-system.md) | B | 已实现（待与 11 合并验收） |
-| 11 | [焦点系统](11-focus-system.md) | B | 草案 |
+| 10 | [输入系统与键位映射](10-input-system.md) | B | 已实现（与 11 合并验收：自动化通过，待掌机实测） |
+| 11 | [焦点系统](11-focus-system.md) | B | 已实现（与 10 合并验收：自动化通过，待掌机实测） |
 | 12 | [共享组件：状态栏、操作提示、列表输入、对话框](12-shared-components.md) | B | 草案 |
 | 13 | [界面：当前工作](13-screen-current-work.md) | B | 草案 |
 | 14 | [界面：任务地图](14-screen-task-map.md) | B | 草案 |

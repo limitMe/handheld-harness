@@ -4,7 +4,7 @@ import type { CapturedControl } from './types'
 
 export interface InputApi {
   /** Registers a context with handlers; call the returned function to pop it. */
-  pushContext(id: string, getHandlers: () => ActionHandlers): () => void
+  pushContext(id: string, getHandlers: () => ActionHandlers, order?: number): () => void
   /** Resolves with the next control press, for the rebinding UI (spec 15). */
   captureNextControl(): Promise<CapturedControl>
   cancelCapture(): void

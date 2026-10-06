@@ -1,6 +1,6 @@
 export { InputProvider } from './InputProvider'
 export { useInputApi, type InputApi } from './context'
 export { useInputContext } from './hooks'
+export { CONTEXT_ORDER, onPress, type ActionHandlers, type DispatchRecord } from './router'
 export { useInputDebugStore, type DebugAction, type InputDebugState } from './debugStore'
-export type { ActionHandlers, DispatchRecord } from './router'
 export type { CapturedControl, InputActionEvent } from './types'

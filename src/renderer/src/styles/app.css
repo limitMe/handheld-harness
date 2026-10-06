@@ -2,6 +2,7 @@
 @import './tokens.css';
 @import './theme/default.css';
 @import './markdown.css';
+@import './focus.css';
 
 html,
 body,

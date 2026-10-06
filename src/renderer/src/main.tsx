@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { FocusProvider } from './focus'
 import { InputProvider } from './input'
 import './styles/app.css'
 
@@ -10,7 +11,9 @@ if (!container) throw new Error('Root container not found')
 createRoot(container).render(
   <StrictMode>
     <InputProvider>
-      <App />
+      <FocusProvider>
+        <App />
+      </FocusProvider>
     </InputProvider>
   </StrictMode>,
 )

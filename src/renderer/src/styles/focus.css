@@ -1,0 +1,25 @@
+/*
+ * Focus-tree visual hooks (spec 11). The concrete look belongs to spec 18;
+ * this is the minimal ring so focused/activated nodes are visible.
+ */
+[data-focus-id] {
+  scroll-margin: 1rem;
+}
+
+[data-focus-id]:focus {
+  outline: none;
+}
+
+[data-focus-id][data-focused] {
+  outline: 2px solid var(--theme-color-focus-ring);
+  outline-offset: 2px;
+}
+
+[data-focus-id][data-activated] {
+  outline-color: var(--theme-color-accent);
+}
+
+[data-focus-id][data-focus-within]:not([data-focused]) {
+  outline: 1px dashed var(--theme-color-text-muted);
+  outline-offset: 2px;
+}

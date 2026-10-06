@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { PermissionReply, PermissionRequest } from '@shared/engine'
+import { useFocusTree, useFocusable, FOCUS_ORDER } from '../focus'
 import { Button } from '../ui'
 
 export interface PermissionCardProps {
@@ -15,11 +16,17 @@ export function PermissionCard({
   autoFocus,
   onReply,
 }: PermissionCardProps) {
-  const container = useRef<HTMLDivElement>(null)
+  const tree = useFocusTree()
+  const cardRef = useRef<HTMLDivElement>(null)
+  const focus = useFocusable({
+    id: `permission-${request.id}`,
+    elementRef: cardRef,
+    order: FOCUS_ORDER.cards,
+  })
 
   useEffect(() => {
-    if (autoFocus) container.current?.focus()
-  }, [autoFocus])
+    if (autoFocus) tree?.setFocus(`permission-${request.id}`)
+  }, [autoFocus, tree, request.id])
 
   const actions: Array<{ label: string; reply: PermissionReply; testId: string }> = [
     { label: 'Allow once', reply: 'once', testId: 'permission-once' },
@@ -31,8 +38,8 @@ export function PermissionCard({
 
   return (
     <div
-      ref={container}
-      tabIndex={-1}
+      ref={cardRef}
+      {...focus.props}
       data-testid="permission-card"
       onKeyDown={(event) => {
         const index = Number(event.key) - 1
@@ -42,7 +49,7 @@ export function PermissionCard({
           onReply(action.reply)
         }
       }}
-      className="flex flex-col gap-3 rounded-card border border-warning bg-card p-4 text-on-card focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
+      className="flex flex-col gap-3 rounded-card border border-warning bg-card p-4 text-on-card"
     >
       <div className="flex items-center gap-2">
         <span className="text-warning">⚠</span>

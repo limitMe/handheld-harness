@@ -3,7 +3,8 @@ import StatusBar from './components/StatusBar'
 import GamepadDebug from './debug/GamepadDebug'
 import MicDebug from './debug/MicDebug'
 import EngineDebug from './engine/EngineDebug'
-import { useInputContext } from './input'
+import { FocusDebugOverlay } from './focus'
+import { CONTEXT_ORDER, onPress, useInputContext } from './input'
 import { useWorkbenchStore } from './state/store'
 import { keyParts } from './state/types'
 import { ConfirmDialog } from './ui'
@@ -16,9 +17,7 @@ export default function App() {
   const [engineOpen, setEngineOpen] = useState(false)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
-
-  // The app's only screen for now; spec 13 will register its own handlers here.
-  useInputContext('currentWork', {})
+  const [focusDebugOpen, setFocusDebugOpen] = useState(false)
 
   const initialize = useWorkbenchStore((state) => state.initialize)
   const sessions = useWorkbenchStore((state) => state.sessions)
@@ -28,6 +27,17 @@ export default function App() {
   const openSession = useWorkbenchStore((state) => state.openSession)
   const newTask = useWorkbenchStore((state) => state.newTask)
   const deleteCurrentSession = useWorkbenchStore((state) => state.deleteCurrentSession)
+  const abortCurrent = useWorkbenchStore((state) => state.abortCurrent)
+
+  // Screen context: bindings resolve here; navigation is handled by the focus tree.
+  useInputContext(
+    'currentWork',
+    useMemo(
+      () => ({ 'agent.abort': onPress(() => void abortCurrent()) }),
+      [abortCurrent],
+    ),
+    CONTEXT_ORDER.screen,
+  )
 
   useEffect(() => {
     void initialize()
@@ -73,6 +83,9 @@ export default function App() {
         } else if (event.code === 'KeyE') {
           event.preventDefault()
           setEngineOpen((open) => !open)
+        } else if (event.code === 'KeyF') {
+          event.preventDefault()
+          setFocusDebugOpen((open) => !open)
         } else if (event.code === 'Backspace') {
           event.preventDefault()
           if (current) setConfirmOpen(true)
@@ -108,6 +121,7 @@ export default function App() {
       <GamepadDebug open={gamepadOpen} onOpenChange={setGamepadOpen} />
       <MicDebug open={micOpen} onOpenChange={setMicOpen} />
       <EngineDebug open={engineOpen} onOpenChange={setEngineOpen} />
+      <FocusDebugOverlay open={focusDebugOpen} />
       <TaskSwitcher
         open={switcherOpen}
         onOpenChange={setSwitcherOpen}

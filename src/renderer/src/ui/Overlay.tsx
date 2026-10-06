@@ -32,7 +32,7 @@ export function Overlay({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop className={backdropStyles} />
-        <Dialog.Popup className={cn(popupStyles, className)}>
+        <Dialog.Popup finalFocus={false} className={cn(popupStyles, className)}>
           <Dialog.Title className="text-xl font-semibold text-text">{title}</Dialog.Title>
           {description ? (
             <Dialog.Description className="text-base text-text-muted">{description}</Dialog.Description>

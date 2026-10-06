@@ -1,5 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+import {
+  FOCUS_ORDER,
+  useFocusTree,
+  useFocusable,
+  type FocusDirection,
+  type NavigateResult,
+} from '../focus'
+import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { Button } from '../ui'
+import { isOnFirstLine, moveCaretHorizontal, moveCaretVertical } from './textEditing'
 
 export interface ComposerProps {
   value: string
@@ -11,8 +20,77 @@ export interface ComposerProps {
   focusKey: string
 }
 
+const COMPOSER_ID = 'composer'
+
+/** Pushed only while activated so `A` sends instead of navigating (spec 10 stack). */
+function ComposerInputContext({
+  onSend,
+  onDeactivate,
+}: {
+  onSend: () => void
+  onDeactivate: () => void
+}) {
+  useInputContext(
+    'currentWork.input',
+    {
+      'input.send': onPress(() => onSend()),
+      'input.deactivate': onPress(() => onDeactivate()),
+    },
+    CONTEXT_ORDER.activated,
+  )
+  return null
+}
+
+function setCaret(element: HTMLTextAreaElement, position: number): void {
+  element.setSelectionRange(position, position)
+}
+
 export function Composer({ value, onChange, onSend, onAbort, busy, focusKey }: ComposerProps) {
+  const tree = useFocusTree()
   const textarea = useRef<HTMLTextAreaElement>(null)
+  const formRef = useRef<HTMLFormElement | null>(null)
+
+  const activate = useCallback(() => {
+    textarea.current?.focus()
+  }, [])
+
+  const deactivate = useCallback(() => {
+    textarea.current?.blur()
+    formRef.current?.focus()
+  }, [])
+
+  const handleNavigate = useCallback((direction: FocusDirection): NavigateResult => {
+    const element = textarea.current
+    if (!element) return 'pass'
+    const text = element.value
+    const position = element.selectionStart
+    if (direction === 'up') {
+      // Two-stage exit: leave activation, the next up moves focus normally.
+      if (isOnFirstLine(text, position)) return 'exit'
+      setCaret(element, moveCaretVertical(text, position, -1))
+      return 'handled'
+    }
+    if (direction === 'down') {
+      setCaret(element, moveCaretVertical(text, position, 1))
+      return 'handled'
+    }
+    if (direction === 'left') {
+      setCaret(element, moveCaretHorizontal(position, -1, text.length))
+      return 'handled'
+    }
+    setCaret(element, moveCaretHorizontal(position, 1, text.length))
+    return 'handled'
+  }, [])
+
+  const focus = useFocusable({
+    id: COMPOSER_ID,
+    elementRef: formRef,
+    order: FOCUS_ORDER.composer,
+    activatable: true,
+    onActivate: activate,
+    onDeactivate: deactivate,
+    onNavigate: handleNavigate,
+  })
 
   useEffect(() => {
     const element = textarea.current
@@ -22,18 +100,29 @@ export function Composer({ value, onChange, onSend, onAbort, busy, focusKey }: C
     element.style.height = `${Math.min(element.scrollHeight, maxHeight)}px`
   }, [value])
 
+  // Start focused and activated so typing and Win+H keep working (spec 13 owns the collapsed bar).
   useEffect(() => {
-    textarea.current?.focus()
-  }, [focusKey])
+    if (tree) {
+      tree.setFocus(COMPOSER_ID)
+      tree.activate(COMPOSER_ID)
+    } else {
+      textarea.current?.focus()
+    }
+  }, [tree, focusKey])
 
   const canSend = value.trim().length > 0
+  const send = useCallback(() => {
+    if (!busy) onSend()
+  }, [busy, onSend])
 
   return (
     <form
+      ref={formRef}
+      {...focus.props}
       className="flex shrink-0 items-end gap-3 border-t border-surface-raised bg-surface px-4 py-3"
       onSubmit={(event) => {
         event.preventDefault()
-        if (!busy) onSend()
+        send()
       }}
     >
       <textarea
@@ -44,16 +133,20 @@ export function Composer({ value, onChange, onSend, onAbort, busy, focusKey }: C
         placeholder="Message the agent…"
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Escape' && busy) {
+          if (event.key === 'Escape') {
             event.preventDefault()
-            onAbort()
+            if (busy) {
+              onAbort()
+            } else {
+              tree?.deactivate()
+            }
             return
           }
           if (event.key !== 'Enter' || event.shiftKey) return
           // Never send while an IME is composing (spec 03 section 4).
           if (event.nativeEvent.isComposing) return
           event.preventDefault()
-          if (!busy) onSend()
+          send()
         }}
         className="max-h-[40vh] min-h-11 flex-1 resize-none overflow-auto rounded-card border border-surface-raised bg-card px-4 py-2.5 text-base text-on-card placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
       />
@@ -66,6 +159,9 @@ export function Composer({ value, onChange, onSend, onAbort, busy, focusKey }: C
           Send
         </Button>
       )}
+      {focus.activated ? (
+        <ComposerInputContext onSend={send} onDeactivate={() => tree?.deactivate()} />
+      ) : null}
     </form>
   )
 }

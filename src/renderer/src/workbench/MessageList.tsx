@@ -6,7 +6,9 @@ import type {
   PermissionRequest,
   QuestionRequest,
 } from '@shared/engine'
-import { Button } from '../ui'
+import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
+import { FOCUS_ORDER, messageOrder } from '../focus'
+import { FocusableButton } from './FocusableButton'
 import { MessageItem } from './MessageItem'
 import { PermissionCard } from './PermissionCard'
 import { QuestionCard } from './QuestionCard'
@@ -21,6 +23,26 @@ export interface MessageListProps {
   onReplyPermission: (requestId: string, reply: PermissionReply) => void
   onReplyQuestion: (requestId: string, answers: string[][]) => void
   onRejectQuestion: (requestId: string) => void
+}
+
+/** Gamepad A/X/B respond to the first pending request (spec 10 permission context). */
+function PermissionInputContext({
+  permissionAlways,
+  onReply,
+}: {
+  permissionAlways: boolean
+  onReply: (reply: PermissionReply) => void
+}) {
+  useInputContext(
+    'currentWork.permission',
+    {
+      'permission.once': onPress(() => onReply('once')),
+      'permission.reject': onPress(() => onReply('reject')),
+      ...(permissionAlways ? { 'permission.always': onPress(() => onReply('always')) } : {}),
+    },
+    CONTEXT_ORDER.overlay,
+  )
+  return null
 }
 
 const BOTTOM_THRESHOLD = 48
@@ -38,6 +60,8 @@ export function MessageList({
 }: MessageListProps) {
   const container = useRef<HTMLDivElement>(null)
   const [atBottom, setAtBottom] = useState(true)
+  const firstPermission = permissions[0]
+  const firstPermissionId = firstPermission?.id
 
   const scrollToBottom = useCallback(() => {
     const element = container.current
@@ -53,6 +77,7 @@ export function MessageList({
       <div
         ref={container}
         data-testid="message-list"
+        data-scroll-region
         onScroll={() => {
           const element = container.current
           if (!element) return
@@ -72,18 +97,26 @@ export function MessageList({
           <MessageItem
             key={message.id}
             message={message}
+            baseOrder={messageOrder(index)}
             streaming={
               busy && index === messages.length - 1 && message.role === 'assistant'
             }
           />
         ))}
 
+        {firstPermission ? (
+          <PermissionInputContext
+            permissionAlways={capabilities?.permissionAlways ?? false}
+            onReply={(reply) => onReplyPermission(firstPermission.id, reply)}
+          />
+        ) : null}
+
         {permissions.map((request) => (
           <PermissionCard
             key={request.id}
             request={request}
             permissionAlways={capabilities?.permissionAlways ?? false}
-            autoFocus={inputEmpty && permissions[0]?.id === request.id}
+            autoFocus={inputEmpty && firstPermissionId === request.id}
             onReply={(reply) => onReplyPermission(request.id, reply)}
           />
         ))}
@@ -110,7 +143,13 @@ export function MessageList({
 
       {!atBottom ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
-          <Button
+          <FocusableButton
+            focusId="scroll-latest"
+            order={FOCUS_ORDER.scrollLatest}
+            onActivate={() => {
+              setAtBottom(true)
+              scrollToBottom()
+            }}
             type="button"
             data-testid="scroll-latest"
             className="pointer-events-auto min-h-11"
@@ -120,7 +159,7 @@ export function MessageList({
             }}
           >
             ↓ Latest
-          </Button>
+          </FocusableButton>
         </div>
       ) : null}
     </div>

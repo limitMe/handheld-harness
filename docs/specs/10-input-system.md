@@ -153,3 +153,16 @@ P-13、P-14，以及上面列出的临时任务切换器快捷键。本 spec 已
 - 验收"不接键盘、只用手柄完成 03 的全部操作"按 spec 与 11 合并验收；本 spec 只交付输入系统本身，未把手柄动作接到 03 的界面（焦点树与各界面在 11–15）。
 - "与 UI 组件库的协调（评估项）"要等 11 的焦点树和 Base UI 组件一起验证（受控模式 vs 把动作转成可信键盘事件），本 spec 不做该原型，留到 11/12。
 - 需要掌机实测：手柄按键 / 摇杆能触发对应动作并在调试页正确显示；长按 / 重复的手感，以及 Steam 输入、厂商桌面模式下的干扰情况。
+
+### 与 11 合并验收（2026-10-06）
+
+11 的焦点系统在实现时补齐了本 spec 的遗留：
+
+- **上下文栈顺序**：`InputRouter.pushContext` 增加 `order`，新增 `CONTEXT_ORDER`（focus `-100` / screen `0` / activated `100` / overlay `150` / modal `200`），`useInputContext` 同步支持第三参数。这样“激活的组件”和“模态”才能稳定地盖住屏幕上下文；原先只靠 effect 顺序无法保证。
+- **手柄动作接管 03 界面**：`tests/e2e/focus.spec.ts` 用与手柄共用同一 Action 的键盘动作验证了首焦点、单步导航、Enter 激活 / Escape 退出、打开任务切换器、Escape 关闭并恢复焦点；`Ctrl+Shift+F` 显示焦点树。
+- **授权卡片**：`currentWork.permission` 上下文的 A/X/B 生效（`permissionAlways=false` 时不注册"始终允许"）。
+- **动作相位**：新增 `onPress`，所有处理器忽略 `end` 相位，避免松开按键时重复触发一次性动作；e2e `gamepad.spec.ts` 用页内假手柄验证了 A 的按下 / 松开。
+- **滚动**：`RStickY → scroll` 现在有实现（`src/renderer/src/focus/scroll.ts`）：优先移动焦点让高亮跟随，无处可移动时再滚动聚焦元素所在的 `data-scroll-region`（消息列表、任务切换器列表），焦点不在列表内时回退到主滚动区。
+- **临时任务切换器**：新增 `taskSwitcher` 上下文（D-pad 上下 / A 激活 / B 退出；键盘方向键 / Enter / Escape），14 完成后随切换器退役。
+
+“不接键盘、只用手柄完成 03 全部操作”仍需掌机实测，步骤与限制见 11 的“未完成 / 需要人工验证”。

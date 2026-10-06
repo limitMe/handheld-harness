@@ -9,9 +9,11 @@ function formatDuration(ms: number): string {
 export interface MessageItemProps {
   message: ChatMessage
   streaming?: boolean
+  /** Sibling order band for this message's parts; see `FOCUS_ORDER`. */
+  baseOrder: number
 }
 
-export function MessageItem({ message, streaming = false }: MessageItemProps) {
+export function MessageItem({ message, streaming = false, baseOrder }: MessageItemProps) {
   const isUser = message.role === 'user'
   const duration =
     message.completedAt !== undefined && message.completedAt >= message.createdAt
@@ -31,8 +33,13 @@ export function MessageItem({ message, streaming = false }: MessageItemProps) {
         {message.parts.length === 0 && isUser ? (
           <p className="whitespace-pre-wrap break-words">{message.error ?? ''}</p>
         ) : null}
-        {message.parts.map((part) => (
-          <PartView key={part.id} part={part} streaming={streaming} />
+        {message.parts.map((part, index) => (
+          <PartView
+            key={part.id}
+            part={part}
+            order={baseOrder + index}
+            streaming={streaming}
+          />
         ))}
         {!isUser ? (
           <footer className="flex flex-wrap items-center gap-3 text-code text-text-muted">

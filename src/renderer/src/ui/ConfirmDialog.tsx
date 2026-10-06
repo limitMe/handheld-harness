@@ -1,4 +1,6 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog'
+import { useRef } from 'react'
+import { FocusContainer, useFocusable } from '../focus'
 import { Button } from './Button'
 
 export interface ConfirmDialogProps {
@@ -21,6 +23,55 @@ const popupStyles =
 const closeStyles =
   'inline-flex min-h-11 items-center justify-center rounded-md border border-surface-raised bg-card px-4 py-2 text-base font-medium text-on-card transition-colors duration-fast ease-standard hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none'
 
+/** Mounted inside the portal, so the focus nodes exist only while the dialog is open. */
+function ConfirmActions({
+  confirmLabel,
+  cancelLabel,
+  destructive,
+  onConfirm,
+  onOpenChange,
+}: Pick<
+  ConfirmDialogProps,
+  'confirmLabel' | 'cancelLabel' | 'destructive' | 'onConfirm' | 'onOpenChange'
+>) {
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const confirmRef = useRef<HTMLButtonElement>(null)
+  const cancel = useFocusable({
+    id: 'confirm-dialog-cancel',
+    elementRef: cancelRef,
+    onActivate: () => onOpenChange(false),
+  })
+  const confirm = useFocusable({
+    id: 'confirm-dialog-confirm',
+    elementRef: confirmRef,
+    onActivate: () => {
+      onConfirm()
+      onOpenChange(false)
+    },
+  })
+
+  return (
+    <FocusContainer id="confirm-dialog" flow="row" scope>
+      <div className="flex justify-end gap-3">
+        <AlertDialog.Close ref={cancelRef} {...cancel.props} className={closeStyles}>
+          {cancelLabel ?? 'Cancel'}
+        </AlertDialog.Close>
+        <Button
+          ref={confirmRef}
+          {...confirm.props}
+          className={destructive ? 'border-danger text-danger' : undefined}
+          onClick={() => {
+            onConfirm()
+            onOpenChange(false)
+          }}
+        >
+          {confirmLabel}
+        </Button>
+      </div>
+    </FocusContainer>
+  )
+}
+
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -35,25 +86,20 @@ export function ConfirmDialog({
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>
         <AlertDialog.Backdrop className={backdropStyles} />
-        <AlertDialog.Popup className={popupStyles}>
+        <AlertDialog.Popup finalFocus={false} className={popupStyles}>
           <AlertDialog.Title className="text-xl font-semibold text-text">{title}</AlertDialog.Title>
           {description ? (
             <AlertDialog.Description className="text-base text-text-muted">
               {description}
             </AlertDialog.Description>
           ) : null}
-          <div className="flex justify-end gap-3">
-            <AlertDialog.Close className={closeStyles}>{cancelLabel}</AlertDialog.Close>
-            <Button
-              className={destructive ? 'border-danger text-danger' : undefined}
-              onClick={() => {
-                onConfirm()
-                onOpenChange(false)
-              }}
-            >
-              {confirmLabel}
-            </Button>
-          </div>
+          <ConfirmActions
+            confirmLabel={confirmLabel}
+            cancelLabel={cancelLabel}
+            destructive={destructive}
+            onConfirm={onConfirm}
+            onOpenChange={onOpenChange}
+          />
         </AlertDialog.Popup>
       </AlertDialog.Portal>
     </AlertDialog.Root>

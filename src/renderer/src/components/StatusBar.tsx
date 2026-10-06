@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useEngineStatus } from '../engine/useEngineStatus'
+import { useFocusable, FOCUS_ORDER } from '../focus'
 import { Button } from '../ui'
 
 interface BatteryState {
@@ -123,6 +124,13 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
   const battery = useBattery()
   const engineStatus = useEngineStatus()
   const badge = profileBadge(useProfile())
+  const tasksRef = useRef<HTMLButtonElement>(null)
+  const tasksFocus = useFocusable({
+    id: 'open-tasks',
+    elementRef: tasksRef,
+    order: FOCUS_ORDER.screen,
+    onActivate: () => onOpenTasks?.(),
+  })
 
   const engineDotClass =
     engineStatus?.state === 'ready'
@@ -137,7 +145,13 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-surface-raised bg-surface px-4">
       <div className="flex flex-1 items-center justify-start gap-3">
         {onOpenTasks ? (
-          <Button data-testid="open-tasks" className="min-h-11" onClick={onOpenTasks}>
+          <Button
+            ref={tasksRef}
+            {...tasksFocus.props}
+            data-testid="open-tasks"
+            className="min-h-11"
+            onClick={onOpenTasks}
+          >
             Tasks
           </Button>
         ) : null}

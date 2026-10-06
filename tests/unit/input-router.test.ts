@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { emptyBindingLayer, resolveActionMap } from '../../src/shared/input'
-import { InputRouter, type DispatchRecord } from '../../src/renderer/src/input/router'
+import { InputRouter, onPress, type DispatchRecord } from '../../src/renderer/src/input/router'
 import type { InputActionEvent } from '../../src/renderer/src/input/types'
 
 const MAP = resolveActionMap(undefined, emptyBindingLayer())
@@ -39,6 +39,22 @@ describe('InputRouter binding resolution', () => {
     expect(router.resolveKeyboard('ArrowUp', false)).toBe('nav.up')
     expect(router.resolveKeyboard('ArrowUp', true)).toBeUndefined()
   })
+
+  it('consults higher-order contexts first, both for bindings and dispatch', () => {
+    const router = new InputRouter(MAP)
+    const calls: string[] = []
+    router.pushContext('currentWork', () => ({ 'input.send': () => calls.push('screen') }), 0)
+    router.pushContext(
+      'currentWork.input',
+      () => ({ 'input.send': () => calls.push('activated') }),
+      100,
+    )
+
+    // The activated context shadows the screen's `A -> nav.activate`.
+    expect(router.resolveGamepad('A', 'press')).toBe('input.send')
+    expect(router.dispatch(event('input.send'))).toBe(true)
+    expect(calls).toEqual(['activated'])
+  })
 })
 
 describe('InputRouter dispatch', () => {
@@ -70,6 +86,17 @@ describe('InputRouter dispatch', () => {
     expect(router.dispatch(event('input.send'))).toBe(false)
     expect(records).toEqual([{ event: event('input.send'), handled: false }])
     off()
+  })
+
+  it('onPress ignores the end phase so releasing a button does not re-trigger it', () => {
+    const handler = vi.fn()
+    const wrapped = onPress(handler)
+
+    wrapped(event('nav.activate'))
+    wrapped({ ...event('nav.activate'), phase: 'end' })
+    wrapped({ ...event('nav.activate'), phase: 'repeat' })
+
+    expect(handler).toHaveBeenCalledTimes(2)
   })
 
   it('notifies context subscribers as the stack changes', () => {
