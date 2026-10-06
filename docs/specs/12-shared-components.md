@@ -69,3 +69,49 @@
 ## 待定输入
 
 无新增阻塞项。P-09、P-12 已决定。状态栏的显示策略采用上文的建议方案，如有不同意见在实现时调整。
+
+## 实现记录
+
+实现日期：2026-10-06（分支 `feat/shared-components`，四个提交：状态栏、操作提示、列表输入、对话框与轻提示）。按用户要求，本次不走 dogfooding，直接在仓库里开发。
+
+### 交付物
+
+- **状态栏**（`src/renderer/src/components/StatusBar.tsx`）：标题改为可选（文本编辑界面不传）；右上角顺序为听写指示 ▸ 网络 ▸ 电量 ▸ 时间，引擎状态点移到该组最左侧，且 `ready` / 未知时**不渲染**（`engineDotClass`）；`STABLE` / `DEV` 徽标沿用原逻辑（仅非 `default` profile）；标题 `min-w-0 truncate`。
+- **操作提示**（`src/renderer/src/hints/`）：
+  - `entries.ts`（纯 TS）：`buildHintEntries(map, contextIds, { editable })` 从 ActionMap 反查“动作 → 手柄控件”，`hintContextIds` 取“最具体上下文 + global”；
+  - `ActionHints.tsx`：展示层，短按为普通键帽，长按为带进度环的键帽 + `hold` 字样；
+  - `HintsProvider.tsx`：聚焦且激活时开始计时，`settings.hints.delayMs`（默认 2 秒）后浮出；任何输入立即隐藏并重新计时；按住长按键时进度环实时填充（阈值 400 ms，对齐 spec 10）；改键 / 上下文变化 / 设置热更新都会刷新内容；
+  - 定位用新增的 `ui/AnchoredPanel.tsx`（Base UI Popover 的 `Positioner`，底层 Floating UI）。
+  - `settings.hints = { enabled, delayMs }` 落进 `shared/ipc.ts`、`main/settings-store.ts`，类型与默认值放 `shared/hints.ts`（无 zod，避免进渲染进程产物）。
+- **列表输入**（`src/renderer/src/workbench/ListInput.tsx` + `commands.ts` + `listInputStore.ts`）：输入框激活时按 LB 弹出，条目来自 `engine.listCommands()`；上下键移动（可按住加速，复用 nav 的重复），A 确认、B 取消；`commands` 能力为 false 时 Composer 不注册入口、不渲染列表。确认后**先插入** `/name`，由用户按 A 发送；发送时以已知命令开头则走 `runCommand`，否则当普通 prompt。排序按最近使用，记录按引擎分别存在 `localStorage`（键 `handheld.listInput.recent`）。
+- **runCommand**：`AgentEngine` 新增 `runCommand(sessionId, command, args?)`；IPC 新增 `engine:runCommand`（contract / schema / preload / main handler）；OpenCode 适配层调用 SDK 的 `client.session.command`，`compact` 失败时回退 `client.session.summarize`；Fake 引擎生成一条“Fake ran /x”回复。引擎契约测试增加 `runCommand` 步骤。
+- **对话框与轻提示**：`ConfirmDialog` 的取消 / 确认节点都加了 `onCancel`，于是 B（`nav.deactivate`）无论焦点在哪都取消，A（`nav.activate`）确认；危险操作默认焦点仍是“取消”（取消先注册）。新增 `ui/Toast.tsx`：Base UI Toast + 全局 `toastManager` / `showToast()`，发送成功后弹“Sent”，引擎从 `reconnecting` / `down` 回到 `ready` 时弹“Engine reconnected”；`ToastProvider` 挂在 `main.tsx` 最外层。
+
+### 与 spec 的出入 / 决策
+
+- **提示内容算法**（spec 只给了输入框示例）：取上下文栈**最上面一层**加 `global`，跳过中间的屏幕上下文，这样提示描述的是“组件”而不是整个界面；隐藏 `nav.*` / `scroll`（焦点环已经表达）与 `menu.toggle` / `map.toggle`（常驻全局功能）；`voice.dictate` 只在激活元素是文本输入时显示（对齐 P-05）。用输入框验证正好得到 spec 示例的 A / B / 长按 Y / RB / LB。
+- **定位实现**：spec 建议用 Popover / Tooltip 的定位器。提示是非交互浮层，仍复用 Base UI Popover 的 `Positioner`（取它的 Floating UI 定位），但没有触发器、不抢焦点；列表输入同样走 `AnchoredPanel`。
+- **未引入 TanStack Virtual**：命令条目很少，spec 里也是“可以”而非“必须”，为避免为可选优化新增依赖而跳过；列表仍带 `data-scroll-region`，可被右摇杆滚动。
+- **`/clear` 在 workbench 层处理**：`AgentEngine.runCommand` 是 `void`，无法表达“切换到新会话”，所以 `/clear` 由 store 直接新建会话（`newTask()`），其余已知命令才调 `runCommand`。适配层的 `clear → 新建会话` 语义因此改由上层承担。
+- **最近使用记录**：spec 说“按引擎分别保存”。为不改 settings schema（settings 界面属 15），先用 `localStorage` 持久化；后续 15 可以迁到 `settings`。
+- **状态栏引擎点**：采用 spec 建议（ready 隐藏）。
+- **Toast 用法**：spec 举了“已发送 / 已复制 / 引擎已重连”为例，本次接了“已发送”和“引擎已重连”；“已复制”等以后有复制入口时再接。
+
+### 已自动验证
+
+- `npm run check` 通过（33 个测试文件 186 个用例，lint 零 warning）。
+- 新增单测：
+  - `hint-entries`（上下文选取、反查、隐藏导航 / 全局功能、dictation 门槛、**改键后控件同步变化**）；
+  - `action-hints`（短按 / 长按样式区分、按住时进度环的 `stroke-dashoffset`）；
+  - `commands`（slash 解析、最近使用排序）；
+  - `confirm-dialog`（危险操作默认焦点在“取消”、Escape/B 取消且不确认）；
+  - `toast`（全局 `showToast()` 能渲染出提示）；
+  - `settings` 增加 `hints` 合并用例；`engine-contract` / `ipc-contract` / `engine-manager` 覆盖 `runCommand`。
+- `npm run test:e2e` 12 个用例通过，其中 `gamepad.spec.ts` 新用例用手柄完成“LB 打开列表 → 选中 `/compact` → 插入输入框 → A 发送 → 看到 Fake 引擎的回复”。
+
+### 未完成 / 需要人工验证
+
+- **掌机实测**：提示的浮出位置 / 淡出动画、按住长按键时进度环的手感，以及列表输入在真实手柄下的滚动。
+- **列表输入的键盘路径**：打开列表时容器会抢 DOM 焦点，从而让键盘方向键走列表上下文；真实键盘（含输入法）下的行为需人工确认，游戏手柄路径已由 e2e 覆盖。
+- **真实 OpenCode 的 `runCommand`**：`client.session.command` 对各命令的实际支持范围、`compact` 回退 `summarize` 是否命中，需用 `npm run engine:smoke` 在有凭据的环境验证（本次只能对 Fake 引擎自动化）。
+- **操作提示的触发细节**：目前只有“聚焦且激活”的组件才提示；授权 / 提问卡片按 P-02 应由 13 在激活后复用，本次未改 13 的交互。

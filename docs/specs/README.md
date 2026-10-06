@@ -18,7 +18,7 @@
 | 04 | [自举开发闭环](04-dogfooding-loop.md) | A | 待执行 |
 | 10 | [输入系统与键位映射](10-input-system.md) | B | 已实现（与 11 合并验收：自动化通过，待掌机实测） |
 | 11 | [焦点系统](11-focus-system.md) | B | 已实现（与 10 合并验收：自动化通过，待掌机实测） |
-| 12 | [共享组件：状态栏、操作提示、列表输入、对话框](12-shared-components.md) | B | 草案 |
+| 12 | [共享组件：状态栏、操作提示、列表输入、对话框](12-shared-components.md) | B | 已实现（自动化通过，待掌机实测） |
 | 13 | [界面：当前工作](13-screen-current-work.md) | B | 草案 |
 | 14 | [界面：任务地图](14-screen-task-map.md) | B | 草案 |
 | 15 | [界面：系统菜单](15-screen-system-menu.md) | B | 草案 |
