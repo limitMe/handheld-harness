@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createHandheldApi, type IpcBridge } from '../../src/preload/api'
-import { EVENT_CHANNELS, INVOKE_CHANNELS, type EventChannel, type InvokeChannel } from '../../src/shared/ipc'
+import {
+  EVENT_CHANNELS,
+  INVOKE_CHANNELS,
+  type EventChannel,
+  type InvokeChannel,
+} from '../../src/shared/ipc'
+
+const ref = { engineId: 'opencode', sessionId: 'ses_1' }
 
 function createRecordingBridge() {
   const invoked: InvokeChannel[] = []
@@ -28,6 +35,23 @@ describe('IPC contract', () => {
     await api.settings.update({})
     api.log.write('info', 'hello')
 
+    await api.engine.capabilities()
+    await api.engine.snapshot()
+    await api.engine.listSessions()
+    await api.engine.createSession({ title: 't' })
+    await api.engine.deleteSession(ref)
+    await api.engine.getMessages(ref)
+    await api.engine.setSessionModel(ref, { providerId: 'p', modelId: 'm' })
+    await api.engine.prompt(ref, { text: 'hi' })
+    await api.engine.abort(ref)
+    await api.engine.replyPermission(ref, 'req', 'once')
+    await api.engine.replyQuestion(ref, 'req', [['a']])
+    await api.engine.rejectQuestion(ref, 'req')
+    await api.engine.listModels()
+    await api.engine.listCommands()
+    await api.engine.list()
+    await api.engine.restart()
+
     expect(new Set(invoked)).toEqual(new Set(INVOKE_CHANNELS))
     expect(invoked).toHaveLength(INVOKE_CHANNELS.length)
   })
@@ -39,6 +63,7 @@ describe('IPC contract', () => {
     for (const channel of EVENT_CHANNELS) {
       api.events.on(channel, () => undefined)
     }
+    api.engine.onEvent(() => undefined)
 
     expect(new Set(subscribed)).toEqual(new Set(EVENT_CHANNELS))
   })

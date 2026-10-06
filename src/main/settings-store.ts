@@ -8,7 +8,11 @@ export interface SettingsStore {
 }
 
 function defaults(): Settings {
-  return { schemaVersion: DEFAULT_SETTINGS.schemaVersion, window: { ...DEFAULT_SETTINGS.window } }
+  return {
+    schemaVersion: DEFAULT_SETTINGS.schemaVersion,
+    window: { ...DEFAULT_SETTINGS.window },
+    engine: { ...DEFAULT_SETTINGS.engine },
+  }
 }
 
 export function createSettingsStore(userDataDir: string): SettingsStore {
@@ -56,6 +60,7 @@ export function createSettingsStore(userDataDir: string): SettingsStore {
         ...current,
         ...patch,
         window: { ...current.window, ...patch.window },
+        engine: { ...current.engine, ...patch.engine },
       })
       persist(next)
       current = next

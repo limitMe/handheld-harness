@@ -22,6 +22,8 @@
   --theme-color-accent: #6ea8fe;
   --theme-color-focus-ring: #8ab4ff;
   --theme-color-danger: #f87171;
+  --theme-color-success: #4ade80;
+  --theme-color-warning: #fbbf24;
 
   --theme-radius-card: 12px;
   --theme-shadow-card: 0 12px 32px rgb(0 0 0 / 0.45);

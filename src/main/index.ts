@@ -4,6 +4,7 @@ import { log } from './log'
 import { registerIpc } from './ipc'
 import { installPermissions } from './permissions'
 import { resolveProfile } from './profile'
+import { stopEngineRuntime } from './engine-runtime'
 import { createMainWindow, resolveWindowMode } from './window'
 
 const profile = resolveProfile()
@@ -21,7 +22,11 @@ function logStartupInfo(): void {
     chrome: process.versions.chrome,
     node: process.versions.node,
     platform: process.platform,
-    display: { width: display.size.width, height: display.size.height, scaleFactor: display.scaleFactor },
+    display: {
+      width: display.size.width,
+      height: display.size.height,
+      scaleFactor: display.scaleFactor,
+    },
   })
 }
 
@@ -57,5 +62,9 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()
+  })
+
+  app.on('before-quit', () => {
+    stopEngineRuntime()
   })
 }

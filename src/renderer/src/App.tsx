@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import StatusBar from './components/StatusBar'
 import GamepadDebug from './debug/GamepadDebug'
 import MicDebug from './debug/MicDebug'
+import EngineDebug from './engine/EngineDebug'
 
 export default function App() {
   const [gamepadOpen, setGamepadOpen] = useState(false)
   const [micOpen, setMicOpen] = useState(false)
+  const [engineOpen, setEngineOpen] = useState(false)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -16,6 +18,9 @@ export default function App() {
       } else if (event.code === 'KeyM') {
         event.preventDefault()
         setMicOpen((open) => !open)
+      } else if (event.code === 'KeyE') {
+        event.preventDefault()
+        setEngineOpen((open) => !open)
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -35,6 +40,7 @@ export default function App() {
       </main>
       <GamepadDebug open={gamepadOpen} onOpenChange={setGamepadOpen} />
       <MicDebug open={micOpen} onOpenChange={setMicOpen} />
+      <EngineDebug open={engineOpen} onOpenChange={setEngineOpen} />
     </div>
   )
 }

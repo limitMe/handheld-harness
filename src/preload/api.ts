@@ -5,6 +5,7 @@ import type {
   InvokeChannel,
   InvokeContract,
 } from '../shared/ipc'
+import type { EngineEventPayload } from '../shared/engine'
 
 /** Minimal surface of `ipcRenderer` used by the preload bridge, kept injectable for tests. */
 export interface IpcBridge {
@@ -32,6 +33,28 @@ export function createHandheldApi(bridge: IpcBridge): HandheldApi {
     settings: {
       get: () => invoke('settings:get'),
       update: (patch) => invoke('settings:update', patch),
+    },
+    engine: {
+      capabilities: (engineId) => invoke('engine:capabilities', { engineId }),
+      snapshot: (engineId) => invoke('engine:snapshot', { engineId }),
+      listSessions: (engineId) => invoke('engine:listSessions', { engineId }),
+      createSession: (opts, engineId) => invoke('engine:createSession', { opts, engineId }),
+      deleteSession: (ref) => invoke('engine:deleteSession', { ref }),
+      getMessages: (ref) => invoke('engine:getMessages', { ref }),
+      setSessionModel: (ref, model) => invoke('engine:setSessionModel', { ref, model }),
+      prompt: (ref, input) => invoke('engine:prompt', { ref, input }),
+      abort: (ref) => invoke('engine:abort', { ref }),
+      replyPermission: (ref, requestId, reply) =>
+        invoke('engine:replyPermission', { ref, requestId, reply }),
+      replyQuestion: (ref, requestId, answers) =>
+        invoke('engine:replyQuestion', { ref, requestId, answers }),
+      rejectQuestion: (ref, requestId) => invoke('engine:rejectQuestion', { ref, requestId }),
+      listModels: (engineId) => invoke('engine:listModels', { engineId }),
+      listCommands: (engineId) => invoke('engine:listCommands', { engineId }),
+      list: () => invoke('engine:list'),
+      restart: (engineId) => invoke('engine:restart', { engineId }),
+      onEvent: (listener) =>
+        bridge.on('engine:event', (payload) => listener(payload as EngineEventPayload)),
     },
     events: {
       on: <K extends EventChannel>(

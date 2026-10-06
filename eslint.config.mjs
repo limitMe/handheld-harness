@@ -35,6 +35,15 @@ export default tseslint.config(
               group: ['@base-ui/react', '@base-ui/react/*'],
               message: 'Import Base UI only through src/renderer/src/ui.',
             },
+            {
+              group: ['@opencode-ai/*', '@opencode-ai/**'],
+              message:
+                'The renderer must not import engine SDKs; go through window.handheld.engine.',
+            },
+            {
+              group: ['**/main/engine/**', '**/main/**'],
+              message: 'The renderer must not import main-process code.',
+            },
           ],
         },
       ],
@@ -47,6 +56,39 @@ export default tseslint.config(
         {
           selector: 'Literal[value=/' + PALETTE_PATTERN.source + '/]',
           message: 'Use semantic tokens instead of the Tailwind color palette.',
+        },
+        {
+          selector:
+            'BinaryExpression[operator=/^(===|!==|==|!=)$/]:has(> Literal[value=/^(opencode|fake)$/]):has(> MemberExpression[property.name="kind"])',
+          message: 'Do not branch on engine kind; use EngineCapabilities instead.',
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/shared/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['electron', 'electron/*'],
+              message: 'src/shared must stay free of electron.',
+            },
+            {
+              group: ['react', 'react-dom', 'react/*', 'react-dom/*'],
+              message: 'src/shared must stay free of react.',
+            },
+            {
+              group: ['@opencode-ai/*', '@opencode-ai/**'],
+              message: 'src/shared must not depend on a specific engine SDK.',
+            },
+            {
+              group: ['**/main/engine/**', '**/main/**'],
+              message: 'src/shared must not import main-process code.',
+            },
+          ],
         },
       ],
     },

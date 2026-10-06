@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useEngineStatus } from '../engine/useEngineStatus'
 
 interface BatteryState {
   level: number
@@ -91,6 +92,16 @@ export default function StatusBar({ title }: StatusBarProps) {
   const time = useClock()
   const online = useOnline()
   const battery = useBattery()
+  const engineStatus = useEngineStatus()
+
+  const engineDotClass =
+    engineStatus?.state === 'ready'
+      ? 'bg-success'
+      : engineStatus?.state === 'down'
+        ? 'bg-danger'
+        : engineStatus?.state === 'starting' || engineStatus?.state === 'reconnecting'
+          ? 'bg-warning'
+          : 'bg-text-muted'
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-surface-raised bg-surface px-4">
@@ -103,6 +114,11 @@ export default function StatusBar({ title }: StatusBarProps) {
       </h1>
       <div className="flex flex-1 items-center justify-end gap-4 text-base text-text-muted">
         <span data-testid="dictation-indicator" hidden aria-hidden="true" />
+        <span
+          data-testid="engine-status"
+          title={engineStatus ? `engine: ${engineStatus.state}` : 'engine: unknown'}
+          className={`h-3 w-3 rounded-full ${engineDotClass}`}
+        />
         <span data-testid="status-network">{online ? 'online' : 'offline'}</span>
         {battery ? (
           <span data-testid="status-battery" className="tabular-nums">

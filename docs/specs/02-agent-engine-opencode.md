@@ -83,10 +83,12 @@
   1. 读取对应 key 的登记文件；
   2. 健康检查（带认证）；
   3. 检查通过 → **复用**，日志里写 `reused server pid=…`；
-  4. 检查失败：先确认该 pid 确实是 opencode 进程（检查进程名）再结束它，然后重新启动。**只能处理同一个 key 的 server，不得结束其他 key 的 server。**
+  4. 检查失败：**只有在确认该 pid 既像是 opencode 进程、又确实监听在登记文件里的端口上时**，才结束它，然后重新启动；否则视为过期登记，只删除文件并从新端口启动，绝不结束该 pid。**只能处理同一个 key 的 server，不得结束其他 key 的 server。**
+  - 之所以要求"监听在登记端口上"这一条：OpenCode 还有一个同名的**桌面应用**（进程名也是 `OpenCode.exe`）。只按进程名判断时，一旦旧 pid 被系统回收给桌面应用，就会误杀它。`isPidListeningOnPort` 用 `netstat`/`lsof` 校验端口归属，可杜绝这种误杀。
 - 新增 Node 脚本（应用没有运行时也必须能用）：
   - `npm run server:status`：列出所有登记的 server，显示 pid、地址、版本、工作区、是否健康；
-  - `npm run server:stop -- <workspaceDir | --all>`：结束指定的 server，并删除登记文件。不带参数时只打印用法。
+  - `npm run server:stop -- <workspaceDir | --all>`：结束指定的 server，并删除登记文件。结束前同样校验端口归属，pid 已被回收时只删登记文件。不带参数时只打印用法；
+  - `npm run server:kill -- <workspaceDir | --all>`：只结束登记的 server、**保留登记文件**，用于模拟崩溃验证恢复。不要用 `Stop-Process -Name opencode`，它会连带命中同名的 OpenCode 桌面应用。
 
 ### 4. 工作区（必须）
 
@@ -374,10 +376,10 @@ v1 不实现第二种底座，但以下约定要从第一天开始遵守。这�
 | 1 | 端到端冒烟 | 在掌机上运行 `npm run engine:smoke -- --engine opencode`，退出码为 0 |
 | 2 | 归一化测试 | 已提交录制的夹具，`npm test` 通过 |
 | 3 | dev 模式复用 | 运行 `npm run dev`，状态点变绿；关闭窗口后，`npm run server:status` 显示 server 仍然健康；再次运行 `npm run dev`，日志中出现 `reused server`，pid 不变 |
-| 4 | 停止 | `npm run server:stop -- --all` 之后，`Get-Process opencode -ErrorAction SilentlyContinue` 没有输出 |
+| 4 | 停止 | `npm run server:stop -- --all` 之后，`npm run server:status` 显示无登记，且对应端口不再监听。**不要用 `Get-Process opencode` 作判据**：它也会匹配同名的 OpenCode 桌面应用 |
 | 4b | 跨 profile 共享 | `npm run dev` 运行时，另开一个终端执行 `npm run build; $env:HANDHELD_PROFILE='p2'; $env:HANDHELD_ENGINE_MODE='detached'; npm run start`：两个实例的 pid 相同，在一个实例里新建的会话会出现在另一个实例的调试页中 |
-| 5 | 生产模式清理 | 运行 `npm run build; npm run start`，退出应用后，`Get-Process opencode` 没有残留 |
-| 6 | 崩溃恢复 | 应用运行中执行 `Stop-Process -Name opencode -Force`，状态点先变黄，10 秒内恢复绿色 |
+| 5 | 生产模式清理 | 运行 `npm run build; npm run start`，记录 `npm run server:status` 里的 pid，退出应用后该 pid 不再存在、端口不再监听（同样不要用 `Get-Process opencode` 判断） |
+| 6 | 崩溃恢复 | 应用运行中执行 `npm run server:kill -- --all`（只杀登记的 server、保留登记文件），状态点先变黄，10 秒内恢复绿色 |
 | 7 | 只监听本机 | `Get-NetTCPConnection -OwningProcess <pid> -State Listen` 只显示 `127.0.0.1` |
 | 8 | 需要认证 | 不带密码执行 `Invoke-WebRequest http://127.0.0.1:<port>/doc` 返回 401，或者锁定版本规定的未授权响应 |
 | 9 | 调试页 | 在 `Ctrl+Shift+E` 中新建会话、发送测试文本，能看到事件流，状态最终变为 idle |
@@ -397,4 +399,66 @@ v1 不实现第二种底座，但以下约定要从第一天开始遵守。这�
 
 ## 实现记录
 
-（由实现 Agent 填写。）
+实现日期：2026-10-06（分支 `feat/agent-engine-opencode`）。
+
+### 与锁定版本核实后的差异（以实际为准）
+
+- **SDK 只能动态 import**：`@opencode-ai/sdk@1.18.34` 是 ESM-only，且 `package.json` 的 `exports` 只提供 `import` 条件、没有 `require`。静态 `import` 在 electron-vite 的 CJS main 产物和 `tsx` 脚本里都会报 `ERR_PACKAGE_PATH_NOT_EXPORTED`。适配层因此用缓存过的 `import('@opencode-ai/sdk/v2')` 加载（构建产物里保留为动态 import，Electron 的 Node 能正常加载）。`@opencode-ai/sdk/package.json` 未导出，所以启动时的版本比较读取工程自身锁定的 `dependencies['@opencode-ai/sdk']`；`tests/unit/dependencies.test.ts` 断言它与 `opencode-ai` 的版本相同。
+- **v2 的位置**：spec 里核实过的方法位于 `@opencode-ai/sdk/v2` 模块的**根 client**（`client.session.*`、`client.event.subscribe`、`client.permission.reply`、`client.question.reply/reject`、`client.provider.list`、`client.command.list`、`client.config.get`）。SDK 里另有一个实验性的 `client.v2.*` 命名空间（`session.next.*`、`permission.v2.*`），本 spec 未使用；`normalize` 同时兼容 `permission.v2.*` / `question.v2.*` 命名，以防 server 切换到新命名。
+- **认证方式**：server 使用 **HTTP Basic**，用户名固定为 `opencode`，密码来自 `OPENCODE_SERVER_PASSWORD`。未带凭据访问 `/config` 返回 `401` + `WWW-Authenticate: Basic realm="Secure Area"`（spec 第 71 行的变量名已核实）。
+- **端口**：锁定版本的 `serve --port=0` **不会**自动分配端口（实测仍监听 4096）。因此 host 自己用 `net` 找一个空闲端口再通过 `--port=<port>` 传入；地址不解析 stdout，直接轮询健康检查，这样 detached 模式把 stdout 重定向到日志文件也不受影响。
+- **二进制定位**：实际安装布局是平台可选包 `node_modules/opencode-windows-x64/bin/opencode.exe`，`opencode-ai` 的 postinstall 也会把二进制复制到 `node_modules/opencode-ai/bin/opencode.exe`。查找顺序：`HANDHELD_OPENCODE_BIN` → 平台包 → `opencode-ai` wrapper → （仅在 `HANDHELD_OPENCODE_ALLOW_PATH=1` 时）PATH。
+- **工作区区分方式（第 4 节问题）**：server 按启动时的 `cwd` 决定项目；`--port` 之外还通过 `client.session.list({ directory })` 等方式支持请求级 `directory`，但 v1 只用一个工作区，适配层不传 `directory`，继承 server 的 `cwd`。
+- **事件名**：实测 SSE 发出的是 v1 命名：`server.connected`、`session.updated`、`session.status`、`session.idle`、`session.diff`、`message.updated`、`message.part.updated`、`message.part.delta`、`permission.asked`、`permission.replied`、`session.error`，以及大量与本应用无关的信息事件（`plugin.added`、`catalog.updated`、`reference.updated`、`integration.updated` 等）。`normalize` 只映射需要的类型，其余返回空数组；未知类型在 debug 级别记录后丢弃，不抛异常。
+- **消息结构**：`session.messages()` 返回 `Array<{ info: Message; parts: Part[] }>`，part 是扁平数组；`Session.model` 是 `{ id, providerID, variant? }`（注意是 `id`），assistant message 用 `providerID` / `modelID`。适配层已按实际字段映射。
+- **`listCommands()`**：返回 server 的 `command.list`（如 `init`），另外补上适配层维护的 `/clear`（新建会话）和 `/compact`（`session.summarize`）两条。`runCommand` 按 spec 留到 12，本阶段只保证列表可用。
+
+### 实现说明与偏差
+
+- **新增依赖**：`opencode-ai@1.18.34`、`@opencode-ai/sdk@1.18.34`（精确版本），`tsx@4.23.15`（devDependency，用于脚本）。
+- **shared 类型**：`src/shared/engine.ts` 原样实现 spec 第 5 节的类型；`EngineStatus.ready` 增加可选 `pid`（调试页需要）。
+- **IPC**：`engine.<method>` 与 `AgentEngine` 一一对应（含 `capabilities`，不含 `onEvent`），另加 `engine.list` 和 `engine.restart` 两个通道供调试页使用；事件通道 `engine:event` 载荷为 `{ engineId, event }`。与会话相关的方法第一个参数为 `SessionRef`，由 `EngineManager` 路由；未知 `engineId` 抛出 `Unknown engineId: <id>`。`preload` 暴露 `window.handheld.engine`。
+- **settings**：新增 `engine.workspaceDir`（zod schema，默认 `{}`）。旧 `settings.json` 没有该字段时解析为 `{}` 而不会触发备份回退。
+- **调试页**：`Ctrl+Shift+E` 打开 `src/renderer/src/engine/EngineDebug.tsx`（基于 `ui/Overlay`），显示状态/模式/版本/工作区/pid、会话、待处理请求、最近 100 条事件（可展开 JSON），并提供新建会话、发送测试文本、中止、重启 server 按钮。StatusBar 右侧新增引擎状态点（ready 绿 / starting、reconnecting 黄 / down 红），为此在语义 token 里新增 `success`、`warning`。
+- **纯函数与可测性**：`normalize.ts`、`delta.ts`、`binary.ts`、`server-registry.ts`、`mode.ts`、`engines.ts`、`opencode/model-resolution.ts` 都不 import electron；日志、路径、fs、fetch、时钟均可注入。引擎代码不 import electron（`engine-runtime.ts` 是 electron 侧接线，位于 `src/main/engine/` 之外）。
+- **`HANDHELD_ENGINE_MODE=fake`**：按"不自行扩大范围"的规则，Fake 引擎属于 spec 03，本 spec 只在 runtime 里记录 warning 且不注册引擎；`EngineManager` 已按 `engineId` 设计，03 直接 `register()` 即可。
+- **模型回退顺序**：表 → 该会话最后一条 assistant 消息 → server 上报的 session model → 引擎默认（`config.model`）。比 spec 多了一层"server 上报"，因为新会话直接由 server 写入默认模型，用它等价于默认值且更贴近实际。
+- **脚本**：`engine:smoke`、`engine:record`、`server:status`、`server:stop` 都用 `tsx` 运行 `scripts/*.ts`；`server:status` / `server:stop` 复用 `server-registry`，不依赖 Electron。
+
+### 已自动验证
+
+- 验收 1：`npm run engine:smoke -- --engine opencode` 退出码 0，约 4.7 s 跑完 listModels → createSession → prompt → waitForIdle → getMessages（含 PONG 断言）→ setSessionModel → abort → deleteSession。
+- 验收 2：`npm run engine:record` 生成 `tests/fixtures/opencode/1.18.34/basic-tool-permission.jsonl`（88 条事件，路径/用户名已脱敏），`tests/unit/normalize.test.ts` 用它覆盖 delta 拼接、工具 pending→running→completed、permission asked/replied、busy→idle、未知事件忽略。
+- 验收 11：`npm run check` 通过（typecheck、lint 零 warning、59 个单元测试），其中包含第 8 节的 ESLint 边界规则和 `tests/unit/renderer-boundaries.test.ts` 的扫描。
+- 验收 3（脚本化验证）：detached 模式连续启动两次，第二次日志出现 `reused server pid=…`，pid 不变；结束 Electron 后 `npm run server:status` 显示 server 仍 healthy。
+- 验收 4（脚本化验证）：`npm run server:stop -- --all` 结束 server 并删除登记文件，端口不再监听；`npm run server:status` 显示无登记。
+- 验收 7（部分自动）：server 以 `--hostname=127.0.0.1` 启动；`server-registry` 健康检查与所有连接都走 `127.0.0.1`。
+- 验收 8（探测验证）：不带凭据请求 `/config` 返回 401。
+- 构建：`npm run build` 成功；`npm run test:e2e` 通过。
+- 依赖：`tests/unit/dependencies.test.ts` 断言 `opencode-ai` 与 `@opencode-ai/sdk` 版本一致且都精确锁定。
+
+### 未完成 / 需要人工验证
+
+- 验收 4b（跨 profile 共享）：登记文件按设计不区分 profile（`<appData>/handheld-ai/servers/opencode/<key>.json`），不同 profile 只要工作区和版本相同就共享；需要在掌机上按标准步骤用两个 profile 实测。
+- 验收 5（生产模式清理）：`attached` 在 `before-quit` 调用 `taskkill /T /F`；需要实际运行 `npm run build; npm run start` 后正常退出应用确认无残留（未用 GUI 退出流程实测）。
+- 验收 6（崩溃恢复）：attached 子进程退出后 60 秒内最多重启 3 次；detached 每 10 秒健康检查。逻辑已实现，用 `npm run server:kill -- --all` 在掌机上实测状态点由黄转绿。
+- 验收 9（调试页交互）：`Ctrl+Shift+E` 的界面逻辑已实现并通过类型检查，需要在掌机 GUI 中实际点击验证。
+- 验收 10（日志脱敏）：所有 URL / 环境变量日志都经过 `redactSecrets`；密码不传给渲染进程，也不写入 server 日志（server 日志由 server 自身输出）。需要按标准步骤搜索日志文件确认。
+- 验收 12（扩展点）：`capabilities()` 已实现，`shared` / `renderer` 无 OpenCode 类型（有 ESLint 规则与单元测试），IPC 会话调用全部使用 `SessionRef`；"在调试页设置模型后下一条消息使用新模型"需在 GUI 中确认（适配层已把表里的模型带进每次 `promptAsync`）。
+
+### 与 OpenCode 桌面应用共存（进程误杀防护）
+
+本机同时装有一个**进程名也是 `OpenCode.exe` 的 OpenCode 桌面应用**。最初的实现只按"进程名像 opencode"来确认旧 pid（spec 原第 86 行），这不足以防误杀：登记文件里的 pid 在 server 退出后可能被 Windows 回收给桌面应用，此时健康检查会失败，而进程名检查会通过，重启逻辑就会 `taskkill /T /F` 掉桌面应用。
+
+现在的做法：
+
+- 新增 `isPidListeningOnPort(pid, port)`：用 `netstat -ano`（Windows）/ `lsof`（其他平台）确认 pid 是否**正在监听登记 URL 里的端口**。
+- `decideServerReuse` 只有在 `isHealthy` 为假、且 `isOpencodeProcess` 与 `ownsRegisteredPort` 同时为真时才 restart；否则一律当作过期登记，只删文件、从新端口启动，绝不结束该 pid。
+- `killServer`（调试页重启、崩溃恢复、attached 退出）也先校验端口归属；归属为假时跳过 kill 并记录 warning。
+- `server:stop` / `server:kill` 脚本同样带这层校验，pid 被回收时只处理登记文件。
+- 新增 `server:kill` 脚本用于崩溃恢复验证，替代 `Stop-Process -Name opencode`；验收 4/5/6 的判据也从 `Get-Process opencode` 改成按 pid / 端口判断。
+
+触发这条路径需要"登记 pid 被回收 + 新进程恰好是 opencode 名字"，概率低但不是零，因此按"宁可留下一个孤儿进程，也绝不误杀用户进程"的原则处理。
+
+
+

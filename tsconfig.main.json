@@ -24,6 +24,8 @@
     "playwright.config.ts",
     "src/main/**/*",
     "src/shared/**/*",
-    "tests/e2e/**/*"
+    "tests/e2e/**/*",
+    "tests/engine-contract/**/*",
+    "scripts/**/*.ts"
   ]
 }

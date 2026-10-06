@@ -12,6 +12,8 @@
   --color-accent: var(--theme-color-accent);
   --color-focus-ring: var(--theme-color-focus-ring);
   --color-danger: var(--theme-color-danger);
+  --color-success: var(--theme-color-success);
+  --color-warning: var(--theme-color-warning);
 
   --font-sans: var(--theme-font-sans);
   --font-mono: var(--theme-font-mono);
