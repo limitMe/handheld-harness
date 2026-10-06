@@ -1,0 +1,37 @@
+/*
+ * Semantic token names. Components may only use these tokens; concrete values
+ * live in theme/<name>.css and can be swapped without touching components.
+ */
+@theme inline {
+  --color-surface: var(--theme-color-surface);
+  --color-surface-raised: var(--theme-color-surface-raised);
+  --color-card: var(--theme-color-card);
+  --color-on-card: var(--theme-color-on-card);
+  --color-text: var(--theme-color-text);
+  --color-text-muted: var(--theme-color-text-muted);
+  --color-accent: var(--theme-color-accent);
+  --color-focus-ring: var(--theme-color-focus-ring);
+  --color-danger: var(--theme-color-danger);
+
+  --font-sans: var(--theme-font-sans);
+  --font-mono: var(--theme-font-mono);
+
+  --text-base: var(--theme-font-size-base);
+  --text-code: var(--theme-font-size-code);
+
+  --radius-card: var(--theme-radius-card);
+  --shadow-card: var(--theme-shadow-card);
+  --ease-standard: var(--theme-ease-standard);
+}
+
+@utility duration-fast {
+  transition-duration: var(--t-fast);
+}
+
+@utility duration-ui {
+  transition-duration: var(--t-ui);
+}
+
+@utility duration-scene {
+  transition-duration: var(--t-scene);
+}

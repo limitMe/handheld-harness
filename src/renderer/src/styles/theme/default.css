@@ -1,0 +1,29 @@
+/* Default dark theme (P-08). Replace this file to restyle the whole app. */
+:root {
+  color-scheme: dark;
+
+  --t-fast: 120ms;
+  --t-ui: 220ms;
+  --t-scene: 450ms;
+
+  --theme-font-sans:
+    system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  --theme-font-mono: 'Cascadia Code', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+
+  --theme-font-size-base: 18px;
+  --theme-font-size-code: 15px;
+
+  --theme-color-surface: #0b0d10;
+  --theme-color-surface-raised: #161a20;
+  --theme-color-card: #1e242c;
+  --theme-color-on-card: #f2f5f8;
+  --theme-color-text: #e7ebf0;
+  --theme-color-text-muted: #9aa6b2;
+  --theme-color-accent: #6ea8fe;
+  --theme-color-focus-ring: #8ab4ff;
+  --theme-color-danger: #f87171;
+
+  --theme-radius-card: 12px;
+  --theme-shadow-card: 0 12px 32px rgb(0 0 0 / 0.45);
+  --theme-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}

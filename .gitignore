@@ -1,1 +1,13 @@
-docs/
+node_modules/
+out/
+dist/
+coverage/
+.vite/
+*.log
+tests/e2e/artifacts/
+test-results/
+playwright-report/
+
+# Harness scratch docs stay local. The specs are part of the project and tracked.
+docs/*
+!docs/specs/
