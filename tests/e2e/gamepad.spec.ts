@@ -126,10 +126,10 @@ test('picks /compact from list input and sends it with the gamepad', async () =>
   }
 })
 
-test('A on the Tasks button opens the switcher and releasing A keeps it open', async () => {
+test('A on the Tasks button opens the task map and releasing A keeps it open', async () => {
   const { app, window } = await launch('e2e-pad-tasks')
   try {
-    // Create a session so the switcher actually has a row (the reported case).
+    // Create a session so the map actually has a card (the reported case).
     const composer = window.getByTestId('composer')
     await composer.fill('hello')
     await composer.press('Enter')
@@ -147,15 +147,92 @@ test('A on the Tasks button opens the switcher and releasing A keeps it open', a
     )
 
     await pressPad(window, 'A')
-    await expect(window.getByTestId('task-list')).toBeVisible()
+    await expect(window.getByTestId('task-map')).toBeVisible()
 
     await releasePad(window, 'A')
-    await expect(window.getByTestId('task-list')).toBeVisible()
-    // The filter, not a row, takes the initial focus.
-    await expect(window.locator('[data-focus-id="task-filter"]')).toHaveAttribute(
-      'data-focused',
-      '',
-    )
+    await expect(window.getByTestId('task-map')).toBeVisible()
+    // The current task's card is selected, focused and activated for hints.
+    const card = window.getByTestId('task-card').first()
+    await expect(card).toHaveAttribute('data-focused', '')
+    await expect(card).toHaveAttribute('data-activated', '')
+  } finally {
+    await app.close()
+  }
+})
+
+test('creates, switches, closes and reopens tasks from the map', async () => {
+  const { app, window } = await launch('e2e-pad-task-map')
+  try {
+    const composer = window.getByTestId('composer')
+    await composer.fill('hello')
+    await composer.press('Enter')
+    await expect(window.getByTestId('message-list')).toContainText('DONE', { timeout: 30_000 })
+
+    // Back opens the map with the current task selected.
+    await pressPad(window, 'Back')
+    await releasePad(window, 'Back')
+    await expect(window.getByTestId('task-map')).toBeVisible()
+    await expect(window.getByTestId('task-card').first()).toHaveAttribute('data-selected', '')
+
+    // Y adds an empty card at the right and selects it.
+    await pressPad(window, 'Y')
+    await releasePad(window, 'Y')
+    await expect(window.getByTestId('task-card-empty')).toHaveAttribute('data-selected', '')
+
+    // A creates a new task and returns to the chat.
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByTestId('task-map')).toHaveCount(0)
+    await expect(window.getByTestId('status-title')).toHaveText('New task')
+
+    await composer.fill('second')
+    await composer.press('Enter')
+    await expect(window.getByTestId('status-title')).toHaveText('Fake session 2', {
+      timeout: 30_000,
+    })
+
+    // Open the map and step left to task 1, then open it.
+    await pressPad(window, 'Back')
+    await releasePad(window, 'Back')
+    await pressPad(window, 'DpadLeft')
+    await releasePad(window, 'DpadLeft')
+    await expect(window.getByTestId('task-card').first()).toHaveAttribute('data-selected', '')
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByTestId('status-title')).toHaveText('Fake session 1')
+    await expect(window.getByTestId('message-list')).toContainText('hello')
+
+    // Long-press B closes task 1; the dialog starts on Close, so A confirms.
+    await pressPad(window, 'Back')
+    await releasePad(window, 'Back')
+    await pressPad(window, 'B')
+    await window.waitForTimeout(500)
+    await expect(window.getByRole('alertdialog')).toBeVisible()
+    await releasePad(window, 'B')
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByRole('alertdialog')).toHaveCount(0)
+
+    // Closing the current card switched to the neighbour (task 2). The map stays
+    // open, so exit it before the status bar shows the new title.
+    await pressPad(window, 'B')
+    await releasePad(window, 'B')
+    await expect(window.getByTestId('task-map')).toHaveCount(0)
+    await expect(window.getByTestId('status-title')).toHaveText('Fake session 2')
+
+    // Reopen task 1 from history: Y adds a card, X lists history.
+    await pressPad(window, 'Back')
+    await releasePad(window, 'Back')
+    await pressPad(window, 'Y')
+    await releasePad(window, 'Y')
+    await pressPad(window, 'X')
+    await releasePad(window, 'X')
+    await expect(window.getByTestId('task-history')).toBeVisible()
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByTestId('task-history')).toHaveCount(0)
+    await expect(window.getByTestId('status-title')).toHaveText('Fake session 1')
+    await expect(window.getByTestId('message-list')).toContainText('hello')
   } finally {
     await app.close()
   }

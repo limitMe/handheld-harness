@@ -57,13 +57,13 @@ test('deactivates then navigates to the status bar', async () => {
       '',
     )
 
-    // A on the Tasks button opens the temporary switcher.
+    // A on the Tasks button opens the task map (spec 14).
     await window.keyboard.press('Enter')
-    await expect(window.getByTestId('task-list')).toBeVisible()
+    await expect(window.getByTestId('task-map')).toBeVisible()
 
     // Escape closes it and restores focus.
     await window.keyboard.press('Escape')
-    await expect(window.getByTestId('task-list')).toHaveCount(0)
+    await expect(window.getByTestId('task-map')).toHaveCount(0)
     await expect(window.locator('[data-focus-id="open-tasks"]')).toHaveAttribute(
       'data-focused',
       '',

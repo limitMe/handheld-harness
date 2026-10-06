@@ -15,6 +15,7 @@ function defaults(): Settings {
     engine: { ...DEFAULT_SETTINGS.engine },
     ui: { ...DEFAULT_SETTINGS.ui },
     hints: { ...DEFAULT_SETTINGS.hints },
+    tasks: { open: [], unread: [] },
     input: { contexts: {}, keyboard: {} },
   }
 }
@@ -89,6 +90,10 @@ export function createSettingsStore(userDataDir: string): SettingsStore {
         engine: { ...current.engine, ...patch.engine },
         ui: { ...current.ui, ...patch.ui },
         hints: { ...current.hints, ...patch.hints },
+        tasks: {
+          open: patch.tasks?.open ?? current.tasks.open,
+          unread: patch.tasks?.unread ?? current.tasks.unread,
+        },
         input: mergeBindingLayers(current.input, patch.input),
       })
       persist(next)

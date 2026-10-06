@@ -20,7 +20,7 @@
 | 11 | [焦点系统](11-focus-system.md) | B | 已实现（与 10 合并验收：自动化通过，待掌机实测） |
 | 12 | [共享组件：状态栏、操作提示、列表输入、对话框](12-shared-components.md) | B | 已实现（自动化通过，待掌机实测） |
 | 13 | [界面：当前工作](13-screen-current-work.md) | B | 已实现（与 16/17 相关的听写、文本编辑仍待接入；待掌机实测） |
-| 14 | [界面：任务地图](14-screen-task-map.md) | B | 草案 |
+| 14 | [界面：任务地图](14-screen-task-map.md) | B | 已实现（自动化通过，待掌机实测；临时任务切换器已退役） |
 | 15 | [界面：系统菜单](15-screen-system-menu.md) | B | 草案 |
 | 16 | [语音输入协议与实现](16-voice-input.md) | B | 草案 |
 | 17 | [界面：文本编辑](17-screen-text-edit.md) | B | 草案 |
@@ -142,9 +142,10 @@
 | `F11` / `Ctrl+Shift+I` / `Ctrl+R` | 切换全屏 / DevTools / 重新加载 | 01 |
 | `Ctrl+Shift+G` / `Ctrl+Shift+M` | 手柄调试页 / 麦克风调试页 | 01 |
 | `Ctrl+Shift+E` | 引擎调试页 | 02 |
-| `Ctrl+K` / `Ctrl+N` / `Ctrl+Shift+Backspace` | 临时任务切换器 / 新任务 / 删除当前会话（14 完成后退役） | 03 |
 | `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | 字号缩放 | 03 |
 | `Ctrl+Shift+F` | 叠加显示焦点树 | 11 |
+
+> 03 的临时任务切换器快捷键（`Ctrl+K` / `Ctrl+N` / `Ctrl+Shift+Backspace`）已随 14 上线移除；任务地图用 Back 打开，状态栏左侧的 `Tasks` 按钮是触屏 / 键盘入口。
 
 ### settings.json 字段
 
@@ -154,7 +155,7 @@
 | `engine.workspaceDir` | 工作区目录 | 02 |
 | `ui.lastSession`（`SessionRef`）、`ui.zoom` | 上次打开的任务、字号缩放 | 03 |
 | `input` | 用户键位配置（ActionMap 的用户层） | 10 |
-| `tasks.open` | 任务地图里打开的任务（`SessionRef[]`）和红点状态 | 14 |
+| `tasks.open`（`SessionRef[]`）、`tasks.unread`（`SessionRef[]`） | 任务地图里打开的任务（按创建时间）和显示红点的任务 | 14 |
 | `hints = { enabled, delayMs }` | 操作提示的开关和等待时间 | 12, 15 |
 | `model.default` | 新任务使用的默认模型 | 15 |
 

@@ -37,6 +37,7 @@ export const GLOBAL_CONTEXT = 'global'
  * activated component or a modal can shadow the screen beneath it.
  */
 export const CONTEXT_ORDER = {
+  global: -200,
   focus: -100,
   screen: 0,
   activated: 100,

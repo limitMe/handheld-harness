@@ -1,10 +1,16 @@
 import { useWorkbenchStore } from '../state/store'
 import { sessionKey } from '../state/types'
+import { cn } from '../ui'
 import { Composer } from './Composer'
 import { ErrorBanner } from './ErrorBanner'
 import { MessageList } from './MessageList'
 
-export function CurrentWork() {
+export interface CurrentWorkProps {
+  /** True while the task map is on top: the transcript recedes and stops taking focus. */
+  dimmed?: boolean
+}
+
+export function CurrentWork({ dimmed = false }: CurrentWorkProps) {
   const current = useWorkbenchStore((state) => state.ui.current)
   const defaultEngineId = useWorkbenchStore((state) => state.defaultEngineId)
   const engineEntry = useWorkbenchStore((state) =>
@@ -32,7 +38,12 @@ export function CurrentWork() {
   const questions = current ? (pendingQuestions[key] ?? []) : []
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden">
+    <div
+      className={cn(
+        'relative flex flex-1 flex-col overflow-hidden transition-[transform,opacity] duration-scene ease-standard',
+        dimmed ? 'scale-[0.98] opacity-40' : '',
+      )}
+    >
       <ErrorBanner status={engineEntry?.status} />
       <MessageList
         messages={sessionMessages}
@@ -51,6 +62,7 @@ export function CurrentWork() {
         onAbort={() => void abortCurrent()}
         busy={busy}
         focusKey={key}
+        autoActivate={!dimmed}
         engineId={current?.engineId ?? defaultEngineId}
         commandsAvailable={engineEntry?.capabilities?.commands ?? false}
       />

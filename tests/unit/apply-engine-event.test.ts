@@ -140,4 +140,46 @@ describe('applyEngineEvent', () => {
     expect(next.ui.current).toBeNull()
     expect(next.sessions[sessionKey(ref)]).toBeUndefined()
   })
+
+  it('red-dots a watched task that finishes while you are elsewhere', () => {
+    const state = loadedState()
+    state.ui.current = { engineId, sessionId: 's2' }
+    state.tasks.watched = { 'fake:s1': true }
+    const next = applyEngineEvent(
+      state,
+      payload({ type: 'session.runState', sessionId: 's1', runState: 'idle' }),
+    )
+    expect(next.tasks.unread['fake:s1']).toBe(true)
+  })
+
+  it('does not red-dot the task you are looking at', () => {
+    const state = loadedState()
+    state.ui.current = { engineId, sessionId: 's1' }
+    state.tasks.watched = { 'fake:s1': true }
+    const next = applyEngineEvent(
+      state,
+      payload({ type: 'session.runState', sessionId: 's1', runState: 'idle' }),
+    )
+    expect(next.tasks.unread['fake:s1']).toBeUndefined()
+  })
+
+  it('does not red-dot an unwatched task', () => {
+    const state = loadedState()
+    const next = applyEngineEvent(
+      state,
+      payload({ type: 'session.runState', sessionId: 's1', runState: 'idle' }),
+    )
+    expect(next.tasks.unread['fake:s1']).toBeUndefined()
+  })
+
+  it('drops a deleted task from the map and the red-dot set', () => {
+    const state = loadedState()
+    state.tasks.open = [{ engineId, sessionId: 's1' }]
+    state.tasks.unread = { 'fake:s1': true }
+    state.tasks.watched = { 'fake:s1': true }
+    const next = applyEngineEvent(state, payload({ type: 'session.deleted', sessionId: 's1' }))
+    expect(next.tasks.open).toEqual([])
+    expect(next.tasks.unread).toEqual({})
+    expect(next.tasks.watched).toEqual({})
+  })
 })

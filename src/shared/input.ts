@@ -5,7 +5,7 @@ export type BindingValue = ActionId | null
 
 /**
  * One configuration layer. Gamepad contexts are keyed by physical control
- * (`A`, `Y:hold`); keyboard entries by key combo (`Escape`, `Ctrl+K`).
+ * (`A`, `Y:hold`); keyboard entries by key combo (`Escape`, `Ctrl+M`).
  */
 export interface BindingLayer {
   contexts: Record<string, Record<string, BindingValue>>
@@ -76,13 +76,6 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       Y: 'task.new',
       X: 'task.history',
     },
-    /** Temporary switcher from 03; it retires when 14 lands. */
-    taskSwitcher: {
-      DpadUp: 'nav.up',
-      DpadDown: 'nav.down',
-      A: 'nav.activate',
-      B: 'map.exit',
-    },
     textEdit: {
       DpadUp: 'nav.up',
       DpadDown: 'nav.down',
@@ -115,12 +108,6 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       ArrowDown: 'nav.down',
       Enter: 'nav.activate',
       Escape: 'nav.deactivate',
-    },
-    taskSwitcher: {
-      ArrowUp: 'nav.up',
-      ArrowDown: 'nav.down',
-      Enter: 'nav.activate',
-      Escape: 'map.exit',
     },
     textEdit: {
       ArrowLeft: 'nav.left',

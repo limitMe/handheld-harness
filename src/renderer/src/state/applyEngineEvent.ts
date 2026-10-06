@@ -1,5 +1,5 @@
 import type { EngineEventPayload } from '@shared/engine'
-import { sessionKey, type WorkbenchState } from './types'
+import { omitKey, sessionKey, type WorkbenchState } from './types'
 
 /**
  * Pure reducer for engine events. Kept free of zustand and the preload bridge
@@ -48,6 +48,12 @@ export function applyEngineEvent(
         messagesLoaded,
         pendingPermissions,
         pendingQuestions,
+        tasks: {
+          ...state.tasks,
+          open: state.tasks.open.filter((ref) => sessionKey(ref) !== key),
+          unread: omitKey(state.tasks.unread, key),
+          watched: omitKey(state.tasks.watched, key),
+        },
         ui: { ...state.ui, current },
       }
     }
@@ -56,10 +62,22 @@ export function applyEngineEvent(
       const key = sessionKey({ engineId, sessionId: event.sessionId })
       const session = state.sessions[key]
       if (!session) return state
-      return {
-        ...state,
-        sessions: { ...state.sessions, [key]: { ...session, runState: event.runState } },
+      const sessions = { ...state.sessions, [key]: { ...session, runState: event.runState } }
+      // A watched task finishing while you are elsewhere earns a red dot (spec 14).
+      const currentKey = state.ui.current ? sessionKey(state.ui.current) : null
+      if (
+        event.runState === 'idle' &&
+        state.tasks.watched[key] &&
+        currentKey !== key &&
+        !state.tasks.unread[key]
+      ) {
+        return {
+          ...state,
+          sessions,
+          tasks: { ...state.tasks, unread: { ...state.tasks.unread, [key]: true } },
+        }
       }
+      return { ...state, sessions }
     }
 
     case 'session.error': {

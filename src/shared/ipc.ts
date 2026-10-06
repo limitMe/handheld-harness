@@ -63,6 +63,17 @@ export const HintsSettingsSchema = z.object({
 })
 export type { HintsSettings } from './hints'
 
+/**
+ * Task map state (spec 14). `open` is the ordered set of tasks shown on the map
+ * (creation-time order); `unread` holds the sessions whose "finished while you
+ * were away" red dot is still showing. Both are persisted per profile.
+ */
+export const TasksSettingsSchema = z.object({
+  open: z.array(SessionRefSchema).default([]),
+  unread: z.array(SessionRefSchema).default([]),
+})
+export type TasksSettings = z.infer<typeof TasksSettingsSchema>
+
 const BindingValueSchema = z.union([z.enum(ACTION_IDS as [ActionId, ...ActionId[]]), z.null()])
 const BindingRowsSchema = z.record(z.string(), z.record(z.string(), BindingValueSchema))
 
@@ -87,6 +98,7 @@ export const SettingsSchema = z.object({
   engine: EngineSettingsSchema.default({}),
   ui: UiSettingsSchema.default({ zoom: 1 }),
   hints: HintsSettingsSchema.default({ ...DEFAULT_HINTS }),
+  tasks: TasksSettingsSchema.default({ open: [], unread: [] }),
   input: BindingLayerSchema.default({ contexts: {}, keyboard: {} }),
 })
 export type Settings = z.infer<typeof SettingsSchema>
@@ -114,6 +126,12 @@ export const SettingsPatchSchema = z.object({
       delayMs: z.number().int().min(0).max(60_000).optional(),
     })
     .optional(),
+  tasks: z
+    .object({
+      open: z.array(SessionRefSchema).optional(),
+      unread: z.array(SessionRefSchema).optional(),
+    })
+    .optional(),
   input: BindingPatchSchema.optional(),
 })
 export type SettingsPatch = z.infer<typeof SettingsPatchSchema>
@@ -124,6 +142,7 @@ export const DEFAULT_SETTINGS: Settings = {
   engine: {},
   ui: { zoom: 1 },
   hints: { ...DEFAULT_HINTS },
+  tasks: { open: [], unread: [] },
   input: { contexts: {}, keyboard: {} },
 }
 

@@ -80,6 +80,20 @@ describe('settings store', () => {
     expect(store.get().hints).toEqual({ enabled: false, delayMs: 3000 })
   })
 
+  it('persists the task map slice and replaces arrays wholesale', () => {
+    const target = makeDir()
+    const store = createSettingsStore(target)
+    const a = { engineId: 'fake', sessionId: 'ses_1' }
+    const b = { engineId: 'fake', sessionId: 'ses_2' }
+
+    store.update({ tasks: { open: [a] } })
+    expect(store.get().tasks).toEqual({ open: [a], unread: [] })
+
+    store.update({ tasks: { unread: [b] } })
+    expect(store.get().tasks).toEqual({ open: [a], unread: [b] })
+    expect(createSettingsStore(target).get().tasks).toEqual({ open: [a], unread: [b] })
+  })
+
   it('merges input bindings deeply and preserves explicit unbinds', () => {
     const target = makeDir()
     const store = createSettingsStore(target)

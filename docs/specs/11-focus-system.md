@@ -107,6 +107,8 @@ P-15：激活态下左摇杆是否也移动光标，还是只用十字键；消�
 - 提问卡片未启用 spec 10 的 `currentWork.question`（A→`question.confirm` / B→`question.ignore`），而是复用焦点树的“聚焦 + A 激活”来勾选选项、聚焦提交 / 忽略按钮；完整提问交互留待 13（P-13）。
 - 临时任务切换器新增 `taskSwitcher` 上下文绑定（D-pad 上下 / A 激活 / B 退出；键盘方向键 / Enter / Escape），14 完成后随切换器一起退役。
 
+14 落地后已移除该切换器与对应绑定；任务地图用同一套焦点树（卡片为焦点节点，选中项保持激活以供操作提示），详见 spec 14 实现记录。
+
 ### 已自动验证
 
 - `npm run check` 通过（typecheck、lint 零 warning、28 个测试文件 167 个用例）。

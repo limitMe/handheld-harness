@@ -58,14 +58,21 @@ test('keeps task content when switching between tasks', async () => {
     await send(window, 'hello')
     await expect(window.getByTestId('message-list')).toContainText('DONE', { timeout: 30_000 })
 
-    await window.keyboard.press('Control+n')
+    // Open the task map from the status bar, add a card (N) and open it (Enter).
+    await window.getByTestId('open-tasks').click()
+    await expect(window.getByTestId('task-map')).toBeVisible()
+    await window.keyboard.press('n')
+    await expect(window.getByTestId('task-card-empty')).toHaveAttribute('data-selected', '')
+    await window.keyboard.press('Enter')
     await expect(window.getByTestId('status-title')).toHaveText('New task')
+
     await send(window, 'second')
     await expect(window.getByTestId('status-title')).toHaveText('Fake session 2')
 
-    await window.keyboard.press('Control+k')
-    await expect(window.getByTestId('task-list')).toBeVisible()
-    await window.getByRole('button', { name: /Fake session 1/ }).click()
+    // Reopen the map, step left to the first task and switch to it.
+    await window.getByTestId('open-tasks').click()
+    await window.keyboard.press('ArrowLeft')
+    await window.keyboard.press('Enter')
 
     await expect(window.getByTestId('status-title')).toHaveText('Fake session 1')
     await expect(window.getByTestId('message-list')).toContainText('hello')

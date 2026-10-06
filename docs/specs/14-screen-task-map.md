@@ -68,3 +68,51 @@
 ## 待定输入
 
 P-16：首次运行时是否自动打开最近的任务；关闭当前卡片后切到哪一张。P-03、P-04、P-08 已决定。
+
+## 实现记录
+
+实现日期：2026-10-06（在 `main` 上直接开发，尚未提交）。按用户要求，本 spec 直接在仓库里开发，暂不经 dogfooding。
+
+### P-16 决定（用户确认）
+
+- 首次运行**不自动打开**最近的任务：`settings.tasks.open` 为空，任务地图靠 Y 新建 / X 打开历史任务来填充。
+- 关闭当前卡片后切到相邻卡片（优先右侧，其次左侧）；一张都不剩时进入“新任务”状态（spec 正文的建议值）。
+
+### 交付物
+
+- **数据**（`shared/ipc.ts`、`main/settings-store.ts`、`state/types.ts`、`state/applyEngineEvent.ts`、`state/store.ts`）：
+  - 设置新增 `tasks.open` / `tasks.unread`（均为 `SessionRef[]`，数组整体替换），zod schema、patch schema、默认值与深合并都已补齐。
+  - store 新增 `tasks` 切片：`open`（有序）、`unread`（红点，持久化）、`watched`（离开时仍在忙的任务，仅内存）。
+  - `insertByCreatedAt()` 让 `open` 始终按 `createdAt` 排序，历史任务重开时插回原位置；`reconcileTasks()` 在初始化时剔除已不存在的会话并重排。
+  - 红点状态机：`switchCurrent()` 在离开 busy 任务时把它记入 `watched`；`applyEngineEvent` 在该会话变为 `idle` 且它不是当前工作时置 `unread`；切回该任务清除 `unread` 与 `watched`；`unread` 每次变化都写回 `settings.tasks`。
+- **界面**（`workbench/TaskMap.tsx`、`HistoryList.tsx`、`taskCards.ts`）：
+  - 状态栏下方一排横向卡片，整排用 `translateX` 滑动把选中卡片居中，选中卡片 `scale-105`，两侧 `scale-95` 且半透明；卡片用 `card` / `on-card` 语义 token。
+  - 边框区分状态：当前工作 `border-accent`、busy `border-warning`、error `border-danger`、其余 `border-surface-raised`；未读完成在右上角显示红点。
+  - 选中卡片注册为焦点树节点并保持**激活**，因此 12 的操作提示会显示 A 打开 / Y 新建 / X 历史 / B 退出 / 长按 B 关闭。
+  - 历史列表沿用 12 的列表输入形态（`AnchoredPanel` + 自己的输入上下文），列出不在打开列表里的会话，按 `updatedAt` 倒序；确认后打开并直接切到当前工作。
+  - 关闭任务弹二次确认（复用 12 的 `ConfirmDialog`），确认后只从地图移除，底座会话保留为历史任务（P-04）。
+- **接线**（`App.tsx`）：新增 `global` 上下文处理 Back（`map.toggle`），Start（`menu.toggle`）暂为空操作（留给 15）；当前工作与地图放在同一 `relative` 容器内，地图打开时当前工作缩小淡出，关闭后焦点回到打开地图前的节点。
+- **退役临时任务切换器**：删除 `TaskSwitcher.tsx`、`taskSwitcher` 上下文绑定、`App.tsx` 的 `Ctrl+K` / `Ctrl+N` / `Ctrl+Shift+Backspace` 快捷键，以及 store 的 `deleteCurrentSession`。状态栏左侧的 `Tasks` 按钮保留，但改为打开任务地图（触屏 / 键盘入口）。
+
+### 与 spec 的出入 / 决策
+
+- **空卡片的 A 沿用 03 的“不预建会话”**：spec 14 写“新建 session”，但 03（阶段 A，“必须”）明确“不要预先创建空会话”。因此空卡片按 A 走 `newTask()`（当前工作置空，进入“新任务”状态），第一条消息发送时才 `createSession()` 并加入打开列表。
+- **任务卡片配色暂用当前主题的 `card` / `on-card`**（用户确认）：默认主题里 `card` 仍是深色面板（spec 18 计划改为白底黑字并统一迁移）。本次按 spec 14 的“用语义 token”实现，等 18 换主题时卡片配色会一起变。
+- **空列表时自动显示空卡片**：`open` 为空时地图直接显示那张空卡片，避免一张卡都没有时无从下手；它仍随局部状态在退出时清掉，满足“退出地图时清理未使用的空卡片”。
+- **长按 B 的进度环**：进度环由 12 的提示层提供，只在提示已经浮出后按住才显示；本次未额外实现。
+- **历史列表未做过滤输入**：spec 说“复用 12 的列表输入组件”，而 12 的命令列表本身没有过滤框，历史列表保持一致（上下键 + A / B）。
+- **关闭的二次确认默认焦点放在“确认”**：关闭只是从地图移除、会话保留，不属于危险操作，所以 A 直接确认、B 取消。为此给 `ConfirmDialog` 增加 `initialFocus`，并修正了它原先 `FocusContainer` 没包住按钮、作用域形同虚设的问题。
+- **启动时把 `ui.lastSession` 补进打开列表**：否则当前工作那张卡片会不在打开列表里，违反“打开地图默认选中当前工作”。首次运行没有 `lastSession`，所以打开列表仍为空。
+- **动效**：打开 / 关闭、整排滑动、卡片缩放都用 CSS 过渡（`duration-ui` / `duration-scene`）；spec 18 的共享元素过渡（卡片放大成当前工作）留待 18。
+
+### 已自动验证
+
+- `npm run check` 通过（37 个测试文件 213 个用例，lint 零 warning）。
+- 新增单测：`task-cards`（空卡片、初始选中、循环步进、历史排序、按创建时间插入、`ref` / `omitKey` 辅助）；`apply-engine-event` 增加红点四个用例；`confirm-dialog` 增加 `initialFocus='confirm'`；`settings` 增加 `tasks` 合并用例。
+- `npm run test:e2e` 18 个用例通过，其中 `gamepad.spec.ts` 新增用手柄完整走一遍“打开地图 → Y 新建空卡片 → A 新建任务 → 回到当前工作对话 → 打开地图切回旧任务 → 长按 B 关闭（确认）→ 从历史任务重新打开，内容完整”。`focus.spec.ts` / `workbench.spec.ts` / `gamepad.spec.ts` 中原先依赖临时切换器的用例已改写为任务地图。
+
+### 未完成 / 需要人工验证
+
+- **掌机实测**：卡片滑动手感、选中放大 / 两侧变暗在 1080p 7 英寸上的观感、操作提示浮出位置、长按 B 的进度环。
+- 红点的端到端体验要在真实 busy 任务上确认（自动化只覆盖纯函数状态机）。
+- 任务卡片“白底黑字”要等 spec 18 的主题统一。

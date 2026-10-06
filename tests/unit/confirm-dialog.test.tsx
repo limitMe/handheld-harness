@@ -13,7 +13,7 @@ function Screen({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-function renderDialog() {
+function renderDialog(overrides: Partial<Parameters<typeof ConfirmDialog>[0]> = {}) {
   const onOpenChange = vi.fn()
   const onConfirm = vi.fn()
   render(
@@ -27,6 +27,7 @@ function renderDialog() {
             confirmLabel="Delete"
             destructive
             onConfirm={onConfirm}
+            {...overrides}
           />
         </Screen>
       </FocusProvider>
@@ -41,6 +42,11 @@ describe('ConfirmDialog', () => {
     const cancel = screen.getByRole('button', { name: 'Cancel' })
     expect(cancel.hasAttribute('data-focused')).toBe(true)
     expect(screen.getByRole('button', { name: 'Delete' }).hasAttribute('data-focused')).toBe(false)
+  })
+
+  it('starts on Confirm when asked, so A confirms', () => {
+    renderDialog({ initialFocus: 'confirm' })
+    expect(screen.getByRole('button', { name: 'Delete' }).hasAttribute('data-focused')).toBe(true)
   })
 
   it('cancels with B (Escape) instead of confirming', () => {

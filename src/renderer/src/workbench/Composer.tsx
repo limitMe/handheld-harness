@@ -20,6 +20,8 @@ export interface ComposerProps {
   busy: boolean
   /** Changes whenever the input should regain focus (new task or session switch). */
   focusKey: string
+  /** When false (task map open) the composer does not steal focus behind the map. */
+  autoActivate?: boolean
   /** Engine that owns the command list; defaults to the engine list's default. */
   engineId?: string
   /** List input is unavailable when the engine has no `commands` capability. */
@@ -66,6 +68,7 @@ export function Composer({
   onAbort,
   busy,
   focusKey,
+  autoActivate = true,
   engineId,
   commandsAvailable = false,
 }: ComposerProps) {
@@ -135,7 +138,15 @@ export function Composer({
   }, [focus.activated])
 
   // Start focused and activated so typing and Win+H keep working (spec 11).
+  // While the task map is open the composer stays out of the way; the ref keeps
+  // that check current without re-running this effect when the map closes, so
+  // focus can return to whatever opened the map.
+  const autoActivateRef = useRef(autoActivate)
   useEffect(() => {
+    autoActivateRef.current = autoActivate
+  })
+  useEffect(() => {
+    if (!autoActivateRef.current) return
     if (tree) {
       tree.setFocus(COMPOSER_ID)
       tree.activate(COMPOSER_ID)

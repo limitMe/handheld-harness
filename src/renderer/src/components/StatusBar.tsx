@@ -115,7 +115,7 @@ export function profileBadge(profile: string | undefined): string | null {
 export interface StatusBarProps {
   /** Screens show their name or the session title; the text editor passes none (spec 12). */
   title?: string
-  /** Touch-accessible entry point for the temporary task switcher (spec 03 section 6). */
+  /** Touch / keyboard entry point for the task map (spec 14). */
   onOpenTasks?: () => void
 }
 

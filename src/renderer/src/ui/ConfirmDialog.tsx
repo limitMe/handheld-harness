@@ -1,5 +1,5 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog'
-import { useRef } from 'react'
+import { useRef, type RefObject } from 'react'
 import { FocusContainer, useFocusable } from '../focus'
 import { Button } from './Button'
 
@@ -11,6 +11,8 @@ export interface ConfirmDialogProps {
   confirmLabel: string
   cancelLabel?: string
   destructive?: boolean
+  /** Which button the focus tree starts on; dangerous actions default to Cancel (spec 12). */
+  initialFocus?: 'cancel' | 'confirm'
   onConfirm: () => void
 }
 
@@ -24,21 +26,29 @@ const closeStyles =
   'inline-flex min-h-11 items-center justify-center rounded-md border border-surface-raised bg-card px-4 py-2 text-base font-medium text-on-card transition-colors duration-fast ease-standard hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none'
 
 /** Mounted inside the portal, so the focus nodes exist only while the dialog is open. */
-function ConfirmActions({
+function ConfirmButtons({
+  cancelRef,
+  confirmRef,
   confirmLabel,
   cancelLabel,
   destructive,
+  initialFocus,
   onConfirm,
   onOpenChange,
 }: Pick<
   ConfirmDialogProps,
-  'confirmLabel' | 'cancelLabel' | 'destructive' | 'onConfirm' | 'onOpenChange'
->) {
-  const cancelRef = useRef<HTMLButtonElement>(null)
-  const confirmRef = useRef<HTMLButtonElement>(null)
+  'confirmLabel' | 'cancelLabel' | 'destructive' | 'initialFocus' | 'onConfirm' | 'onOpenChange'
+> & {
+  cancelRef: RefObject<HTMLButtonElement | null>
+  confirmRef: RefObject<HTMLButtonElement | null>
+}) {
+  const confirmFirst = initialFocus === 'confirm'
   const cancel = useFocusable({
     id: 'confirm-dialog-cancel',
     elementRef: cancelRef,
+    // Sibling order decides which button the scope focuses first: dangerous
+    // actions start on Cancel (spec 12).
+    order: confirmFirst ? 1 : 0,
     onActivate: () => onOpenChange(false),
     // B / Escape cancels from either button (spec 12).
     onCancel: () => onOpenChange(false),
@@ -46,6 +56,7 @@ function ConfirmActions({
   const confirm = useFocusable({
     id: 'confirm-dialog-confirm',
     elementRef: confirmRef,
+    order: confirmFirst ? 0 : 1,
     onActivate: () => {
       onConfirm()
       onOpenChange(false)
@@ -54,23 +65,30 @@ function ConfirmActions({
   })
 
   return (
+    <div className="flex justify-end gap-3">
+      <AlertDialog.Close ref={cancelRef} {...cancel.props} className={closeStyles}>
+        {cancelLabel ?? 'Cancel'}
+      </AlertDialog.Close>
+      <Button
+        ref={confirmRef}
+        {...confirm.props}
+        className={destructive ? 'border-danger text-danger' : undefined}
+        onClick={() => {
+          onConfirm()
+          onOpenChange(false)
+        }}
+      >
+        {confirmLabel}
+      </Button>
+    </div>
+  )
+}
+
+/** Wrapped in a scope so navigation is trapped inside the dialog (spec 12). */
+function ConfirmActions(props: Parameters<typeof ConfirmButtons>[0]) {
+  return (
     <FocusContainer id="confirm-dialog" flow="row" scope>
-      <div className="flex justify-end gap-3">
-        <AlertDialog.Close ref={cancelRef} {...cancel.props} className={closeStyles}>
-          {cancelLabel ?? 'Cancel'}
-        </AlertDialog.Close>
-        <Button
-          ref={confirmRef}
-          {...confirm.props}
-          className={destructive ? 'border-danger text-danger' : undefined}
-          onClick={() => {
-            onConfirm()
-            onOpenChange(false)
-          }}
-        >
-          {confirmLabel}
-        </Button>
-      </div>
+      <ConfirmButtons {...props} />
     </FocusContainer>
   )
 }
@@ -83,13 +101,20 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel = 'Cancel',
   destructive,
+  initialFocus = 'cancel',
   onConfirm,
 }: ConfirmDialogProps) {
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const confirmRef = useRef<HTMLButtonElement>(null)
+
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>
         <AlertDialog.Backdrop className={backdropStyles} />
-        <AlertDialog.Popup finalFocus={false} className={popupStyles}>
+        {/* The focus tree owns the initial focus so `initialFocus` can pick the
+            default button (spec 12); letting Base UI focus the first tabbable
+            would always land on Cancel. */}
+        <AlertDialog.Popup initialFocus={false} finalFocus={false} className={popupStyles}>
           <AlertDialog.Title className="text-xl font-semibold text-text">{title}</AlertDialog.Title>
           {description ? (
             <AlertDialog.Description className="text-base text-text-muted">
@@ -97,9 +122,12 @@ export function ConfirmDialog({
             </AlertDialog.Description>
           ) : null}
           <ConfirmActions
+            cancelRef={cancelRef}
+            confirmRef={confirmRef}
             confirmLabel={confirmLabel}
             cancelLabel={cancelLabel}
             destructive={destructive}
+            initialFocus={initialFocus}
             onConfirm={onConfirm}
             onOpenChange={onOpenChange}
           />

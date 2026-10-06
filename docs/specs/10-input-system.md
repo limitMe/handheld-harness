@@ -165,4 +165,6 @@ P-13、P-14，以及上面列出的临时任务切换器快捷键。本 spec 已
 - **滚动**：`RStickY → scroll` 现在有实现（`src/renderer/src/focus/scroll.ts`）：优先移动焦点让高亮跟随，无处可移动时再滚动聚焦元素所在的 `data-scroll-region`（消息列表、任务切换器列表），焦点不在列表内时回退到主滚动区。
 - **临时任务切换器**：新增 `taskSwitcher` 上下文（D-pad 上下 / A 激活 / B 退出；键盘方向键 / Enter / Escape），14 完成后随切换器退役。
 
+14 落地后已按计划移除 `taskSwitcher` 上下文与 `Ctrl+K` / `Ctrl+N` / `Ctrl+Shift+Backspace` 快捷键；任务地图用全局 `map.toggle`（Back）打开，绑定不变（见 spec 14 实现记录）。
+
 “不接键盘、只用手柄完成 03 全部操作”仍需掌机实测，步骤与限制见 11 的“未完成 / 需要人工验证”。
