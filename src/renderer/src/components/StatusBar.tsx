@@ -113,9 +113,17 @@ export function profileBadge(profile: string | undefined): string | null {
 }
 
 export interface StatusBarProps {
-  title: string
+  /** Screens show their name or the session title; the text editor passes none (spec 12). */
+  title?: string
   /** Touch-accessible entry point for the temporary task switcher (spec 03 section 6). */
   onOpenTasks?: () => void
+}
+
+/** The ready state is the normal case, so its dot would only add noise (spec 12). */
+export function engineDotClass(state: string | undefined): string | null {
+  if (!state || state === 'ready') return null
+  if (state === 'down') return 'bg-danger'
+  return 'bg-warning'
 }
 
 export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
@@ -132,14 +140,7 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
     onActivate: () => onOpenTasks?.(),
   })
 
-  const engineDotClass =
-    engineStatus?.state === 'ready'
-      ? 'bg-success'
-      : engineStatus?.state === 'down'
-        ? 'bg-danger'
-        : engineStatus?.state === 'starting' || engineStatus?.state === 'reconnecting'
-          ? 'bg-warning'
-          : 'bg-text-muted'
+  const dotClass = engineDotClass(engineStatus?.state)
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-surface-raised bg-surface px-4">
@@ -164,19 +165,23 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
           </span>
         ) : null}
       </div>
-      <h1
-        data-testid="status-title"
-        className="text-center text-xl font-semibold tracking-wide text-text"
-      >
-        {title}
-      </h1>
+      {title ? (
+        <h1
+          data-testid="status-title"
+          className="min-w-0 truncate text-center text-xl font-semibold tracking-wide text-text"
+        >
+          {title}
+        </h1>
+      ) : null}
       <div className="flex flex-1 items-center justify-end gap-4 text-base text-text-muted">
+        {dotClass ? (
+          <span
+            data-testid="engine-status"
+            title={engineStatus ? `engine: ${engineStatus.state}` : undefined}
+            className={`h-3 w-3 rounded-full ${dotClass}`}
+          />
+        ) : null}
         <span data-testid="dictation-indicator" hidden aria-hidden="true" />
-        <span
-          data-testid="engine-status"
-          title={engineStatus ? `engine: ${engineStatus.state}` : 'engine: unknown'}
-          className={`h-3 w-3 rounded-full ${engineDotClass}`}
-        />
         <span data-testid="status-network">{online ? 'online' : 'offline'}</span>
         {battery ? (
           <span data-testid="status-battery" className="tabular-nums">

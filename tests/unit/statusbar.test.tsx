@@ -1,7 +1,10 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
-import StatusBar, { profileBadge } from '../../src/renderer/src/components/StatusBar'
+import StatusBar, {
+  engineDotClass,
+  profileBadge,
+} from '../../src/renderer/src/components/StatusBar'
 
 afterEach(cleanup)
 
@@ -18,6 +21,16 @@ describe('profileBadge', () => {
   })
 })
 
+describe('engineDotClass', () => {
+  it('hides the dot when the engine is ready or unknown and warns otherwise', () => {
+    expect(engineDotClass('ready')).toBeNull()
+    expect(engineDotClass(undefined)).toBeNull()
+    expect(engineDotClass('starting')).toBe('bg-warning')
+    expect(engineDotClass('reconnecting')).toBe('bg-warning')
+    expect(engineDotClass('down')).toBe('bg-danger')
+  })
+})
+
 describe('StatusBar', () => {
   it('renders the title, a HH:mm clock and the network state', () => {
     render(<StatusBar title="HANDHELD.AI" />)
@@ -25,6 +38,11 @@ describe('StatusBar', () => {
     expect(screen.getByTestId('status-title').textContent).toBe('HANDHELD.AI')
     expect(screen.getByTestId('status-time').textContent).toMatch(/^\d{2}:\d{2}$/)
     expect(screen.getByTestId('status-network').textContent).toMatch(/^(online|offline)$/)
+  })
+
+  it('omits the title when the screen has none (text edit)', () => {
+    render(<StatusBar />)
+    expect(screen.queryByTestId('status-title')).toBeNull()
   })
 
   it('shows the STABLE badge when the app reports the stable profile', async () => {
