@@ -92,3 +92,18 @@ tests/
 ## 自举开发规则
 
 （由 spec 04 追加。）
+
+### Dogfooding rules (spec 04)
+
+1. **You may be running inside the app you are editing.** Never terminate `opencode`, `electron`, or `node` processes. Never run `server:stop`. Never run `taskkill` or `Stop-Process`.
+2. **Do not launch a GUI yourself.** Never run `npm run dev`, `npm run start`, or `stable:*`; the user already has these instances open. `npm run test:e2e` is allowed: it uses an isolated `e2e` profile and the fake engine, so it does not disturb the running instances.
+3. **Edit only the main repository** (`C:\Apps\handheld-harness`). Never modify the `handheld-harness-stable` directory.
+4. Run `npm run check` after every change, then tell the user:
+   - what changed and where to look;
+   - whether the change is live immediately through HMR (renderer) or restarts the dev instance (main / preload).
+5. **Dependency changes:** on Windows, the Electron binary and files under `node_modules` are locked while the dev instance runs, so `npm install` fails with EBUSY or EPERM. Before adding or removing a dependency, tell the user the reason and the package name, and ask them to close the dev instance before installing.
+6. Without an explicit user instruction, never `git commit`, `git push`, or `git reset --hard`, and never delete branches. When the user says "commit", follow the agreed format and make one commit per feature.
+7. specs are the source of requirements. If the implementation diverges, say so first and record it in that spec's "实现记录". Stage B specs are directional: for open inputs (`P-xx`), propose an option and get the user's confirmation before acting.
+8. Keep changes small and verifiable. One conversation does one thing; let the user verify before moving on.
+
+Recovery procedures: [`docs/recovery.md`](docs/recovery.md). Daily workflow: [`docs/dogfooding.md`](docs/dogfooding.md).

@@ -11,10 +11,10 @@
 
 | 编号 | Spec | 阶段 | 状态 |
 |---|---|---|---|
-| 00 | [Windows 11 开发环境部署](00-windows-dev-environment.md) | A | 待执行 |
-| 01 | [工程脚手架](01-project-scaffold.md) | A | 待执行 |
-| 02 | [Agent 引擎适配层（OpenCode）](02-agent-engine-opencode.md) | A | 待执行 |
-| 03 | [最小可用工作台](03-workbench-mvp.md) | A | 待执行 |
+| 00 | [Windows 11 开发环境部署](00-windows-dev-environment.md) | A | 已完成 |
+| 01 | [工程脚手架](01-project-scaffold.md) | A | 已完成 |
+| 02 | [Agent 引擎适配层（OpenCode）](02-agent-engine-opencode.md) | A | 已完成 |
+| 03 | [最小可用工作台](03-workbench-mvp.md) | A | 已完成 |
 | 04 | [自举开发闭环](04-dogfooding-loop.md) | A | 待执行 |
 | 10 | [输入系统与键位映射](10-input-system.md) | B | 草案 |
 | 11 | [焦点系统](11-focus-system.md) | B | 草案 |
@@ -133,6 +133,7 @@
 | `HANDHELD_OPENCODE_URL` / `HANDHELD_OPENCODE_PASSWORD` | `external` 模式的连接信息 | 02 |
 | `HANDHELD_OPENCODE_CONFIG_CONTENT` | 传给 server 的 `OPENCODE_CONFIG_CONTENT` | 02 |
 | `HANDHELD_FAKE_CAPABILITIES` | 关闭 Fake 引擎的部分能力，用来测试 UI 降级 | 03 |
+| `HANDHELD_STABLE_DIR` | 覆盖稳定版 worktree 的目录（默认 `<主仓库同级>/<主仓库名>-stable`） | 04 |
 
 ### 开发与调试快捷键（键盘）
 

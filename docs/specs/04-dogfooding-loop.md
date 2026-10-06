@@ -121,4 +121,40 @@ C:\dev\handheld-ai          (主仓库，分支 main)
 
 ## 实现记录
 
-（由实现 Agent 填写。）
+实现日期：2026-10-06（分支 `feat/dogfooding-loop`）。
+
+### 交付物
+
+- **稳定版脚本**（`package.json` 新增，均用 `tsx` 运行，与 `server:*` 一致）：
+  - `npm run stable:setup` / `stable:update` / `stable:rollback` / `stable:start` / `stable:shortcut`，实现于 `scripts/stable-*.ts`，公共逻辑在 `scripts/lib/stable.ts`。
+- **状态栏 profile 标记**：`src/renderer/src/components/StatusBar.tsx` 增加 `profileBadge()`，`stable` → `STABLE`、`dev` → `DEV`、其余（含 `default`）不显示；profile 来自 `app.getInfo()`。
+- **文档**：`docs/recovery.md`（故障恢复手册）、`docs/dogfooding.md`（日常工作流）；`AGENTS.md` 的"自举开发规则"按 spec 第 4 节翻译成英文并引用上述两份文档。
+- **测试**：`tests/unit/stable.test.ts`（路径 / 标签纯函数）、`tests/unit/statusbar.test.tsx`（`profileBadge` 与 STABLE 徽标渲染）。
+- **仓库配置**：`.gitignore` 放行 `docs/recovery.md`、`docs/dogfooding.md`，并忽略构建暂存目录 `.stable-out-tmp/`、`out.stable-backup/`；`README.md` 状态表把 00–03 标为"已完成"（04 待验收），环境变量表补充 `HANDHELD_STABLE_DIR`。
+
+### 与 spec 的偏差 / 以实际为准的修正
+
+- **路径**：沿用 01 的偏差，主仓库是 `C:\Apps\handheld-harness`，稳定版 worktree 是同级 `C:\Apps\handheld-harness-stable`（而不是 spec 示例里的 `handheld-ai-stable`）。新增 `HANDHELD_STABLE_DIR` 覆盖。
+- **脚本运行时**：用 `tsx` 运行 TypeScript 脚本，与既有 `server:*` 脚本一致，便于复用类型并给纯函数写单测。
+- **Electron 44.5.1 没有 `postinstall`**：`npm ci` **不会**下载 Electron 二进制（`node_modules/electron/package.json` 无 `scripts`，只有 `install-electron` bin）。因此 `stable:setup` / `stable:update` / `stable:rollback` 在 `npm ci` 之后会补跑一次 `node node_modules/electron/install.js`（幂等，已安装时立即退出）。这是 spec 第 3 节"`npm ci` 和 `npm run build`"的必要补充；否则 `stable:start` 会因缺少 `electron.exe` 失败。
+- **"先构建到临时目录"**：`stable:update` / `stable:rollback` 用 `electron-vite build --outDir .stable-out-tmp` 构建到暂存目录，成功后再把旧 `out/` 改名为 `out.stable-backup/`、把暂存目录改名成 `out/`。构建失败或替换失败时旧 `out/` 保持不动（替换失败会回滚改名），不会留下半成品。
+- **`stable:start`**：用 `electron-vite preview --skipBuild` 运行已有构建，不触发重新构建；显式设置 `HANDHELD_PROFILE=stable`、`HANDHELD_WORKSPACE=<主仓库>`、`HANDHELD_ENGINE_MODE=detached`、`HANDHELD_WINDOW=fullscreen`，并清掉可能残留的 `ELECTRON_RENDERER_URL`。
+- **`stable:shortcut`**：生成 `%LOCALAPPDATA%\handheld-ai\stable-launch.cmd`（绝对 `node` + `electron-vite.js` 路径，避免依赖 PATH），再用 PowerShell `WScript.Shell` 在桌面和开始菜单创建 "HANDHELD.AI (stable)" 快捷方式（目标 `cmd /c <launcher>`，图标用 Electron 可执行文件）。仅 Windows 支持。
+- **`stable:update` 顺序**：先检查主仓库工作区干净 → 跑 `npm run check` → `git merge --ff-only <main>` → 打 `stable-YYYYMMDD-N` 标签 → 仅当 `package-lock.json` 在两个 commit 间有变化时 `npm ci` → 构建。`stable:rollback` 用同一套构建/安装步骤回退到上一个 `stable-*` 标签。
+- **进程规则**：未运行 `npm run dev` / `npm run start` / `stable:start`，没有启动任何 GUI；也没有结束任何 opencode / electron / node 进程。
+
+### 已自动验证
+
+- `npm run stable:setup` 成功且幂等（连跑两次）：创建 `stable` 分支（从 `main`）与 worktree，`npm ci`，补装 Electron 二进制，构建到 `out/`。已验证 `out/main/index.js` 与 `node_modules/electron/dist/electron.exe` 存在，`electron --version` 输出 `v44.5.1`。
+- `npm run stable:shortcut` 成功：桌面与开始菜单出现 "HANDHELD.AI (stable)" 快捷方式；实测 lnk 的 Target 为 `cmd.exe`、Arguments 为 `/c "<launcher>"`、WorkingDirectory 为稳定版目录、图标为 Electron。
+- `--outDir .stable-out-tmp` 的产物结构正确（`main/`、`preload/`、`renderer/`），可被改名成 `out/`。
+- 守卫路径：`stable:start` / `stable:update` 在 worktree 缺失时、`stable:rollback` 在没有 `stable-*` 标签时、`stable:update` 在主仓库不干净时，都输出明确错误并以退出码 1 结束。
+- `npm run check` 通过（typecheck、lint 零 warning、18 个测试文件 94 个用例）。
+
+### 未完成 / 需要用户验证
+
+- **验收 1（STABLE 标记）**：当前稳定版由 `main`（`f9c729d`）构建，不含本分支的状态栏标记。需要把本分支合并进 `main` 后运行 `npm run stable:update`、重启稳定版，才能看到 `STABLE`；`DEV` 在 `npm run dev` 下显示。
+- **`stable:update` 的升级路径**：实现时 `stable` 与 `main` 相同，只验证到"无变化"分支；fast-forward + 打标签 + 按 lock 变化重装 + 重建的完整路径需在真实升级时确认。
+- **验收 2–6、8–10** 涉及 GUI、手柄、真实引擎与最终提交，需要用户在掌机上按 spec 步骤验证；本实现遵守自举规则，未启动 GUI。
+- 实现过程中创建了 `stable` 分支、`C:\Apps\handheld-harness-stable` worktree 以及两个快捷方式；用户可用 `git worktree remove` / 删除快捷方式撤销。
+

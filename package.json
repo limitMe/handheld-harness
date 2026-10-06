@@ -25,6 +25,11 @@
     "server:status": "tsx scripts/server-status.ts",
     "server:stop": "tsx scripts/server-stop.ts",
     "server:kill": "tsx scripts/server-kill.ts",
+    "stable:setup": "tsx scripts/stable-setup.ts",
+    "stable:update": "tsx scripts/stable-update.ts",
+    "stable:rollback": "tsx scripts/stable-rollback.ts",
+    "stable:start": "tsx scripts/stable-start.ts",
+    "stable:shortcut": "tsx scripts/stable-shortcut.ts",
     "check": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {
