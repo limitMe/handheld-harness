@@ -1,32 +1,27 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import type { PermissionReply, PermissionRequest } from '@shared/engine'
-import { useFocusTree, useFocusable, FOCUS_ORDER } from '../focus'
+import { useFocusable, FOCUS_ORDER } from '../focus'
 import { Button } from '../ui'
 
 export interface PermissionCardProps {
   request: PermissionRequest
   permissionAlways: boolean
-  autoFocus: boolean
   onReply: (reply: PermissionReply) => void
 }
 
-export function PermissionCard({
-  request,
-  permissionAlways,
-  autoFocus,
-  onReply,
-}: PermissionCardProps) {
-  const tree = useFocusTree()
+/**
+ * Permission prompt. The list auto-focuses and activates it so the action hints
+ * (A allow once / X always / B reject) show beside it (spec 13, P-02); handlers
+ * live in the `currentWork.permission` input context.
+ */
+export function PermissionCard({ request, permissionAlways, onReply }: PermissionCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const focus = useFocusable({
     id: `permission-${request.id}`,
     elementRef: cardRef,
     order: FOCUS_ORDER.cards,
+    activatable: true,
   })
-
-  useEffect(() => {
-    if (autoFocus) tree?.setFocus(`permission-${request.id}`)
-  }, [autoFocus, tree, request.id])
 
   const actions: Array<{ label: string; reply: PermissionReply; testId: string }> = [
     { label: 'Allow once', reply: 'once', testId: 'permission-once' },

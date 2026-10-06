@@ -32,7 +32,7 @@ export function CurrentWork() {
   const questions = current ? (pendingQuestions[key] ?? []) : []
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="relative flex flex-1 flex-col overflow-hidden">
       <ErrorBanner status={engineEntry?.status} />
       <MessageList
         messages={sessionMessages}
@@ -40,7 +40,6 @@ export function CurrentWork() {
         questions={questions}
         capabilities={engineEntry?.capabilities}
         busy={busy}
-        inputEmpty={draft.trim().length === 0}
         onReplyPermission={(requestId, reply) => void replyPermission(requestId, reply)}
         onReplyQuestion={(requestId, answers) => void replyQuestion(requestId, answers)}
         onRejectQuestion={(requestId) => void rejectQuestion(requestId)}
