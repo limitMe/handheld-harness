@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { ACTION_IDS, type ActionId } from './actions'
+import { DEFAULT_HINTS } from './hints'
 import type { BindingLayer, BindingValue } from './input'
 import type {
   ChatMessage,
@@ -55,6 +56,13 @@ export const UiSettingsSchema = z.object({
 })
 export type UiSettings = z.infer<typeof UiSettingsSchema>
 
+/** Action hints share one wait time everywhere and can be turned off entirely (spec 12, P-09). */
+export const HintsSettingsSchema = z.object({
+  enabled: z.boolean().default(true),
+  delayMs: z.number().int().min(0).max(60_000).default(DEFAULT_HINTS.delayMs),
+})
+export type { HintsSettings } from './hints'
+
 const BindingValueSchema = z.union([z.enum(ACTION_IDS as [ActionId, ...ActionId[]]), z.null()])
 const BindingRowsSchema = z.record(z.string(), z.record(z.string(), BindingValueSchema))
 
@@ -78,6 +86,7 @@ export const SettingsSchema = z.object({
   }),
   engine: EngineSettingsSchema.default({}),
   ui: UiSettingsSchema.default({ zoom: 1 }),
+  hints: HintsSettingsSchema.default({ ...DEFAULT_HINTS }),
   input: BindingLayerSchema.default({ contexts: {}, keyboard: {} }),
 })
 export type Settings = z.infer<typeof SettingsSchema>
@@ -99,6 +108,12 @@ export const SettingsPatchSchema = z.object({
       zoom: z.number().optional(),
     })
     .optional(),
+  hints: z
+    .object({
+      enabled: z.boolean().optional(),
+      delayMs: z.number().int().min(0).max(60_000).optional(),
+    })
+    .optional(),
   input: BindingPatchSchema.optional(),
 })
 export type SettingsPatch = z.infer<typeof SettingsPatchSchema>
@@ -108,6 +123,7 @@ export const DEFAULT_SETTINGS: Settings = {
   window: { mode: 'windowed' },
   engine: {},
   ui: { zoom: 1 },
+  hints: { ...DEFAULT_HINTS },
   input: { contexts: {}, keyboard: {} },
 }
 

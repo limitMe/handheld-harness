@@ -56,13 +56,27 @@ export class InputRouter {
   private nextSeq = 0
   private dispatchListeners = new Set<(record: DispatchRecord) => void>()
   private contextListeners = new Set<(ids: string[]) => void>()
+  private mapListeners = new Set<(map: ActionMap) => void>()
 
   constructor(map: ActionMap) {
     this.map = map
   }
 
+  getMap(): ActionMap {
+    return this.map
+  }
+
   setMap(map: ActionMap): void {
     this.map = map
+    for (const listener of this.mapListeners) listener(map)
+  }
+
+  subscribeMap(listener: (map: ActionMap) => void): () => void {
+    this.mapListeners.add(listener)
+    listener(this.map)
+    return () => {
+      this.mapListeners.delete(listener)
+    }
   }
 
   /** Pushes a context; the returned function pops it (idempotent). */

@@ -14,6 +14,7 @@ function defaults(): Settings {
     window: { ...DEFAULT_SETTINGS.window },
     engine: { ...DEFAULT_SETTINGS.engine },
     ui: { ...DEFAULT_SETTINGS.ui },
+    hints: { ...DEFAULT_SETTINGS.hints },
     input: { contexts: {}, keyboard: {} },
   }
 }
@@ -87,6 +88,7 @@ export function createSettingsStore(userDataDir: string): SettingsStore {
         window: { ...current.window, ...patch.window },
         engine: { ...current.engine, ...patch.engine },
         ui: { ...current.ui, ...patch.ui },
+        hints: { ...current.hints, ...patch.hints },
         input: mergeBindingLayers(current.input, patch.input),
       })
       persist(next)

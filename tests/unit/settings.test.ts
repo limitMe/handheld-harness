@@ -69,6 +69,17 @@ describe('settings store', () => {
     expect(reloaded.zoom).toBe(1.2)
   })
 
+  it('merges the hints slice and keeps untouched fields', () => {
+    const target = makeDir()
+    const store = createSettingsStore(target)
+
+    store.update({ hints: { delayMs: 3000 } })
+    expect(store.get().hints).toEqual({ enabled: true, delayMs: 3000 })
+
+    store.update({ hints: { enabled: false } })
+    expect(store.get().hints).toEqual({ enabled: false, delayMs: 3000 })
+  })
+
   it('merges input bindings deeply and preserves explicit unbinds', () => {
     const target = makeDir()
     const store = createSettingsStore(target)

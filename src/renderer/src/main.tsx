@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { FocusProvider } from './focus'
+import { HintsProvider } from './hints'
 import { InputProvider } from './input'
 import './styles/app.css'
 
@@ -12,7 +13,9 @@ createRoot(container).render(
   <StrictMode>
     <InputProvider>
       <FocusProvider>
-        <App />
+        <HintsProvider>
+          <App />
+        </HintsProvider>
       </FocusProvider>
     </InputProvider>
   </StrictMode>,

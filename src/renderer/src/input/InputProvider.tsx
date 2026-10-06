@@ -13,7 +13,7 @@ import {
 import { GestureResolver } from './gestures'
 import { formatKeyCombo, isEditableElement, isModifierKey } from './keyboard'
 import { InputRouter } from './router'
-import type { CapturedControl, InputActionEvent } from './types'
+import type { CapturedControl, ControlChange, InputActionEvent } from './types'
 
 function readPads(): Gamepad[] {
   return Array.from(navigator.getGamepads()).filter(
@@ -38,6 +38,11 @@ export function InputProvider({ children }: { children: ReactNode }) {
   const padIdRef = useRef<string | undefined>(undefined)
   const captureRef = useRef<((control: CapturedControl) => void) | null>(null)
   const previousStatesRef = useRef<ControlStates>({})
+  const controlListenersRef = useRef(new Set<(change: ControlChange) => void>())
+
+  const emitControl = useCallback((change: ControlChange) => {
+    for (const listener of controlListenersRef.current) listener(change)
+  }, [])
 
   const rebuild = useCallback(() => {
     router.setMap(resolveActionMap(padIdRef.current, userBindingsRef.current))
@@ -103,6 +108,7 @@ export function InputProvider({ children }: { children: ReactNode }) {
 
       const events: InputActionEvent[] = []
       for (const change of changes) {
+        emitControl(change)
         if (captureRef.current && change.pressed) {
           const resolve = captureRef.current
           captureRef.current = null
@@ -118,12 +124,13 @@ export function InputProvider({ children }: { children: ReactNode }) {
     }
     frame = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(frame)
-  }, [router, gesture, rebuild])
+  }, [router, gesture, rebuild, emitControl])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.isComposing || isModifierKey(event.key)) return
       const combo = formatKeyCombo(event)
+      emitControl({ source: 'keyboard', control: combo, pressed: true, value: 1 })
 
       const capture = captureRef.current
       if (capture) {
@@ -140,9 +147,17 @@ export function InputProvider({ children }: { children: ReactNode }) {
         event.preventDefault()
       }
     }
+    const onKeyUp = (event: KeyboardEvent): void => {
+      if (isModifierKey(event.key)) return
+      emitControl({ source: 'keyboard', control: formatKeyCombo(event), pressed: false, value: 0 })
+    }
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [router])
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [router, emitControl])
 
   const api = useMemo<InputApi>(
     () => ({
@@ -153,6 +168,15 @@ export function InputProvider({ children }: { children: ReactNode }) {
         }),
       cancelCapture: () => {
         captureRef.current = null
+      },
+      getMap: () => router.getMap(),
+      subscribeMap: (listener) => router.subscribeMap(listener),
+      subscribeContexts: (listener) => router.subscribeContexts(listener),
+      subscribeControls: (listener) => {
+        controlListenersRef.current.add(listener)
+        return () => {
+          controlListenersRef.current.delete(listener)
+        }
       },
     }),
     [router],
