@@ -54,4 +54,18 @@ describe('settings store', () => {
     expect(updated.window.mode).toBe('fullscreen')
     expect(createSettingsStore(target).get().window.mode).toBe('fullscreen')
   })
+
+  it('persists the ui slice and can clear lastSession with null', () => {
+    const target = makeDir()
+    const store = createSettingsStore(target)
+    const ref = { engineId: 'fake', sessionId: 'ses_1' }
+
+    store.update({ ui: { lastSession: ref, zoom: 1.2 } })
+    expect(createSettingsStore(target).get().ui).toEqual({ lastSession: ref, zoom: 1.2 })
+
+    store.update({ ui: { lastSession: null } })
+    const reloaded = createSettingsStore(target).get().ui
+    expect(reloaded.lastSession).toBeNull()
+    expect(reloaded.zoom).toBe(1.2)
+  })
 })

@@ -1,0 +1,157 @@
+/* Rendered Markdown and code highlighting, all sourced from theme tokens. */
+
+.message-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 8rem;
+}
+
+.markdown {
+  font-size: var(--theme-font-size-base);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown p,
+.markdown ul,
+.markdown ol,
+.markdown blockquote,
+.markdown table {
+  margin: 0.6rem 0;
+}
+
+.markdown ul,
+.markdown ol {
+  padding-left: 1.4rem;
+}
+
+.markdown ul {
+  list-style: disc;
+}
+
+.markdown ol {
+  list-style: decimal;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 0.9rem 0 0.4rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.markdown h1 {
+  font-size: 1.5em;
+}
+
+.markdown h2 {
+  font-size: 1.3em;
+}
+
+.markdown h3 {
+  font-size: 1.15em;
+}
+
+.markdown blockquote {
+  border-left: 3px solid var(--theme-color-surface-raised);
+  padding-left: 0.8rem;
+  color: var(--theme-color-text-muted);
+}
+
+.markdown code {
+  font-family: var(--theme-font-mono);
+  font-size: var(--theme-font-size-code);
+}
+
+.markdown :not(pre) > code {
+  border-radius: 4px;
+  background-color: var(--theme-color-surface);
+  padding: 0.1em 0.35em;
+}
+
+.markdown pre {
+  max-width: 100%;
+  margin: 0.6rem 0;
+  overflow-x: auto;
+  border: 1px solid var(--theme-color-surface-raised);
+  border-radius: var(--theme-radius-card);
+  background-color: var(--theme-color-surface);
+  padding: 0.75rem 1rem;
+}
+
+.markdown pre code {
+  display: block;
+  white-space: pre;
+}
+
+.markdown table {
+  border-collapse: collapse;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid var(--theme-color-surface-raised);
+  padding: 0.35rem 0.6rem;
+}
+
+.markdown hr {
+  margin: 1rem 0;
+  border: 0;
+  border-top: 1px solid var(--theme-color-surface-raised);
+}
+
+/* Minimal highlight.js palette mapped onto semantic tokens. */
+.hljs-comment,
+.hljs-quote {
+  color: var(--theme-color-text-muted);
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-type {
+  color: var(--theme-color-accent);
+}
+
+.hljs-string,
+.hljs-attr,
+.hljs-addition,
+.hljs-regexp {
+  color: var(--theme-color-success);
+}
+
+.hljs-number,
+.hljs-symbol,
+.hljs-meta {
+  color: var(--theme-color-warning);
+}
+
+.hljs-title,
+.hljs-function,
+.hljs-built_in,
+.hljs-name {
+  color: var(--theme-color-text);
+  font-weight: 600;
+}
+
+.hljs-deletion {
+  color: var(--theme-color-danger);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 600;
+}

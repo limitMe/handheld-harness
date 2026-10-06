@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { app, BrowserWindow, screen } from 'electron'
 import { log } from './log'
-import { registerIpc } from './ipc'
+import { applySavedZoom, registerIpc } from './ipc'
 import { installPermissions } from './permissions'
 import { resolveProfile } from './profile'
 import { stopEngineRuntime } from './engine-runtime'
@@ -47,6 +47,7 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc()
     logStartupInfo()
     mainWindow = createMainWindow()
+    applySavedZoom(mainWindow)
     mainWindow.on('closed', () => {
       mainWindow = null
     })

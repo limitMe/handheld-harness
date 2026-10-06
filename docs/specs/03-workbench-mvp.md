@@ -197,4 +197,52 @@
 
 ## 实现记录
 
-（由实现 Agent 填写。）
+实现日期：2026-10-06（分支 `feat/workbench-mvp`）。
+
+### 依赖与构建
+
+- 新增运行时依赖（精确版本）：`zustand@5.0.15`、`react-markdown@10.1.0`、`remark-gfm@4.0.1`、`rehype-highlight@7.0.2`。
+- 代码高亮的配色没有引入 highlight.js 的主题，而是用语义 token 在 `src/renderer/src/styles/markdown.css` 里覆盖 `.hljs-*` 类，保证不出现硬编码颜色。
+
+### 状态管理
+
+- `src/renderer/src/state/` 放 zustand store：`applyEngineEvent.ts`（纯函数）、`types.ts`、`store.ts`。切片与 key 方案按 spec：`sessions` / `messages`(懒加载，带 `messagesLoaded` 门控) / `pendingPermissions` / `pendingQuestions` 都以 `engineId:sessionId` 为键；`engines` 按 engineId 保存 `status` 和 `capabilities`；`ui` 放当前会话和内存草稿。
+- 签名偏差：纯函数实现为 `applyEngineEvent(state, { engineId, event })`，因为事件载荷里带 `engineId`，队列里没有别的来源。语义与 spec 第 1 节一致，已单测覆盖 delta 拼接、part upsert、会话状态、权限出现/消失、未知会话容错、未加载会话丢弃消息事件、删除时清空当前会话。
+- 收到 `engine.status: ready` 时重新拉 `snapshot()` 并强制重载当前会话 `getMessages()`；首次初始化时按 `settings.ui.lastSession` 打开（会话必须仍存在），否则进入新任务。**不预先创建空会话**，第一条消息发送时才 `createSession()`。
+- 草稿只存内存，切换会话保留、重启丢失。
+
+### 设置与 IPC
+
+- settings 新增 `ui.lastSession`（`SessionRef | null`，`null` 表示"新任务"）和 `ui.zoom`（默认 1），已加进 zod schema、patch schema、默认值和深合并。
+- 新增 invoke 通道：`app:openExternal`（主进程用 `shell.openExternal`，白名单只放行 http/https，纯函数 `src/shared/url.ts` 已单测）、`window:setZoom`（`clampZoom` 到 0.8–2.0，调用 `webContents.setZoomFactor`，持久化到 `ui.zoom`，启动时用 `applySavedZoom` 恢复）。缩放快捷键在渲染进程监听（`Ctrl+=` / `Ctrl+-` / `Ctrl+0`）。
+- `src/main/zoom.ts` 抽出纯函数 `clampZoom` 以便单测。
+
+### 界面
+
+- 新增 `src/renderer/src/workbench/`：`CurrentWork`、`MessageList`（自动滚底 + "↓ Latest"）、`MessageItem`（脚注：模型、耗时、错误）、`Markdown`（react-markdown + remark-gfm + rehype-highlight，流式按 50 ms 节流重渲染）、`PartView`（tool/reasoning/file/other，工具调用可展开、最大高度 40vh）、`Composer`（原生 textarea、自增高、IME 组字不发送、busy 变 Stop、Esc 中止、切换会话自动聚焦）、`PermissionCard`（1/2/3 快捷键、按 `permissionAlways` 隐藏"始终允许"）、`QuestionCard`、`TaskSwitcher`（`Ctrl+K` 浮层，过滤 / ↑↓ / Enter / Esc，busy 与 ⚠ 标记）、`ErrorBanner`（down / reconnecting）。
+- 新增 `ui/ConfirmDialog`（Base UI AlertDialog 包装），用于 `Ctrl+Shift+Backspace` 的删除二次确认。`Ctrl+N` 进入新任务。任务切换器除了 `Ctrl+K` 之外，在 StatusBar 左侧加了一个触屏可点的 `Tasks` 按钮，这样验收 9（只用触屏切换任务）也能完成。
+- 所有可点击元素用 `min-h-11`（44px）满足触屏要求。
+- **UI 文案用英文**（New task / Send / Stop / Allow once 等），与 01 已有界面保持一致；spec 里的中文按钮名按语义实现。
+
+### Fake 引擎
+
+- `src/main/engine/fake/`：`adapter.ts`、`capabilities.ts`、`fixture.ts`、`scenarios.ts`。完整实现 `AgentEngine`，通过 02 的引擎契约测试（用 `expectText: 'DONE'`，因为默认回放的夹具结尾就是 DONE）。
+- 默认回放 `tests/fixtures/opencode/1.18.34/basic-tool-permission.jsonl`，事件经同一个 `normalize`。回放时会重映射会话 id（含 `info.id`），并跳过夹具里的 `session.updated` / `session.created`，避免录制时的标题覆盖用户当前会话；夹具里的用户消息也跳过，改用用户真实输入。
+- `/fake long`、`permission`、`question`、`error`、`many` 五种场景；`prompt` 立即返回，场景在后台推进，与 `promptAsync` 语义一致。
+- `HANDHELD_FAKE_CAPABILITIES`（如 `streamingDeltas=false,permissionAlways=false`）解析为能力覆盖；`streamingDeltas=false` 时不发 delta，文本一次性出现。`HANDHELD_ENGINE_MODE=fake` 时才注册，构建产物默认不启用。
+- `engine-runtime` 在 fake 模式下把夹具目录指向 `app.getAppPath()/tests/fixtures/...`；e2e 从仓库根运行，因此能读到夹具。
+
+### 测试
+
+- 单元测试新增：`apply-engine-event`、`composer`（IME）、`links`、`fake-engine`（契约 + 五个场景 + 能力解析/降级）、`zoom`；`settings` 增加 ui 持久化用例；`ipc-contract` 覆盖两个新通道。
+- e2e：`smoke.spec.ts` 改为 `HANDHELD_ENGINE_MODE=fake` 并断言标题为"New task"；新增 `workbench.spec.ts` 覆盖 spec 第 9 节的 5 个场景（回放、授权卡片、`Ctrl+N` + `Ctrl+K` 切回、`Ctrl+R` 重载、`permissionAlways=false` 隐藏按钮）。
+
+### 已自动验证
+
+- `npm run check` 通过（typecheck、lint 零 warning、17 个测试文件 85 个用例）。
+- `npm run build` 成功；`npm run test:e2e` 6 个用例全部通过。
+
+### 未完成 / 需要人工验证
+
+- 验收 2–13 需要在掌机上用真实引擎（`npm run dev`）逐一验证：流式对话与工具标签、授权/拒绝、Esc 中止、多任务并行、Win+H 语音、纯触屏、链接外开、断线横幅、`/fake long` 流式性能、字号重启保持。
+

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useEngineStatus } from '../engine/useEngineStatus'
+import { Button } from '../ui'
 
 interface BatteryState {
   level: number
@@ -86,9 +87,11 @@ function useBattery(): BatteryState | null {
 
 export interface StatusBarProps {
   title: string
+  /** Touch-accessible entry point for the temporary task switcher (spec 03 section 6). */
+  onOpenTasks?: () => void
 }
 
-export default function StatusBar({ title }: StatusBarProps) {
+export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
   const time = useClock()
   const online = useOnline()
   const battery = useBattery()
@@ -105,7 +108,13 @@ export default function StatusBar({ title }: StatusBarProps) {
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-surface-raised bg-surface px-4">
-      <div className="flex-1" />
+      <div className="flex flex-1 items-center justify-start">
+        {onOpenTasks ? (
+          <Button data-testid="open-tasks" className="min-h-11" onClick={onOpenTasks}>
+            Tasks
+          </Button>
+        ) : null}
+      </div>
       <h1
         data-testid="status-title"
         className="text-center text-xl font-semibold tracking-wide text-text"

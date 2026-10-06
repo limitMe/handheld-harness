@@ -12,6 +12,7 @@ test('smoke: starts the built app and renders the status bar', async () => {
       ...process.env,
       HANDHELD_PROFILE: 'e2e',
       HANDHELD_WINDOW: 'windowed',
+      HANDHELD_ENGINE_MODE: 'fake',
     },
   })
 
@@ -19,7 +20,7 @@ test('smoke: starts the built app and renders the status bar', async () => {
     const window = await app.firstWindow()
     await window.waitForLoadState('domcontentloaded')
 
-    await expect(window.getByTestId('status-title')).toHaveText('HANDHELD.AI')
+    await expect(window.getByTestId('status-title')).toHaveText('New task')
     await expect(window.getByTestId('status-time')).toHaveText(/^\d{2}:\d{2}$/)
 
     const security = await window.evaluate(() => {

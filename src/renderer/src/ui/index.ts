@@ -1,3 +1,4 @@
 export { Button, type ButtonProps } from './Button'
+export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog'
 export { Overlay, type OverlayProps } from './Overlay'
 export { cn } from './cn'

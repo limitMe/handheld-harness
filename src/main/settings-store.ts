@@ -12,6 +12,7 @@ function defaults(): Settings {
     schemaVersion: DEFAULT_SETTINGS.schemaVersion,
     window: { ...DEFAULT_SETTINGS.window },
     engine: { ...DEFAULT_SETTINGS.engine },
+    ui: { ...DEFAULT_SETTINGS.ui },
   }
 }
 
@@ -61,6 +62,7 @@ export function createSettingsStore(userDataDir: string): SettingsStore {
         ...patch,
         window: { ...current.window, ...patch.window },
         engine: { ...current.engine, ...patch.engine },
+        ui: { ...current.ui, ...patch.ui },
       })
       persist(next)
       current = next

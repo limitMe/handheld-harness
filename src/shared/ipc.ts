@@ -29,10 +29,29 @@ export const AppInfoSchema = z.object({
 })
 export type AppInfo = z.infer<typeof AppInfoSchema>
 
+export const SessionRefSchema = z.object({
+  engineId: z.string().min(1),
+  sessionId: z.string().min(1),
+})
+export type SessionRefInput = z.infer<typeof SessionRefSchema>
+
+export const ModelRefSchema = z.object({
+  providerId: z.string().min(1),
+  modelId: z.string().min(1),
+})
+export type ModelRefInput = z.infer<typeof ModelRefSchema>
+
 export const EngineSettingsSchema = z.object({
   workspaceDir: z.string().optional(),
 })
 export type EngineSettings = z.infer<typeof EngineSettingsSchema>
+
+export const UiSettingsSchema = z.object({
+  // Null means "new task"; a ref reopens the last task on the next launch.
+  lastSession: z.union([SessionRefSchema, z.null()]).optional(),
+  zoom: z.number().min(0.8).max(2).default(1),
+})
+export type UiSettings = z.infer<typeof UiSettingsSchema>
 
 export const SettingsSchema = z.object({
   schemaVersion: z.literal(1),
@@ -40,6 +59,7 @@ export const SettingsSchema = z.object({
     mode: WindowModeSchema,
   }),
   engine: EngineSettingsSchema.default({}),
+  ui: UiSettingsSchema.default({ zoom: 1 }),
 })
 export type Settings = z.infer<typeof SettingsSchema>
 
@@ -54,6 +74,12 @@ export const SettingsPatchSchema = z.object({
       workspaceDir: z.string().optional(),
     })
     .optional(),
+  ui: z
+    .object({
+      lastSession: z.union([SessionRefSchema, z.null()]).optional(),
+      zoom: z.number().optional(),
+    })
+    .optional(),
 })
 export type SettingsPatch = z.infer<typeof SettingsPatchSchema>
 
@@ -61,6 +87,7 @@ export const DEFAULT_SETTINGS: Settings = {
   schemaVersion: 1,
   window: { mode: 'windowed' },
   engine: {},
+  ui: { zoom: 1 },
 }
 
 export const LogWriteRequestSchema = z.object({
@@ -71,18 +98,6 @@ export const LogWriteRequestSchema = z.object({
 export type LogWriteRequest = z.infer<typeof LogWriteRequestSchema>
 
 // ----- engine IPC schemas -------------------------------------------------
-
-export const SessionRefSchema = z.object({
-  engineId: z.string().min(1),
-  sessionId: z.string().min(1),
-})
-export type SessionRefInput = z.infer<typeof SessionRefSchema>
-
-export const ModelRefSchema = z.object({
-  providerId: z.string().min(1),
-  modelId: z.string().min(1),
-})
-export type ModelRefInput = z.infer<typeof ModelRefSchema>
 
 export const PermissionReplySchema = z.enum(['once', 'always', 'reject'])
 export type PermissionReplyInput = z.infer<typeof PermissionReplySchema>
@@ -126,6 +141,8 @@ export interface EngineApi {
 
 export interface InvokeContract {
   'app:getInfo': { request: undefined; response: AppInfo }
+  'app:openExternal': { request: { url: string }; response: void }
+  'window:setZoom': { request: { factor: number }; response: { zoom: number } }
   'log:write': { request: LogWriteRequest; response: void }
   'settings:get': { request: undefined; response: Settings }
   'settings:update': { request: SettingsPatch; response: Settings }
@@ -169,6 +186,8 @@ export type EventChannel = keyof EventContract
 
 export const INVOKE_CHANNELS = [
   'app:getInfo',
+  'app:openExternal',
+  'window:setZoom',
   'log:write',
   'settings:get',
   'settings:update',
@@ -197,6 +216,8 @@ export const EVENT_CHANNELS = [
 
 export const IPC_INVOKE_SCHEMAS = {
   'app:getInfo': z.undefined(),
+  'app:openExternal': z.object({ url: z.string().min(1) }),
+  'window:setZoom': z.object({ factor: z.number() }),
   'log:write': LogWriteRequestSchema,
   'settings:get': z.undefined(),
   'settings:update': SettingsPatchSchema,
@@ -230,6 +251,10 @@ export const IPC_INVOKE_SCHEMAS = {
 export interface HandheldApi {
   app: {
     getInfo(): Promise<AppInfo>
+    openExternal(url: string): Promise<void>
+  }
+  window: {
+    setZoom(factor: number): Promise<{ zoom: number }>
   }
   log: {
     write(level: LogLevel, message: string, meta?: Record<string, unknown>): void

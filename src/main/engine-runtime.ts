@@ -2,7 +2,13 @@ import path from 'node:path'
 import { app, BrowserWindow } from 'electron'
 import type { Settings } from '../shared/ipc'
 import type { EngineEventPayload } from '../shared/engine'
-import { EngineManager, OpenCodeEngine, resolveEngineMode, resolveWorkspaceDir } from './engine'
+import {
+  EngineManager,
+  FakeEngine,
+  OpenCodeEngine,
+  resolveEngineMode,
+  resolveWorkspaceDir,
+} from './engine'
 import { readPinnedSdkVersion } from './engine/version'
 import { log } from './log'
 import { isDevMode } from './env'
@@ -46,9 +52,21 @@ export function startEngineRuntime(getSettings: () => Settings): void {
   })
 
   if (mode === 'fake') {
-    log.warn(
-      'HANDHELD_ENGINE_MODE=fake requested, but the fake engine ships with spec 03; no engine registered',
+    const fixtureDir = path.join(app.getAppPath(), 'tests', 'fixtures', 'opencode', '1.18.34')
+    manager.register(
+      new FakeEngine({
+        capabilities: process.env.HANDHELD_FAKE_CAPABILITIES,
+        fixturePath: path.join(fixtureDir, 'basic-tool-permission.jsonl'),
+        workspaceDir: workspace.dir,
+      }),
+      { default: true },
     )
+    log.info('engine runtime starting (fake)', {
+      capabilities: process.env.HANDHELD_FAKE_CAPABILITIES ?? 'default',
+    })
+    void manager
+      .startAll()
+      .catch((error: unknown) => log.error('fake engine failed', String(error)))
     return
   }
 
