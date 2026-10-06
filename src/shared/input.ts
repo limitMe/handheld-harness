@@ -50,6 +50,12 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       LB: 'input.listInput',
       RB: 'input.textEdit',
     },
+    'currentWork.listInput': {
+      DpadUp: 'nav.up',
+      DpadDown: 'nav.down',
+      A: 'nav.activate',
+      B: 'nav.deactivate',
+    },
     'currentWork.permission': {
       A: 'permission.once',
       X: 'permission.always',
@@ -103,6 +109,12 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       Delete: 'task.close',
       N: 'task.new',
       H: 'task.history',
+    },
+    'currentWork.listInput': {
+      ArrowUp: 'nav.up',
+      ArrowDown: 'nav.down',
+      Enter: 'nav.activate',
+      Escape: 'nav.deactivate',
     },
     taskSwitcher: {
       ArrowUp: 'nav.up',

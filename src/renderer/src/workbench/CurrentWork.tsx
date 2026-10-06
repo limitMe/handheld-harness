@@ -52,6 +52,8 @@ export function CurrentWork() {
         onAbort={() => void abortCurrent()}
         busy={busy}
         focusKey={key}
+        engineId={current?.engineId ?? defaultEngineId}
+        commandsAvailable={engineEntry?.capabilities?.commands ?? false}
       />
     </div>
   )

@@ -161,6 +161,11 @@ export interface AgentEngine {
   rejectQuestion(sessionId: string, requestId: string): Promise<void>
   listModels(): Promise<ModelGroup[]>
   listCommands(): Promise<CommandInfo[]>
+  /**
+   * Runs a command that cannot go through the normal prompt path (spec 12),
+   * e.g. `/compact`. `command` may be given with or without a leading slash.
+   */
+  runCommand(sessionId: string, command: string, args?: string): Promise<void>
   onEvent(listener: (e: EngineEvent) => void): () => void
 }
 

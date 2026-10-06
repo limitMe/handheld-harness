@@ -51,6 +51,7 @@ describe('IPC contract', () => {
     await api.engine.rejectQuestion(ref, 'req')
     await api.engine.listModels()
     await api.engine.listCommands()
+    await api.engine.runCommand(ref, 'compact')
     await api.engine.list()
     await api.engine.restart()
 

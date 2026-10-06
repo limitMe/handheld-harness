@@ -1,14 +1,34 @@
 import { create } from 'zustand'
 import type {
+  CommandInfo,
   EngineEventPayload,
   EngineSnapshot,
   PermissionReply,
   SessionRef,
 } from '@shared/engine'
+import { parseSlashCommand } from '../workbench/commands'
 import { applyEngineEvent } from './applyEngineEvent'
 import { initialWorkbenchState, sessionKey, type WorkbenchState } from './types'
 
 const NEW_TASK_KEY = 'new-task'
+
+/** Commands barely change, so one fetch per engine is enough for slash dispatch. */
+const commandCache = new Map<string, CommandInfo[]>()
+
+async function isKnownCommand(engineId: string, name: string): Promise<boolean> {
+  const bridge = window.handheld?.engine
+  if (!bridge) return false
+  let commands = commandCache.get(engineId)
+  if (!commands) {
+    try {
+      commands = await bridge.listCommands(engineId)
+      commandCache.set(engineId, commands)
+    } catch {
+      return false
+    }
+  }
+  return commands.some((command) => command.name === name)
+}
 
 export interface WorkbenchStore extends WorkbenchState {
   defaultEngineId?: string
@@ -133,6 +153,15 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     const draftKey = current ? sessionKey(current) : NEW_TASK_KEY
     const text = (state.ui.drafts[draftKey] ?? '').trim()
     if (!text) return
+
+    const command = parseSlashCommand(text)
+    // `/clear` starts a new session in the workbench, which is a UI concern.
+    if (command?.name === 'clear') {
+      set((next) => ({ ui: { ...next.ui, drafts: { ...next.ui.drafts, [draftKey]: '' } } }))
+      get().newTask()
+      return
+    }
+
     if (!current && engineId) {
       const summary = await bridge.createSession(undefined, engineId)
       current = { engineId, sessionId: summary.id }
@@ -143,6 +172,11 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
       set((next) => ({ ui: { ...next.ui, drafts: { ...next.ui.drafts, [draftKey]: '' } } }))
     }
     if (!current) return
+
+    if (command && (await isKnownCommand(current.engineId, command.name))) {
+      await bridge.runCommand(current, command.name, command.args)
+      return
+    }
     await bridge.prompt(current, { text })
   },
 

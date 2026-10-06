@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CommandInfo } from '@shared/engine'
 import {
   FOCUS_ORDER,
   useFocusTree,
@@ -8,6 +9,7 @@ import {
 } from '../focus'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { Button } from '../ui'
+import { ListInput } from './ListInput'
 import { isOnFirstLine, moveCaretHorizontal, moveCaretVertical } from './textEditing'
 
 export interface ComposerProps {
@@ -18,6 +20,10 @@ export interface ComposerProps {
   busy: boolean
   /** Changes whenever the input should regain focus (new task or session switch). */
   focusKey: string
+  /** Engine that owns the command list; defaults to the engine list's default. */
+  engineId?: string
+  /** List input is unavailable when the engine has no `commands` capability. */
+  commandsAvailable?: boolean
 }
 
 const COMPOSER_ID = 'composer'
@@ -26,15 +32,18 @@ const COMPOSER_ID = 'composer'
 function ComposerInputContext({
   onSend,
   onDeactivate,
+  onListInput,
 }: {
   onSend: () => void
   onDeactivate: () => void
+  onListInput?: () => void
 }) {
   useInputContext(
     'currentWork.input',
     {
       'input.send': onPress(() => onSend()),
       'input.deactivate': onPress(() => onDeactivate()),
+      ...(onListInput ? { 'input.listInput': onPress(() => onListInput()) } : {}),
     },
     CONTEXT_ORDER.activated,
   )
@@ -45,16 +54,27 @@ function setCaret(element: HTMLTextAreaElement, position: number): void {
   element.setSelectionRange(position, position)
 }
 
-export function Composer({ value, onChange, onSend, onAbort, busy, focusKey }: ComposerProps) {
+export function Composer({
+  value,
+  onChange,
+  onSend,
+  onAbort,
+  busy,
+  focusKey,
+  engineId,
+  commandsAvailable = false,
+}: ComposerProps) {
   const tree = useFocusTree()
   const textarea = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement | null>(null)
+  const [listOpen, setListOpen] = useState(false)
 
   const activate = useCallback(() => {
     textarea.current?.focus()
   }, [])
 
   const deactivate = useCallback(() => {
+    setListOpen(false)
     textarea.current?.blur()
     formRef.current?.focus()
   }, [])
@@ -112,8 +132,22 @@ export function Composer({ value, onChange, onSend, onAbort, busy, focusKey }: C
 
   const canSend = value.trim().length > 0
   const send = useCallback(() => {
-    if (!busy) onSend()
-  }, [busy, onSend])
+    if (!busy && !listOpen) onSend()
+  }, [busy, listOpen, onSend])
+
+  const insertCommand = useCallback(
+    (command: CommandInfo) => {
+      onChange(`/${command.name}`)
+      setListOpen(false)
+      window.requestAnimationFrame(() => textarea.current?.focus())
+    },
+    [onChange],
+  )
+
+  const closeListInput = useCallback(() => {
+    setListOpen(false)
+    window.requestAnimationFrame(() => textarea.current?.focus())
+  }, [])
 
   return (
     <form
@@ -160,7 +194,19 @@ export function Composer({ value, onChange, onSend, onAbort, busy, focusKey }: C
         </Button>
       )}
       {focus.activated ? (
-        <ComposerInputContext onSend={send} onDeactivate={() => tree?.deactivate()} />
+        <ComposerInputContext
+          onSend={send}
+          onDeactivate={() => tree?.deactivate()}
+          {...(commandsAvailable ? { onListInput: () => setListOpen(true) } : {})}
+        />
+      ) : null}
+      {focus.activated && listOpen ? (
+        <ListInput
+          anchor={formRef}
+          engineId={engineId}
+          onChoose={insertCommand}
+          onCancel={closeListInput}
+        />
       ) : null}
     </form>
   )

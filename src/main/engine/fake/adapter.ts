@@ -207,6 +207,13 @@ export class FakeEngine implements AgentEngine {
     ]
   }
 
+  async runCommand(sessionId: string, command: string, args?: string): Promise<void> {
+    if (!this.sessions.has(sessionId)) throw new Error(`Unknown fake session: ${sessionId}`)
+    const name = command.replace(/^\//, '')
+    this.pushUserMessage(sessionId, `/${name}${args ? ` ${args}` : ''}`)
+    this.pushAssistant(sessionId, `Fake ran /${name}`)
+  }
+
   // ----- scenarios -------------------------------------------------------
 
   private async runScenario(sessionId: string, text: string): Promise<void> {

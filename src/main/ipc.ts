@@ -137,6 +137,10 @@ function registerEngineIpc(): void {
     getEngineManager().get(request?.engineId).listCommands(),
   )
 
+  handle('engine:runCommand', ({ ref, command, args }) =>
+    getEngineManager().getByRef(ref).runCommand(ref.sessionId, command, args),
+  )
+
   handle('engine:list', () => getEngineManager().list())
 
   handle('engine:restart', (request) => getEngineManager().restart(request?.engineId))

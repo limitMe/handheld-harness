@@ -46,6 +46,7 @@ function stubEngine(id: string, kind: AgentEngine['kind'] = 'fake') {
     rejectQuestion: async () => undefined,
     listModels: async () => [],
     listCommands: async () => [],
+    runCommand: async () => undefined,
     onEvent: (listener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)

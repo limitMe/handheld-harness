@@ -171,6 +171,7 @@ export interface EngineApi {
   rejectQuestion(ref: SessionRef, requestId: string): Promise<void>
   listModels(engineId?: string): Promise<ModelGroup[]>
   listCommands(engineId?: string): Promise<CommandInfo[]>
+  runCommand(ref: SessionRef, command: string, args?: string): Promise<void>
   list(): Promise<EngineInfo[]>
   restart(engineId?: string): Promise<void>
   onEvent(listener: (payload: EngineEventPayload) => void): () => void
@@ -209,6 +210,10 @@ export interface InvokeContract {
   'engine:rejectQuestion': { request: { ref: SessionRef; requestId: string }; response: void }
   'engine:listModels': { request: { engineId?: string } | undefined; response: ModelGroup[] }
   'engine:listCommands': { request: { engineId?: string } | undefined; response: CommandInfo[] }
+  'engine:runCommand': {
+    request: { ref: SessionRef; command: string; args?: string }
+    response: void
+  }
   'engine:list': { request: undefined; response: EngineInfo[] }
   'engine:restart': { request: { engineId?: string } | undefined; response: void }
 }
@@ -242,6 +247,7 @@ export const INVOKE_CHANNELS = [
   'engine:rejectQuestion',
   'engine:listModels',
   'engine:listCommands',
+  'engine:runCommand',
   'engine:list',
   'engine:restart',
 ] as const satisfies readonly InvokeChannel[]
@@ -280,6 +286,11 @@ export const IPC_INVOKE_SCHEMAS = {
   'engine:rejectQuestion': z.object({ ref: SessionRefSchema, requestId: z.string() }),
   'engine:listModels': EngineIdParamSchema,
   'engine:listCommands': EngineIdParamSchema,
+  'engine:runCommand': z.object({
+    ref: SessionRefSchema,
+    command: z.string().min(1),
+    args: z.string().optional(),
+  }),
   'engine:list': z.undefined(),
   'engine:restart': EngineIdParamSchema,
 } satisfies Record<InvokeChannel, z.ZodType>

@@ -137,6 +137,15 @@ export async function runEngineContract(
       assert.deepEqual(updated?.model, model, 'SessionSummary.model should reflect setSessionModel')
     }
 
+    if (capabilities.commands) {
+      const commands = await reporter.run('listCommands', () => engine.listCommands())
+      assert.ok(Array.isArray(commands), 'listCommands() must return an array')
+      const command = commands.find((candidate) => candidate.name === 'compact') ?? commands[0]
+      if (command) {
+        await reporter.run('runCommand', () => engine.runCommand(session.id, command.name))
+      }
+    }
+
     // Abort is a no-op when the session is already idle, but it must still resolve.
     const abortSession = await reporter.run('abort:create', () =>
       engine.createSession({ title: 'contract-abort' }),

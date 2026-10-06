@@ -91,6 +91,41 @@ async function releasePad(window: Page, name: string): Promise<void> {
   await window.waitForTimeout(150)
 }
 
+test('picks /compact from list input and sends it with the gamepad', async () => {
+  const { app, window } = await launch('e2e-pad-list-input')
+  try {
+    // LB opens the command picker while the composer is activated.
+    await pressPad(window, 'LB')
+    await releasePad(window, 'LB')
+    await expect(window.getByTestId('list-input')).toBeVisible()
+
+    // Recent-use ordering is persisted, so step until /compact is highlighted.
+    for (let i = 0; i < 5; i += 1) {
+      const highlighted = window.locator('[data-testid="list-input-compact"][data-highlighted]')
+      if ((await highlighted.count()) > 0) break
+      await pressPad(window, 'DpadDown')
+      await releasePad(window, 'DpadDown')
+    }
+    await expect(
+      window.locator('[data-testid="list-input-compact"][data-highlighted]'),
+    ).toHaveCount(1)
+
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+
+    // Choosing inserts the command into the composer for the user to send.
+    await expect(window.getByTestId('composer')).toHaveValue('/compact')
+
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByTestId('message-list')).toContainText('Fake ran /compact', {
+      timeout: 30_000,
+    })
+  } finally {
+    await app.close()
+  }
+})
+
 test('A on the Tasks button opens the switcher and releasing A keeps it open', async () => {
   const { app, window } = await launch('e2e-pad-tasks')
   try {

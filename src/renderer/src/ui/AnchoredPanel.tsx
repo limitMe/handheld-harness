@@ -1,11 +1,11 @@
 import { Popover } from '@base-ui/react/popover'
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { cn } from './cn'
 
 export interface AnchoredPanelProps {
   open: boolean
-  /** Element the panel floats next to; nothing renders until it is known. */
-  anchor: Element | null
+  /** Element (or ref to one) the panel floats next to; nothing renders until known. */
+  anchor: Element | RefObject<Element | null> | null
   side?: 'top' | 'bottom' | 'left' | 'right'
   align?: 'start' | 'center' | 'end'
   sideOffset?: number

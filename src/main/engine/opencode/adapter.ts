@@ -655,6 +655,25 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     return [...serverCommands, ...BUILT_IN_COMMANDS.filter((command) => !names.has(command.name))]
   }
 
+  async runCommand(sessionId: string, command: string, args?: string): Promise<void> {
+    const client = this.requireClient()
+    const name = command.replace(/^\//, '')
+    try {
+      await client.session.command({
+        sessionID: sessionId,
+        command: name,
+        ...(args ? { arguments: args } : {}),
+      })
+    } catch (error) {
+      // `compact` also has a dedicated endpoint the command registry may omit.
+      if (name === 'compact') {
+        await client.session.summarize({ sessionID: sessionId })
+        return
+      }
+      throw error
+    }
+  }
+
   // ----- writes ----------------------------------------------------------
 
   async createSession(opts?: { title?: string; model?: ModelRef }): Promise<SessionSummary> {

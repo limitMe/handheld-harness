@@ -55,6 +55,7 @@ export function createHandheldApi(bridge: IpcBridge): HandheldApi {
       rejectQuestion: (ref, requestId) => invoke('engine:rejectQuestion', { ref, requestId }),
       listModels: (engineId) => invoke('engine:listModels', { engineId }),
       listCommands: (engineId) => invoke('engine:listCommands', { engineId }),
+      runCommand: (ref, command, args) => invoke('engine:runCommand', { ref, command, args }),
       list: () => invoke('engine:list'),
       restart: (engineId) => invoke('engine:restart', { engineId }),
       onEvent: (listener) =>
