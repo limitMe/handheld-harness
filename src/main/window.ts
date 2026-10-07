@@ -1,8 +1,13 @@
 import path from 'node:path'
 import { BrowserWindow } from 'electron'
+import appIconIco from '../../resources/icons/handheld-ai.ico?asset'
+import appIconPng from '../../resources/icons/icon-256.png?asset'
 import type { WindowMode } from '../shared/ipc'
 import { isDevMode } from './env'
 import { log } from './log'
+
+/** Windows picks the best size out of the multi-size `.ico`; other platforms get a PNG. */
+const APP_ICON = process.platform === 'win32' ? appIconIco : appIconPng
 
 export function resolveWindowMode(): WindowMode {
   const raw = process.env.HANDHELD_WINDOW?.trim()
@@ -13,6 +18,7 @@ export function resolveWindowMode(): WindowMode {
 export function createMainWindow(backgroundColor: string): BrowserWindow {
   const win = new BrowserWindow({
     show: false,
+    icon: APP_ICON,
     frame: false,
     autoHideMenuBar: true,
     backgroundColor,

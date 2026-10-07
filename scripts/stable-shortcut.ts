@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import {
+  APP_ICON_RELATIVE,
   SHORTCUT_NAME,
   STABLE_PROFILE,
   electronViteBin,
@@ -40,11 +41,21 @@ function writeLauncher(stableDir: string, repoRoot: string): string {
   return file
 }
 
+/**
+ * The app's own icon when the build carries it, otherwise the Electron binary, which is at
+ * least a recognisable placeholder. Returns a path to a `.ico` or executable.
+ */
+function resolveShortcutIcon(stableDir: string): string | null {
+  const candidates = [
+    path.join(stableDir, APP_ICON_RELATIVE),
+    path.join(stableDir, 'node_modules', 'electron', 'dist', 'electron.exe'),
+  ]
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null
+}
+
 function createShortcuts(stableDir: string, launcher: string): void {
-  const electronExe = path.join(stableDir, 'node_modules', 'electron', 'dist', 'electron.exe')
-  const iconLine = fs.existsSync(electronExe)
-    ? `  $link.IconLocation = ${psQuote(electronExe)} + ',0'`
-    : null
+  const icon = resolveShortcutIcon(stableDir)
+  const iconLine = icon ? `  $link.IconLocation = ${psQuote(icon)} + ',0'` : null
 
   const script = [
     "$ErrorActionPreference = 'Stop'",

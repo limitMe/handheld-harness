@@ -20,6 +20,7 @@
     "test": "vitest run",
     "test:e2e": "npm run build && playwright test",
     "clean": "node scripts/clean.mjs",
+    "icons": "node scripts/generate-icons.mjs",
     "engine:smoke": "tsx scripts/engine-smoke.ts",
     "engine:record": "tsx scripts/engine-record.ts",
     "server:status": "tsx scripts/server-status.ts",

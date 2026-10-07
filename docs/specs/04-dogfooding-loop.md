@@ -158,3 +158,12 @@ C:\dev\handheld-ai          (主仓库，分支 main)
 - **验收 2–6、8–10** 涉及 GUI、手柄、真实引擎与最终提交，需要用户在掌机上按 spec 步骤验证；本实现遵守自举规则，未启动 GUI。
 - 实现过程中创建了 `stable` 分支、`C:\Apps\handheld-harness-stable` worktree 以及两个快捷方式；用户可用 `git worktree remove` / 删除快捷方式撤销。
 
+### 后续变更：应用图标（2026-10-07）
+
+> 该节写于 04 交付之后，记录后加入的应用图标。上面"图标用 Electron 可执行文件"的描述据此作废。
+
+- 素材是 `resources/icons/source.png`：1024 正方形，深色面板上下留透明（Windows 自带的终端类图标就是这个风格），面板顶部那条灰带是刻意的命令行风格包边。`npm run icons`（`scripts/generate-icons.mjs`，纯 Node、无新依赖）按原样缩放出 16–512 的 PNG 与多尺寸 `handheld-ai.ico`；缩放用预乘 alpha 重采样，透明区不会在地块边缘渗出亮边。
+- 主窗口通过 `BrowserWindow.icon` 使用该图标：Windows 用 `.ico`（让系统自己挑尺寸），其他平台用 `icon-256.png`。
+- `stable:shortcut` 的 `IconLocation` 改成 `resources/icons/handheld-ai.ico`；该文件不存在时（例如稳定版还没更新到这一版）仍回退到 Electron 可执行文件。
+- 渲染进程没有引用图标：窗口无边框且默认全屏，没有 favicon 场景；界面上也没有品牌位。
+

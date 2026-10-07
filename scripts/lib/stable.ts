@@ -16,6 +16,8 @@ export const BUILD_TMP_DIR = '.stable-out-tmp'
 export const BUILD_BACKUP_DIR = 'out.stable-backup'
 
 export const STABLE_ENTRY_RELATIVE = path.join('out', 'main', 'index.js')
+/** Multi-size Windows icon used by the desktop and start-menu shortcuts. */
+export const APP_ICON_RELATIVE = path.join('resources', 'icons', 'handheld-ai.ico')
 export const ELECTRON_VITE_RELATIVE = path.join(
   'node_modules',
   'electron-vite',
