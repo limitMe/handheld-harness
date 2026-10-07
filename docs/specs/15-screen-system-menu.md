@@ -125,7 +125,9 @@ P-20：是否在应用里配置模型服务商凭据。分类 4（显示与提�
 
 - **锁定系统快捷键**：`global` 的 `menu.toggle`（Start）与 `map.toggle`（Back）在键位页显示为 `Locked`，不可捕获修改；`resolveActionMap` 与设置存储在合并 / 读取时用 `sanitizeUserBindings` 丢弃这些键位的用户覆盖，避免用户把自己锁在系统菜单外（本次也修复了用户已损坏的 `settings.input`）。
 - **捕获提示常驻顶部**：改键时的提示条改为 `sticky top-0`，编辑列表底部的键时不再滚出屏幕。
-- **显示与提示可编辑**：字号缩放与提示等待时间两行加 `autoActivate`，聚焦即进入可调模式、左右直接修改（原先需要先按 A）。
+- **隐藏方向绑定**：`nav.up/down/left/right`（含摇杆方向绑定）不再出现在键位页（`HIDDEN_BINDING_ACTIONS`），它们由焦点环隐含表达、不值得改键。
+- **取值类设置用可拖动条**：`ui/Slider` 增加指针 / 触摸拖动，`DisplayPage` 的 Text size、Stick scroll speed、Wait before showing 三行在标签下方放一条可拖动条，同时保留聚焦后用左右键微调。
+- **显示与提示可编辑**：取值行加 `autoActivate`，聚焦即进入可调模式（原先需要先按 A）。
 - **模型页显示当前选择**：页面顶部新增 `Current: <模型名 / Engine default (automatic)>`，目录加载完成后把焦点移到已保存的模型行，避免焦点停在 “Engine default” 造成“没生效”的误解。
-- **键位格式化**：模拟量的方向绑定显示为 `LStickX →` / `LStickX ←`。
+- **键位格式化**：模拟量的方向绑定显示为 `LStickX →` / `LStickX ←`；由于方向绑定已隐藏，这条只影响其它模拟量绑定。
 

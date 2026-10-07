@@ -153,7 +153,7 @@
 |---|---|---|
 | `schemaVersion`、`window.mode` | 版本号、窗口模式 | 01 |
 | `engine.workspaceDir` | 工作区目录 | 02 |
-| `ui.lastSession`（`SessionRef`）、`ui.zoom` | 上次打开的任务、字号缩放 | 03 |
+| `ui.lastSession`（`SessionRef`）、`ui.zoom`、`ui.scrollSpeed` | 上次打开的任务、字号缩放、摇杆滚动速度 | 03, 10 |
 | `input` | 用户键位配置（ActionMap 的用户层） | 10 |
 | `tasks.open`（`SessionRef[]`）、`tasks.unread`（`SessionRef[]`） | 任务地图里打开的任务（按创建时间）和显示红点的任务 | 14 |
 | `hints = { enabled, delayMs }` | 操作提示的开关和等待时间 | 12, 15 |
