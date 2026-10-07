@@ -2,8 +2,11 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { FocusTree } from '../../src/renderer/src/focus/tree'
 import {
+  ACCELERATE_AFTER_MS,
+  accelerationFor,
   createStickController,
   focusIntervalMs,
+  MAX_ACCELERATION,
   MAX_SCROLL_SPEED,
   MIN_SCROLL_SPEED,
   resolveScrollRegion,
@@ -24,6 +27,16 @@ describe('scrollPixelsPerSecond / focusIntervalMs', () => {
 
     expect(focusIntervalMs(1)).toBeGreaterThan(focusIntervalMs(2))
     expect(focusIntervalMs(0)).toBeGreaterThan(focusIntervalMs(1))
+  })
+})
+
+describe('accelerationFor', () => {
+  it('stays 1x for the first second then steps up, capped', () => {
+    expect(accelerationFor(0)).toBe(1)
+    expect(accelerationFor(ACCELERATE_AFTER_MS - 1)).toBe(1)
+    expect(accelerationFor(ACCELERATE_AFTER_MS)).toBe(2)
+    expect(accelerationFor(ACCELERATE_AFTER_MS * 2)).toBe(3)
+    expect(accelerationFor(ACCELERATE_AFTER_MS * 10)).toBe(MAX_ACCELERATION)
   })
 })
 
@@ -124,6 +137,37 @@ describe('createStickController', () => {
 
     advance(50)
     expect(region.scrollTop).toBeCloseTo(SCROLL_PIXELS_PER_SECOND * 0.05)
+
+    controller.dispose()
+  })
+
+  it('doubles the scroll rate after a second of holding the same direction', () => {
+    const { controller, region, tree, advance } = makeHarness(() => 1)
+    tree.setFocus('c')
+
+    controller.setValue(1)
+    advance(0)
+    advance(50)
+    const first = region.scrollTop
+    expect(first).toBeCloseTo(SCROLL_PIXELS_PER_SECOND * 0.05)
+
+    advance(950)
+    expect(region.scrollTop - first).toBeCloseTo(first * 2)
+
+    controller.dispose()
+  })
+
+  it('resets the acceleration when the direction changes', () => {
+    const { controller, tree, advance } = makeHarness(() => 1)
+    tree.setFocus('c')
+
+    controller.setValue(1)
+    advance(0)
+    advance(1000)
+
+    controller.setValue(-1)
+    advance(0)
+    expect(tree.getFocusedId()).toBe('b')
 
     controller.dispose()
   })

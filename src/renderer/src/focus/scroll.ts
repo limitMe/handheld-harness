@@ -11,6 +11,9 @@ import type { FocusTree } from './tree'
 export const SCROLL_PIXELS_PER_SECOND = 180
 /** Milliseconds between focus steps at speed 1.0. */
 export const BASE_FOCUS_INTERVAL_MS = 280
+/** A continuous hold accelerates after this long (spec 10). */
+export const ACCELERATE_AFTER_MS = 1000
+export const MAX_ACCELERATION = 3
 export const MIN_SCROLL_SPEED = 0.25
 export const MAX_SCROLL_SPEED = 2
 /** Upper bound on a frame's delta, so a long stall does not jump the list. */
@@ -24,8 +27,17 @@ export function scrollPixelsPerSecond(speed: number): number {
   return SCROLL_PIXELS_PER_SECOND * clampSpeed(speed)
 }
 
-export function focusIntervalMs(speed: number): number {
-  return BASE_FOCUS_INTERVAL_MS / clampSpeed(speed)
+export function focusIntervalMs(speed: number, acceleration = 1): number {
+  return BASE_FOCUS_INTERVAL_MS / (clampSpeed(speed) * acceleration)
+}
+
+/**
+ * Hold acceleration: 1x for the first second, then +1x each further second, up
+ * to `MAX_ACCELERATION`. Reversing direction restarts the hold.
+ */
+export function accelerationFor(heldMs: number): number {
+  if (heldMs < ACCELERATE_AFTER_MS) return 1
+  return Math.min(MAX_ACCELERATION, 1 + Math.floor(heldMs / ACCELERATE_AFTER_MS))
 }
 
 /**
@@ -77,6 +89,7 @@ export function createStickController(
   let sign = 0
   let frame: number | null = null
   let last = now()
+  let heldSince = now()
   let nextMoveAt = 0
   let atBoundary = false
 
@@ -85,15 +98,19 @@ export function createStickController(
     const dt = Math.min(MAX_FRAME_SECONDS, Math.max(0, (current - last) / 1000))
     last = current
     if (value !== 0) {
+      const speed = getSpeed()
+      const acceleration = accelerationFor(current - heldSince)
       const direction = value > 0 ? 'down' : 'up'
       if (current >= nextMoveAt) {
-        nextMoveAt = current + focusIntervalMs(getSpeed())
+        nextMoveAt = current + focusIntervalMs(speed, acceleration)
         atBoundary = !tree.move(direction)
       }
       if (atBoundary) {
         const focusedId = tree.getFocusedId()
         const region = resolveScrollRegion(focusedId ? tree.getElement(focusedId) : null)
-        if (region) scrollRegionBy(region, value * scrollPixelsPerSecond(getSpeed()) * dt)
+        if (region) {
+          scrollRegionBy(region, value * scrollPixelsPerSecond(speed) * acceleration * dt)
+        }
       }
     }
     frame = scheduler.request(tick)
@@ -126,6 +143,7 @@ export function createStickController(
         nextMoveAt = 0
         atBoundary = false
         sign = nextSign
+        heldSince = now()
       }
       value = next
       start()
