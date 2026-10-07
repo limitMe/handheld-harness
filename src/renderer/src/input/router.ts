@@ -39,6 +39,9 @@ export const GLOBAL_CONTEXT = 'global'
 export const CONTEXT_ORDER = {
   global: -200,
   focus: -100,
+  // Keyboard-only chrome (spec 10): opened from any screen but never consulted
+  // while a text field is active, and shadowed by overlays and dialogs.
+  chrome: -50,
   screen: 0,
   activated: 100,
   overlay: 150,

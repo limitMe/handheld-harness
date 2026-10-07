@@ -200,13 +200,20 @@ export const DEFAULT_BINDINGS: BindingLayer = {
     global: {
       'Ctrl+D': 'voice.dictate',
     },
+    // Keyboard chrome (spec 10). Esc / Tab open the two overlays from any
+    // screen; the context sits above the screen but below overlays, and is
+    // skipped while a text field is active, so Back inside dialogs and inputs
+    // still wins.
+    'global.chrome': {
+      Escape: 'menu.toggle',
+      Tab: 'map.toggle',
+    },
     currentWork: {
       ArrowUp: 'nav.up',
       ArrowDown: 'nav.down',
       ArrowLeft: 'nav.left',
       ArrowRight: 'nav.right',
       Enter: 'nav.activate',
-      Escape: 'nav.deactivate',
     },
     taskMap: {
       ArrowLeft: 'nav.left',
@@ -221,6 +228,14 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       ArrowUp: 'nav.up',
       ArrowDown: 'nav.down',
       Enter: 'nav.activate',
+      Escape: 'nav.deactivate',
+    },
+    // Permission / question cards keep Back: they are overlays, so their Esc
+    // must not fall through to the global menu/map shortcuts.
+    'currentWork.permission': {
+      Escape: 'nav.deactivate',
+    },
+    'currentWork.question': {
       Escape: 'nav.deactivate',
     },
     'taskMap.history': {

@@ -122,7 +122,7 @@ export const zh = {
     deviceKey: '键',
     keepHolding: '继续按住 Start 可取消…',
     holdToCancel: '按住 Start 2 秒可取消。',
-    lockedNotice: '系统菜单（Start）与任务地图（Back）已锁定，确保始终可以打开。',
+    lockedNotice: '手柄上系统菜单（Start）与任务地图（Back）已锁定，确保始终可以打开。',
     none: '该设备没有绑定。',
     locked: '已锁定',
     restoreDefault: '恢复默认键位',
@@ -342,6 +342,7 @@ export const zh = {
   },
   contexts: {
     global: '全局',
+    'global.chrome': '全局 · 快捷方式',
     dictation: '听写',
     currentWork: '当前工作',
     'currentWork.input': '当前工作 · 输入框',

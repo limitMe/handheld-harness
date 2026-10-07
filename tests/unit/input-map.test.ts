@@ -60,6 +60,17 @@ describe('action map layering', () => {
     expect(map.contexts['currentWork.input']?.X).toBe('input.deleteBackward')
   })
 
+  it('opens both overlays from the keyboard without shadowing dialogs', () => {
+    const map = resolveActionMap(undefined, emptyBindingLayer())
+    expect(map.keyboard['global.chrome']?.Escape).toBe('menu.toggle')
+    expect(map.keyboard['global.chrome']?.Tab).toBe('map.toggle')
+    // The screen no longer swallows Esc, so the chrome layer can open the menu.
+    expect(map.keyboard.currentWork?.Escape).toBeUndefined()
+    // Overlay cards keep Back so Esc still cancels them.
+    expect(map.keyboard['currentWork.permission']?.Escape).toBe('nav.deactivate')
+    expect(map.keyboard['currentWork.question']?.Escape).toBe('nav.deactivate')
+  })
+
   it('overlays a device preset matched by gamepad id', () => {
     const preset: DevicePreset = {
       name: 'Test pad',

@@ -11,6 +11,7 @@ export type MenuDevice = 'gamepad' | 'keyboard'
 /** Human-readable group names; unknown contexts fall back to their id. */
 export const CONTEXT_LABELS: Record<string, string> = {
   global: 'Global',
+  'global.chrome': 'Global · Shortcuts',
   dictation: 'Dictation',
   currentWork: 'Current work',
   'currentWork.input': 'Current work · Input',
@@ -28,6 +29,7 @@ export const CONTEXT_LABELS: Record<string, string> = {
 /** Preferred display order; contexts not listed are appended alphabetically. */
 const CONTEXT_ORDER = [
   'global',
+  'global.chrome',
   'dictation',
   'currentWork',
   'currentWork.input',

@@ -30,6 +30,9 @@ function Item({
 
 function Harness({ children }: { children: ReactNode }) {
   useInputContext('currentWork', {}, CONTEXT_ORDER.screen)
+  // Esc now belongs to the chrome layer above the screen; dialogs keep it for
+  // Back (spec 10), so the harness registers one to exercise cancel.
+  useInputContext('dialog', {}, CONTEXT_ORDER.modal)
   return (
     <FocusContainer id="harness" flow="column">
       {children}

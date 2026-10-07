@@ -123,7 +123,7 @@ export const en = {
     deviceKey: 'key',
     keepHolding: 'Keep holding Start to cancel…',
     holdToCancel: 'Hold Start for 2 seconds to cancel.',
-    lockedNotice: 'System menu (Start) and task map (Back) are locked so they always open.',
+    lockedNotice: 'On gamepad, the system menu (Start) and task map (Back) are locked so they always open.',
     none: 'No bindings for this device.',
     locked: 'Locked',
     restoreDefault: 'Restore default bindings',
@@ -347,6 +347,7 @@ export const en = {
   },
   contexts: {
     global: 'Global',
+    'global.chrome': 'Global · Shortcuts',
     dictation: 'Dictation',
     currentWork: 'Current work',
     'currentWork.input': 'Current work · Input',

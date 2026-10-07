@@ -67,6 +67,10 @@ export default function App() {
     CONTEXT_ORDER.global,
   )
 
+  // Keyboard chrome (spec 10): Esc / Tab open the overlays from any screen. The
+  // context is skipped while a text field is active, so typing never triggers it.
+  useInputContext('global.chrome', useMemo(() => ({}), []), CONTEXT_ORDER.chrome)
+
   useEffect(() => {
     void initialize()
   }, [initialize])

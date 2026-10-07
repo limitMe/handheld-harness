@@ -37,6 +37,8 @@ describe('binding helpers', () => {
     const keyboardContexts = listContexts(map, 'keyboard')
     expect(keyboardContexts[0]).toBe('global')
     expect(keyboardContexts).toContain('currentWork')
+    // Esc / Tab live in their own keyboard chrome group above the screens.
+    expect(keyboardContexts).toContain('global.chrome')
   })
 
   it('lists bindings sorted by the canonical action order', () => {
