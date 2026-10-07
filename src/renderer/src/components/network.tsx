@@ -78,11 +78,11 @@ export function useNetworkStatus(): NetworkStatus {
   return status
 }
 
-/** Wi-Fi arcs, outermost first (the strongest bar). */
+/** Wi-Fi arcs, outermost first (the strongest bar). Sized to fill the 24 box. */
 const WIFI_ARCS = [
-  { r: 8, width: 2.6 },
-  { r: 5.5, width: 2.6 },
-  { r: 3, width: 2.6 },
+  { r: 12.5, width: 2.8 },
+  { r: 8.5, width: 2.8 },
+  { r: 5, width: 2.8 },
 ]
 
 function polar(cx: number, cy: number, r: number, degrees: number): { x: number; y: number } {
@@ -104,7 +104,7 @@ function WifiGlyph({ level, offline }: { level: NetworkLevel; offline: boolean }
         return (
           <path
             key={arc.r}
-            d={wifiArc(12, 20, arc.r)}
+            d={wifiArc(12, 21, arc.r)}
             strokeWidth={arc.width}
             strokeLinecap="round"
             className={cn('stroke-current', lit ? '' : 'opacity-30')}
@@ -113,12 +113,12 @@ function WifiGlyph({ level, offline }: { level: NetworkLevel; offline: boolean }
       })}
       <circle
         cx={12}
-        cy={20}
-        r={1.5}
+        cy={21}
+        r={1.9}
         className={cn('fill-current', !offline && level >= 1 ? '' : 'opacity-30')}
       />
       {offline ? (
-        <path d="M4 4 L20 20" strokeWidth={2.2} strokeLinecap="round" className="stroke-current" />
+        <path d="M2.5 3 L21.5 22" strokeWidth={2.4} strokeLinecap="round" className="stroke-current" />
       ) : null}
     </>
   )
@@ -175,7 +175,7 @@ function EthernetGlyph(): ReactElement {
 /** Status-bar network glyph (spec 12): offline, Wi-Fi bars, cellular or wired. */
 export function NetworkIcon({
   status,
-  size = 20,
+  size = 24,
 }: {
   status: NetworkStatus
   size?: number
