@@ -100,7 +100,7 @@ describe('createScrollController', () => {
 
     controller.setValue(1)
     advance(50)
-    // 50 ms at 220 px/s.
+    // 50 ms at the base pixels-per-second.
     expect(region.scrollTop).toBeCloseTo(SCROLL_PIXELS_PER_SECOND * 0.05)
 
     advance(50)

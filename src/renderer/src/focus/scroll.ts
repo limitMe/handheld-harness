@@ -6,7 +6,7 @@
 import type { FocusTree } from './tree'
 
 /** Pixels per second at speed 1.0. */
-export const SCROLL_PIXELS_PER_SECOND = 220
+export const SCROLL_PIXELS_PER_SECOND = 180
 export const MIN_SCROLL_SPEED = 0.25
 export const MAX_SCROLL_SPEED = 2
 /** Upper bound on a frame's delta, so a long stall does not jump the list. */
