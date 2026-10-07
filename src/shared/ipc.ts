@@ -56,6 +56,15 @@ export const UiSettingsSchema = z.object({
 })
 export type UiSettings = z.infer<typeof UiSettingsSchema>
 
+/**
+ * Model defaults (spec 15). New tasks use `model.default`; existing tasks keep
+ * their own model (P-01). Null/absent means "let the engine decide".
+ */
+export const ModelSettingsSchema = z.object({
+  default: z.union([ModelRefSchema, z.null()]).optional(),
+})
+export type ModelSettings = z.infer<typeof ModelSettingsSchema>
+
 /** Action hints share one wait time everywhere and can be turned off entirely (spec 12, P-09). */
 export const HintsSettingsSchema = z.object({
   enabled: z.boolean().default(true),
@@ -88,7 +97,11 @@ export type { BindingLayer, BindingValue }
 export const BindingPatchSchema = z.object({
   contexts: BindingRowsSchema.optional(),
   keyboard: BindingRowsSchema.optional(),
+  /** Contexts whose whole user override is dropped, falling back to the defaults (spec 15). */
+  resetContexts: z.array(z.string()).optional(),
+  resetKeyboard: z.array(z.string()).optional(),
 })
+export type BindingPatch = z.infer<typeof BindingPatchSchema>
 
 export const SettingsSchema = z.object({
   schemaVersion: z.literal(1),
@@ -99,6 +112,7 @@ export const SettingsSchema = z.object({
   ui: UiSettingsSchema.default({ zoom: 1 }),
   hints: HintsSettingsSchema.default({ ...DEFAULT_HINTS }),
   tasks: TasksSettingsSchema.default({ open: [], unread: [] }),
+  model: ModelSettingsSchema.default({}),
   input: BindingLayerSchema.default({ contexts: {}, keyboard: {} }),
 })
 export type Settings = z.infer<typeof SettingsSchema>
@@ -132,6 +146,11 @@ export const SettingsPatchSchema = z.object({
       unread: z.array(SessionRefSchema).optional(),
     })
     .optional(),
+  model: z
+    .object({
+      default: z.union([ModelRefSchema, z.null()]).optional(),
+    })
+    .optional(),
   input: BindingPatchSchema.optional(),
 })
 export type SettingsPatch = z.infer<typeof SettingsPatchSchema>
@@ -143,6 +162,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ui: { zoom: 1 },
   hints: { ...DEFAULT_HINTS },
   tasks: { open: [], unread: [] },
+  model: {},
   input: { contexts: {}, keyboard: {} },
 }
 
@@ -199,6 +219,7 @@ export interface EngineApi {
 export interface InvokeContract {
   'app:getInfo': { request: undefined; response: AppInfo }
   'app:openExternal': { request: { url: string }; response: void }
+  'app:openLogDir': { request: undefined; response: void }
   'window:setZoom': { request: { factor: number }; response: { zoom: number } }
   'log:write': { request: LogWriteRequest; response: void }
   'settings:get': { request: undefined; response: Settings }
@@ -248,6 +269,7 @@ export type EventChannel = keyof EventContract
 export const INVOKE_CHANNELS = [
   'app:getInfo',
   'app:openExternal',
+  'app:openLogDir',
   'window:setZoom',
   'log:write',
   'settings:get',
@@ -279,6 +301,7 @@ export const EVENT_CHANNELS = [
 export const IPC_INVOKE_SCHEMAS = {
   'app:getInfo': z.undefined(),
   'app:openExternal': z.object({ url: z.string().min(1) }),
+  'app:openLogDir': z.undefined(),
   'window:setZoom': z.object({ factor: z.number() }),
   'log:write': LogWriteRequestSchema,
   'settings:get': z.undefined(),
@@ -319,6 +342,7 @@ export interface HandheldApi {
   app: {
     getInfo(): Promise<AppInfo>
     openExternal(url: string): Promise<void>
+    openLogDir(): Promise<void>
   }
   window: {
     setZoom(factor: number): Promise<{ zoom: number }>

@@ -84,6 +84,21 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       X: 'sentence.delete',
       'Y:hold': 'voice.dictate',
     },
+    systemMenu: {
+      DpadUp: 'nav.up',
+      DpadDown: 'nav.down',
+      DpadLeft: 'nav.left',
+      DpadRight: 'nav.right',
+      A: 'nav.activate',
+      B: 'nav.deactivate',
+      Start: 'menu.toggle',
+    },
+    'systemMenu.picker': {
+      DpadUp: 'nav.up',
+      DpadDown: 'nav.down',
+      A: 'nav.activate',
+      B: 'nav.deactivate',
+    },
   },
   keyboard: {
     currentWork: {
@@ -113,6 +128,20 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       ArrowLeft: 'nav.left',
       ArrowRight: 'nav.right',
       X: 'sentence.delete',
+    },
+    systemMenu: {
+      ArrowUp: 'nav.up',
+      ArrowDown: 'nav.down',
+      ArrowLeft: 'nav.left',
+      ArrowRight: 'nav.right',
+      Enter: 'nav.activate',
+      Escape: 'nav.deactivate',
+    },
+    'systemMenu.picker': {
+      ArrowUp: 'nav.up',
+      ArrowDown: 'nav.down',
+      Enter: 'nav.activate',
+      Escape: 'nav.deactivate',
     },
   },
 }

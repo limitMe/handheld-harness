@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, shell, type IpcMainInvokeEvent } from 'electron'
+import path from 'node:path'
 import {
   EVENT_CHANNELS,
   IPC_INVOKE_SCHEMAS,
@@ -59,6 +60,12 @@ export function registerIpc(): void {
       throw new Error('Only http and https links can be opened')
     }
     await shell.openExternal(url)
+  })
+
+  // Opens the profile's log folder (spec 15, About & diagnostics).
+  handle('app:openLogDir', async () => {
+    const dir = path.join(app.getPath('userData'), 'logs')
+    await shell.openPath(dir)
   })
 
   handle('window:setZoom', ({ factor }, event) => {

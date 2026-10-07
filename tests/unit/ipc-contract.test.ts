@@ -32,6 +32,7 @@ describe('IPC contract', () => {
 
     await api.app.getInfo()
     await api.app.openExternal('https://example.com')
+    await api.app.openLogDir()
     await api.window.setZoom(1)
     await api.settings.get()
     await api.settings.update({})

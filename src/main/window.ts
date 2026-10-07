@@ -53,6 +53,23 @@ export function createMainWindow(): BrowserWindow {
   win.once('ready-to-show', () => win.show())
   win.webContents.on('did-finish-load', () => log.info('renderer loaded', { url: win.webContents.getURL() }))
 
+  // Renderer diagnostics: a blank window otherwise leaves no trace (spec 01).
+  win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    log.error('renderer failed to load', { errorCode, errorDescription, validatedURL })
+  })
+  win.webContents.on('render-process-gone', (_event, details) => {
+    log.error('renderer process gone', details)
+  })
+  win.webContents.on('unresponsive', () => log.warn('renderer unresponsive'))
+  win.webContents.on('responsive', () => log.info('renderer responsive'))
+  win.webContents.on('console-message', (details) => {
+    if (details.level !== 'warning' && details.level !== 'error') return
+    log[details.level === 'error' ? 'error' : 'warn'](`renderer console: ${details.message}`, {
+      source: details.sourceId,
+      line: details.lineNumber,
+    })
+  })
+
   if (resolveWindowMode() === 'fullscreen') {
     win.setFullScreen(true)
   } else {

@@ -109,4 +109,37 @@ describe('settings store', () => {
       B: 'input.send',
     })
   })
+
+  it('drops a whole context override when reset is requested', () => {
+    const target = makeDir()
+    const store = createSettingsStore(target)
+
+    store.update({
+      input: {
+        contexts: { currentWork: { A: 'input.send' }, taskMap: { Y: 'task.new' } },
+        keyboard: { textEdit: { X: 'sentence.delete' } },
+      },
+    })
+    store.update({ input: { resetContexts: ['currentWork'] } })
+    expect(store.get().input.contexts).toEqual({ taskMap: { Y: 'task.new' } })
+    expect(createSettingsStore(target).get().input.contexts).toEqual({
+      taskMap: { Y: 'task.new' },
+    })
+
+    store.update({ input: { resetKeyboard: ['textEdit'] } })
+    expect(store.get().input.keyboard).toEqual({})
+  })
+
+  it('persists the default model and clears it with null', () => {
+    const target = makeDir()
+    const store = createSettingsStore(target)
+    const model = { providerId: 'opencode', modelId: 'gpt-5' }
+
+    store.update({ model: { default: model } })
+    expect(store.get().model).toEqual({ default: model })
+    expect(createSettingsStore(target).get().model).toEqual({ default: model })
+
+    store.update({ model: { default: null } })
+    expect(store.get().model).toEqual({ default: null })
+  })
 })

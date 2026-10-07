@@ -16,6 +16,7 @@ import { InputRouter } from './router'
 import type { CapturedControl, ControlChange, InputActionEvent } from './types'
 
 function readPads(): Gamepad[] {
+  if (typeof navigator.getGamepads !== 'function') return []
   return Array.from(navigator.getGamepads()).filter(
     (pad): pad is Gamepad => pad !== null && pad.connected,
   )

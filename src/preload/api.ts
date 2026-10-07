@@ -25,6 +25,7 @@ export function createHandheldApi(bridge: IpcBridge): HandheldApi {
     app: {
       getInfo: () => invoke('app:getInfo'),
       openExternal: (url) => invoke('app:openExternal', { url }),
+      openLogDir: () => invoke('app:openLogDir'),
     },
     window: {
       setZoom: (factor) => invoke('window:setZoom', { factor }),

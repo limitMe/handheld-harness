@@ -3,6 +3,7 @@ import type {
   CommandInfo,
   EngineEventPayload,
   EngineSnapshot,
+  ModelRef,
   PermissionReply,
   SessionRef,
 } from '@shared/engine'
@@ -42,6 +43,8 @@ async function isKnownCommand(engineId: string, name: string): Promise<boolean> 
 
 export interface WorkbenchStore extends WorkbenchState {
   defaultEngineId?: string
+  /** Model new tasks are created with (spec 15, `settings.model.default`). */
+  defaultModel?: ModelRef
   initialized: boolean
   initialize(): Promise<void>
   handleEngineEvent(payload: EngineEventPayload): void
@@ -145,8 +148,12 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     if (!bridge || get().initialized) return
     set({ initialized: true })
     bridge.onEvent((payload) => get().handleEngineEvent(payload))
+    window.handheld.events.on('settings:changed', (next) => {
+      set({ defaultModel: next.model.default ?? undefined })
+    })
     const [engines, settings] = await Promise.all([bridge.list(), window.handheld.settings.get()])
     set((state) => ({
+      defaultModel: settings.model.default ?? undefined,
       tasks: {
         ...state.tasks,
         open: settings.tasks.open,
@@ -270,7 +277,8 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     }
 
     if (!current && engineId) {
-      const summary = await bridge.createSession(undefined, engineId)
+      const model = get().defaultModel
+      const summary = await bridge.createSession(model ? { model } : undefined, engineId)
       const created: SessionRef = { engineId, sessionId: summary.id }
       current = created
       set((next) => ({

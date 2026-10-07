@@ -21,7 +21,7 @@
 | 12 | [共享组件：状态栏、操作提示、列表输入、对话框](12-shared-components.md) | B | 已实现（自动化通过，待掌机实测） |
 | 13 | [界面：当前工作](13-screen-current-work.md) | B | 已实现（与 16/17 相关的听写、文本编辑仍待接入；待掌机实测） |
 | 14 | [界面：任务地图](14-screen-task-map.md) | B | 已实现（自动化通过，待掌机实测；临时任务切换器已退役） |
-| 15 | [界面：系统菜单](15-screen-system-menu.md) | B | 草案 |
+| 15 | [界面：系统菜单](15-screen-system-menu.md) | B | 已实现（自动化通过，待掌机实测） |
 | 16 | [语音输入协议与实现](16-voice-input.md) | B | 草案 |
 | 17 | [界面：文本编辑](17-screen-text-edit.md) | B | 草案 |
 | 18 | [动效与视觉系统](18-motion-and-visual.md) | B | 草案 |

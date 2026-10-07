@@ -11,6 +11,7 @@ import { sessionKey } from './state/types'
 import { showToast } from './ui'
 import { CurrentWork } from './workbench/CurrentWork'
 import { TaskMap } from './workbench/TaskMap'
+import { SystemMenu } from './system/SystemMenu'
 
 export default function App() {
   const [gamepadOpen, setGamepadOpen] = useState(false)
@@ -18,6 +19,7 @@ export default function App() {
   const [engineOpen, setEngineOpen] = useState(false)
   const [focusDebugOpen, setFocusDebugOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const initialize = useWorkbenchStore((state) => state.initialize)
   const sessions = useWorkbenchStore((state) => state.sessions)
@@ -31,14 +33,24 @@ export default function App() {
     CONTEXT_ORDER.screen,
   )
 
-  // Global chrome: the Back button toggles the task map (spec 14); Start is
-  // reserved for the system menu (15).
+  // Global chrome: Back toggles the task map (spec 14), Start the system menu
+  // (spec 15). The two overlays are mutually exclusive.
   useInputContext(
     'global',
     useMemo(
       () => ({
-        'map.toggle': onPress(() => setMapOpen((open) => !open)),
-        'menu.toggle': onPress(() => undefined),
+        'map.toggle': onPress(() =>
+          setMapOpen((open) => {
+            if (!open) setMenuOpen(false)
+            return !open
+          }),
+        ),
+        'menu.toggle': onPress(() =>
+          setMenuOpen((open) => {
+            if (!open) setMapOpen(false)
+            return !open
+          }),
+        ),
       }),
       [],
     ),
@@ -60,11 +72,13 @@ export default function App() {
     previousEngineState.current = state
   }, [engineStatus])
 
-  const title = mapOpen
-    ? 'Task map'
-    : current
-      ? (sessions[sessionKey(current)]?.title ?? 'Task')
-      : 'New task'
+  const title = menuOpen
+    ? 'System menu'
+    : mapOpen
+      ? 'Task map'
+      : current
+        ? (sessions[sessionKey(current)]?.title ?? 'Task')
+        : 'New task'
 
   const adjustZoom = useCallback(async (direction: -1 | 0 | 1): Promise<void> => {
     const settings = await window.handheld.settings.get()
@@ -110,8 +124,18 @@ export default function App() {
     <div className="flex h-full flex-col bg-surface text-text">
       <StatusBar title={title} onOpenTasks={() => setMapOpen(true)} />
       <div className="relative flex flex-1 overflow-hidden">
-        <CurrentWork dimmed={mapOpen} />
+        <CurrentWork dimmed={mapOpen || menuOpen} />
         <TaskMap open={mapOpen} onClose={() => setMapOpen(false)} />
+        <SystemMenu
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          onOpenDebug={(page) => {
+            setMenuOpen(false)
+            if (page === 'gamepad') setGamepadOpen(true)
+            else if (page === 'mic') setMicOpen(true)
+            else setEngineOpen(true)
+          }}
+        />
       </div>
       <GamepadDebug open={gamepadOpen} onOpenChange={setGamepadOpen} />
       <MicDebug open={micOpen} onOpenChange={setMicOpen} />

@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { DEFAULT_SETTINGS, SettingsSchema, type Settings, type SettingsPatch } from '../shared/ipc'
+import { DEFAULT_SETTINGS, SettingsSchema, type Settings, type SettingsPatch, type BindingPatch } from '../shared/ipc'
 import type { BindingLayer, BindingValue } from '../shared/input'
 
 export interface SettingsStore {
@@ -16,6 +16,7 @@ function defaults(): Settings {
     ui: { ...DEFAULT_SETTINGS.ui },
     hints: { ...DEFAULT_SETTINGS.hints },
     tasks: { open: [], unread: [] },
+    model: {},
     input: { contexts: {}, keyboard: {} },
   }
 }
@@ -23,8 +24,10 @@ function defaults(): Settings {
 function mergeRows(
   base: Record<string, Record<string, BindingValue>>,
   patch: Record<string, Record<string, BindingValue>>,
+  reset: string[] | undefined,
 ): Record<string, Record<string, BindingValue>> {
   const out = { ...base }
+  for (const context of reset ?? []) delete out[context]
   for (const [context, rows] of Object.entries(patch)) {
     out[context] = { ...(out[context] ?? {}), ...rows }
   }
@@ -33,12 +36,12 @@ function mergeRows(
 
 function mergeBindingLayers(
   base: BindingLayer,
-  patch: Partial<BindingLayer> | undefined,
+  patch: BindingPatch | undefined,
 ): BindingLayer {
   if (!patch) return base
   return {
-    contexts: mergeRows(base.contexts, patch.contexts ?? {}),
-    keyboard: mergeRows(base.keyboard, patch.keyboard ?? {}),
+    contexts: mergeRows(base.contexts, patch.contexts ?? {}, patch.resetContexts),
+    keyboard: mergeRows(base.keyboard, patch.keyboard ?? {}, patch.resetKeyboard),
   }
 }
 
@@ -94,6 +97,7 @@ export function createSettingsStore(userDataDir: string): SettingsStore {
           open: patch.tasks?.open ?? current.tasks.open,
           unread: patch.tasks?.unread ?? current.tasks.unread,
         },
+        model: { ...current.model, ...patch.model },
         input: mergeBindingLayers(current.input, patch.input),
       })
       persist(next)

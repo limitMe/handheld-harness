@@ -46,6 +46,14 @@ type PadScope = {
   __setPad: (name: string, pressed: boolean) => void
 }
 
+type SettingsScope = {
+  handheld: {
+    settings: {
+      get(): Promise<{ input: { contexts: Record<string, Record<string, string | null>> } }>
+    }
+  }
+}
+
 async function installFakePad(window: Page): Promise<void> {
   await window.evaluate((buttonNames) => {
     const scope = globalThis as unknown as PadScope
@@ -155,6 +163,82 @@ test('A on the Tasks button opens the task map and releasing A keeps it open', a
     const card = window.getByTestId('task-card').first()
     await expect(card).toHaveAttribute('data-focused', '')
     await expect(card).toHaveAttribute('data-activated', '')
+  } finally {
+    await app.close()
+  }
+})
+
+test('rebinds Send from A to X in the system menu', async () => {
+  const { app, window } = await launch('e2e-pad-system-menu')
+  try {
+    const composer = window.getByTestId('composer')
+    await composer.fill('hello')
+    await composer.press('Enter')
+    await expect(window.getByTestId('message-list')).toContainText('DONE', { timeout: 30_000 })
+
+    // Start opens the system menu; the first category is focused.
+    await pressPad(window, 'Start')
+    await releasePad(window, 'Start')
+    await expect(window.getByTestId('system-menu')).toBeVisible()
+    await expect(window.getByTestId('menu-category-keys')).toHaveAttribute('data-focused', '')
+
+    // A enters the settings column, focusing the gamepad tab.
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByTestId('keys-device-gamepad')).toHaveAttribute('data-focused', '')
+
+    // Walk down to the "Send" binding row.
+    for (let i = 0; i < 24; i += 1) {
+      if (
+        (await window
+          .locator('[data-testid="binding-currentWork.input-input.send"][data-focused]')
+          .count()) > 0
+      ) {
+        break
+      }
+      await pressPad(window, 'DpadDown')
+      await releasePad(window, 'DpadDown')
+    }
+    await expect(
+      window.locator('[data-testid="binding-currentWork.input-input.send"]'),
+    ).toHaveAttribute('data-focused', '')
+
+    // A starts capture; X becomes the new key.
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByTestId('capture-banner')).toBeVisible()
+    await pressPad(window, 'X')
+    await releasePad(window, 'X')
+    await expect(window.getByTestId('capture-banner')).toHaveCount(0)
+    await expect(window.getByTestId('binding-key-currentWork.input-input.send')).toHaveText('X')
+
+    // The override is persisted to settings (spec 15 acceptance).
+    const override = await window.evaluate(() =>
+      (globalThis as unknown as SettingsScope).handheld.settings.get(),
+    )
+    expect(override.input.contexts['currentWork.input']?.X).toBe('input.send')
+    expect(override.input.contexts['currentWork.input']?.A).toBeNull()
+
+    // Restore the default so the profile stays clean for later runs.
+    for (let i = 0; i < 6; i += 1) {
+      if (
+        (await window
+          .locator('[data-testid="binding-reset-currentWork.input"][data-focused]')
+          .count()) > 0
+      ) {
+        break
+      }
+      await pressPad(window, 'DpadDown')
+      await releasePad(window, 'DpadDown')
+    }
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    const restored = await window.evaluate(() =>
+      (globalThis as unknown as SettingsScope).handheld.settings.get(),
+    )
+    expect(restored.input.contexts['currentWork.input']).toBeUndefined()
   } finally {
     await app.close()
   }
