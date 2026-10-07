@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CommandInfo } from '@shared/engine'
+import { dictation, type DictationTarget } from '../dictation'
 import {
   FOCUS_ORDER,
   useFocusTree,
@@ -76,6 +77,10 @@ export function Composer({
   const textarea = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement | null>(null)
   const [listOpen, setListOpen] = useState(false)
+  const valueRef = useRef(value)
+  useEffect(() => {
+    valueRef.current = value
+  })
 
   const activate = useCallback(() => {
     textarea.current?.focus()
@@ -119,6 +124,42 @@ export function Composer({
     onDeactivate: deactivate,
     onNavigate: handleNavigate,
   })
+
+  // Spec 16: dictation writes through this adapter while the field is focused.
+  const dictationTarget = useMemo<DictationTarget>(
+    () => ({
+      getValue: () => valueRef.current,
+      getSelection: () => {
+        const element = textarea.current
+        const length = valueRef.current.length
+        return element
+          ? { start: element.selectionStart, end: element.selectionEnd }
+          : { start: length, end: length }
+      },
+      apply: (result) => {
+        valueRef.current = result.value
+        onChange(result.value)
+        const element = textarea.current
+        if (element) {
+          element.value = result.value
+          element.setSelectionRange(result.selectionStart, result.selectionEnd)
+        }
+      },
+      activate: () => tree?.activate(COMPOSER_ID),
+      isActivated: () => focus.activated,
+      isAlive: () => textarea.current !== null,
+    }),
+    [onChange, tree, focus.activated],
+  )
+
+  useEffect(() => {
+    if (!focus.focused && !focus.activated) {
+      dictation.registerTarget(null)
+      return undefined
+    }
+    dictation.registerTarget(dictationTarget)
+    return () => dictation.registerTarget(null)
+  }, [focus.focused, focus.activated, dictationTarget])
 
   const expanded = !tree || focus.focused || focus.activated || value.trim().length > 0
   const dimmed = Boolean(tree) && !focus.focused && !focus.activated && value.trim().length > 0
@@ -208,7 +249,9 @@ export function Composer({
               onKeyDown={(event) => {
                 if (event.key === 'Escape') {
                   event.preventDefault()
-                  if (busy) {
+                  if (dictation.active) {
+                    dictation.cancel()
+                  } else if (busy) {
                     onAbort()
                   } else {
                     tree?.deactivate()

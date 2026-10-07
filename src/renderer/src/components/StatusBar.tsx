@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useDictationStore } from '../dictation'
 import { useEngineStatus } from '../engine/useEngineStatus'
 import { useFocusable, FOCUS_ORDER } from '../focus'
 import { Button } from '../ui'
@@ -132,6 +133,8 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
   const battery = useBattery()
   const engineStatus = useEngineStatus()
   const badge = profileBadge(useProfile())
+  const dictationStatus = useDictationStore((state) => state.status)
+  const dictationLevel = useDictationStore((state) => state.level)
   const tasksRef = useRef<HTMLButtonElement>(null)
   const tasksFocus = useFocusable({
     id: 'open-tasks',
@@ -181,7 +184,18 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
             className={`h-3 w-3 rounded-full ${dotClass}`}
           />
         ) : null}
-        <span data-testid="dictation-indicator" hidden aria-hidden="true" />
+        {dictationStatus !== 'idle' ? (
+          <span data-testid="dictation-indicator" className="flex items-center gap-2 text-accent">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent" />
+            <span>{dictationStatus === 'starting' ? 'Starting…' : 'Listening'}</span>
+            <span className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-raised">
+              <span
+                className="block h-full bg-accent transition-[width] duration-fast"
+                style={{ width: `${Math.round(dictationLevel * 100)}%` }}
+              />
+            </span>
+          </span>
+        ) : null}
         <span data-testid="status-network">{online ? 'online' : 'offline'}</span>
         {battery ? (
           <span data-testid="status-battery" className="tabular-nums">

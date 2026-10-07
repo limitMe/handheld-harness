@@ -25,7 +25,11 @@ describe('binding helpers', () => {
     expect(contexts[0]).toBe('global')
     expect(contexts).toContain('currentWork.input')
     expect(contexts.indexOf('systemMenu')).toBeGreaterThan(contexts.indexOf('taskMap'))
-    expect(listContexts(map, 'keyboard')).not.toContain('global')
+
+    // Keyboard has a global layer too: Ctrl+D toggles dictation (spec 16).
+    const keyboardContexts = listContexts(map, 'keyboard')
+    expect(keyboardContexts[0]).toBe('global')
+    expect(keyboardContexts).toContain('currentWork')
   })
 
   it('lists bindings sorted by the canonical action order', () => {

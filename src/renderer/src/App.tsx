@@ -5,6 +5,7 @@ import MicDebug from './debug/MicDebug'
 import EngineDebug from './engine/EngineDebug'
 import SpeechDebug from './debug/SpeechDebug'
 import { useEngineStatus } from './engine/useEngineStatus'
+import { DictationLayer } from './dictation'
 import { FocusDebugOverlay } from './focus'
 import { CONTEXT_ORDER, onPress, useInputContext } from './input'
 import { useWorkbenchStore } from './state/store'
@@ -127,6 +128,7 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col bg-surface text-text">
+      <DictationLayer />
       <StatusBar title={title} onOpenTasks={() => setMapOpen(true)} />
       <div className="relative flex flex-1 overflow-hidden">
         <CurrentWork dimmed={mapOpen || menuOpen} />

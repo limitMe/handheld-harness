@@ -150,8 +150,15 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       A: 'nav.activate',
       B: 'nav.deactivate',
     },
+    // Pushed only while dictating: B cancels and rolls the inserted text back (spec 16).
+    dictation: {
+      B: 'dictation.cancel',
+    },
   },
   keyboard: {
+    global: {
+      'Ctrl+D': 'voice.dictate',
+    },
     currentWork: {
       ArrowUp: 'nav.up',
       ArrowDown: 'nav.down',

@@ -160,5 +160,39 @@ P-06 的服务商选择留到 MVP 之后；P-21 里的 LLM 润色是可选增强
 ### 未完成 / 需要人工验证
 
 - 真机联调：录入豆包 API Key 后，用调试页 Start 说一句中英混说的话，确认实时出字、松手后最终结果正确。
-- 长按 Y 接线、光标处插入（partial 临时文本 / final 固定）、B 取消回滚、状态栏听写指示、系统菜单语音页（provider 选择 + 凭据入口）——留给本 spec 的下一阶段与 17。
 - 断网时的手动/自动切换与离线兜底。
+
+## 实现记录 · 第二阶段（听写接入）
+
+实现日期：2026-10-07（同一分支工作区）。第一阶段已通过用户真机联调确认。
+
+### 交付物
+
+- `src/renderer/src/dictation/`：
+  - `editor.ts`：纯 TS 的听写编辑状态机——开始时删除选区、`partial` 在插入点预览（用选区高亮）、`final` 追加并把光标后移、`finalize` 把未确认的 `partial` 转为正文、`undo` 回滚到听写前的值与选区。
+  - `controller.ts`：`DictationController` 生命周期：长按 Y 开始、流式写文本、松手结束、B/Esc 取消回滚；检测光标被移动或目标失效则立即收尾（以已确认的 final 为准）；结束时给一次手柄短震动（`pulse.ts`，可用时）。
+  - `audio.ts`：麦克风预热——Y 按下即开始采集并保留约 300 ms 预录缓冲，听写开始时先冲入缓冲，避免吞掉第一个字；无目标时不预热。
+  - `store.ts`：zustand 听写状态（`status` / `level` / `error`），供状态栏与输入层共享。
+  - `DictationLayer.tsx`：注册全局 `voice.dictate`（手柄长按开始/松开结束；键盘 `Ctrl+D` 切换）与听写期间的 `dictation.cancel`（B）；把失败转成轻提示 toast。
+- 输入层：`src/shared/actions.ts` 增加 `dictation.cancel`；`src/shared/input.ts` 增加 `dictation` 上下文（`B → dictation.cancel`）与键盘 `global` 层（`Ctrl+D → voice.dictate`）。
+- 渲染进程接线：
+  - `workbench/Composer.tsx` 在聚焦或激活时把自己注册为 `DictationTarget`（P-05：没有目标时长按 Y 无效），并在 Esc 时优先取消听写。
+  - `components/StatusBar.tsx` 显示听写指示（脉冲点 + Listening/Starting + 电平条）。
+  - `system/VoicePage.tsx` 重做：provider 选择（None / Doubao）、API Key 录入（存/清 + 状态）、模型与计费档位（Resource-Id）、原有麦克风测试。
+- 单测：`dictation-editor`（选区删除、partial 预览/替换、final 追加、finalize、undo）、`dictation-controller`（无目标忽略、开始删除选区、partial/final、取消回滚、光标移动结束、停止释放麦克风）；`bindings` 用例更新以反映新增的键盘 `global` 层。
+
+### 与正文的出入
+
+- 临时文本用**原生选区高亮**表示（正文允许的两种做法之一），未额外叠加图层；因此撤销（Ctrl+Z）沿用受控 textarea 的既有行为。
+- 键盘没有「长按」概念，`Ctrl+D` 实现为**切换**（按一次开始，再按一次结束）；Esc 取消。
+- 离线兜底未实现：目前只有在线 provider，因此断网时以 toast 提示失败，不自动切换。
+
+### 已自动验证
+
+- `npm run check` 通过（typecheck、lint 零 warning、45 个测试文件 274 个用例）。
+- `npm run build` 与 `npm run test:e2e`（19 个用例）通过，包含系统菜单改键用例。
+
+### 未完成 / 需要人工验证
+
+- 掌机实测：输入框激活后长按 Y 说中英混合的一句话，文字实时出现在光标处；松开后 1 秒内得到最终结果；听写中按 B 回滚；状态栏指示正常。
+- 麦克风预热的实际手感（第一个字是否被吞）。

@@ -85,7 +85,7 @@ function SystemMenuBody({ onClose, onOpenDebug }: Omit<SystemMenuProps, 'open'>)
                   ) : category === 'models' ? (
                     <ModelsPage settings={settings} update={update} />
                   ) : category === 'voice' ? (
-                    <VoicePage />
+                    <VoicePage settings={settings} update={update} />
                   ) : category === 'display' ? (
                     <DisplayPage settings={settings} update={update} />
                   ) : (

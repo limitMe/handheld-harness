@@ -1,0 +1,5 @@
+export { DictationLayer } from './DictationLayer'
+export { dictation } from './instance'
+export { DictationEditor, type EditResult, type EditSnapshot } from './editor'
+export type { DictationTarget } from './target'
+export { useDictationStore, type DictationState, type DictationStatus } from './store'

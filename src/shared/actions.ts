@@ -14,6 +14,7 @@ export const ACTIONS = {
   'menu.toggle': { label: 'System menu' },
   'map.toggle': { label: 'Task map' },
   'voice.dictate': { label: 'Dictate' },
+  'dictation.cancel': { label: 'Cancel dictation' },
 
   'nav.up': { label: 'Move up', repeatable: true },
   'nav.down': { label: 'Move down', repeatable: true },
