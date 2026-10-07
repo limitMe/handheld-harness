@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import type { SessionRef } from '@shared/engine'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
+import { useTranslation } from '../i18n'
 import { AnchoredPanel, cn } from '../ui'
 import type { HistoryEntry } from './taskCards'
 import { formatRelativeTime } from './time'
@@ -19,6 +20,7 @@ export interface HistoryListProps {
  * cancel. It pushes its own context so the map's bindings are shadowed while open.
  */
 export function HistoryList({ anchor, entries, onChoose, onCancel }: HistoryListProps) {
+  const { t } = useTranslation()
   const [highlighted, setHighlighted] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -55,9 +57,11 @@ export function HistoryList({ anchor, entries, onChoose, onCancel }: HistoryList
         data-scroll-region
         className="flex max-h-[50vh] flex-col gap-1 overflow-y-auto outline-none"
       >
-        <p className="px-3 py-1 text-sm uppercase tracking-wide text-text-muted">History</p>
+        <p className="px-3 py-1 text-sm uppercase tracking-wide text-text-muted">
+          {t('taskMap.historyTitle')}
+        </p>
         {entries.length === 0 ? (
-          <p className="px-3 py-2 text-text-muted">No closed tasks.</p>
+          <p className="px-3 py-2 text-text-muted">{t('taskMap.noClosedTasks')}</p>
         ) : (
           entries.map((entry, index) => (
             <button
@@ -75,7 +79,7 @@ export function HistoryList({ anchor, entries, onChoose, onCancel }: HistoryList
             >
               <span className="flex-1 truncate">{entry.summary.title}</span>
               <span className="text-code text-text-muted">
-                {formatRelativeTime(entry.summary.updatedAt)}
+                {formatRelativeTime(entry.summary.updatedAt, t)}
               </span>
             </button>
           ))

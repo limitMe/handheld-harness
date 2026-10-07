@@ -1,4 +1,5 @@
 import { actionLabel } from '@shared/actions'
+import { useTranslation } from '../i18n'
 import { cn } from '../ui'
 import type { HintEntry } from './entries'
 
@@ -28,7 +29,15 @@ export function controlLabel(control: string): string {
 const RING_RADIUS = 14
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
 
-function KeyCap({ control, phase, progress }: { control: string; phase: 'press' | 'hold'; progress: number }) {
+function KeyCap({
+  control,
+  phase,
+  progress,
+}: {
+  control: string
+  phase: 'press' | 'hold'
+  progress: number
+}) {
   if (phase !== 'hold') {
     return (
       <span className="inline-flex h-8 min-w-8 items-center justify-center rounded border border-surface-raised bg-card px-1 text-sm font-semibold text-on-card">
@@ -79,14 +88,12 @@ export interface ActionHintsProps {
 
 /** Presentational hint strip; positioning and timing belong to `HintsProvider`. */
 export function ActionHints({ entries, holding, className }: ActionHintsProps) {
+  const { t } = useTranslation()
   if (entries.length === 0) return null
   return (
     <div
       data-testid="action-hints"
-      className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 text-base',
-        className,
-      )}
+      className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 text-base', className)}
     >
       {entries.map((entry) => {
         const progress =
@@ -101,9 +108,11 @@ export function ActionHints({ entries, holding, className }: ActionHintsProps) {
             className="inline-flex items-center gap-2 text-on-card"
           >
             <KeyCap control={entry.control} phase={entry.phase} progress={progress} />
-            <span>{actionLabel(entry.action)}</span>
+            <span>{t(`actions.${entry.action}`, { defaultValue: actionLabel(entry.action) })}</span>
             {entry.phase === 'hold' ? (
-              <span className="text-sm uppercase tracking-wide text-text-muted">hold</span>
+              <span className="text-sm uppercase tracking-wide text-text-muted">
+                {t('part.hold')}
+              </span>
             ) : null}
           </span>
         )

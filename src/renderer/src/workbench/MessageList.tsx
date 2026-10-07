@@ -7,6 +7,7 @@ import type {
   QuestionRequest,
 } from '@shared/engine'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
+import { useTranslation } from '../i18n'
 import { FOCUS_ORDER, messageOrder, useFocusTree } from '../focus'
 import { FocusableButton } from './FocusableButton'
 import { MessageItem } from './MessageItem'
@@ -62,6 +63,7 @@ export function MessageList({
   onReplyQuestion,
   onRejectQuestion,
 }: MessageListProps) {
+  const { t } = useTranslation()
   const tree = useFocusTree()
   const container = useRef<HTMLDivElement>(null)
   const roundElements = useRef(new Map<string, HTMLDivElement>())
@@ -146,7 +148,7 @@ export function MessageList({
       >
         {messages.length === 0 && !busy ? (
           <p className="m-auto max-w-[36rem] text-center text-text-muted">
-            Describe what you want the agent to do. Enter sends, Shift+Enter adds a line.
+            {t('composer.emptyHint')}
           </p>
         ) : null}
 
@@ -213,7 +215,7 @@ export function MessageList({
             className="animate-pulse text-base text-text-muted"
             aria-live="polite"
           >
-            Agent is working…
+            {t('messageList.agentWorking')}
           </p>
         ) : null}
       </div>
@@ -235,7 +237,7 @@ export function MessageList({
               scrollToBottom()
             }}
           >
-            ↓ Latest
+            {t('messageList.scrollLatest')}
           </FocusableButton>
         </div>
       ) : null}

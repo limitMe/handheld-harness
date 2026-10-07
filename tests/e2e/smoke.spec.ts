@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { _electron as electron, expect, test } from '@playwright/test'
+import { forceEnglish } from './i18n'
 
 const root = path.resolve(__dirname, '..', '..')
 const artifacts = path.join(root, 'tests', 'e2e', 'artifacts')
@@ -19,6 +20,7 @@ test('smoke: starts the built app and renders the status bar', async () => {
   try {
     const window = await app.firstWindow()
     await window.waitForLoadState('domcontentloaded')
+    await forceEnglish(window)
 
     await expect(window.getByTestId('status-title')).toHaveText('New task')
     await expect(window.getByTestId('status-time')).toHaveText(/^\d{2}:\d{2}$/)

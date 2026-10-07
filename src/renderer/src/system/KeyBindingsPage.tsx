@@ -1,10 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  actionLabel,
-  splitControlKey,
-  type ActionId,
-  type ControlPhase,
-} from '@shared/actions'
+import { actionLabel, splitControlKey, type ActionId, type ControlPhase } from '@shared/actions'
 import {
   bindingTable,
   contextLabel,
@@ -20,6 +15,7 @@ import {
 import { isLockedBinding, type ActionMap } from '@shared/input'
 import type { Settings, SettingsPatch } from '@shared/ipc'
 import { useFocusTree } from '../focus'
+import { useTranslation } from '../i18n'
 import { useInputApi, type CapturedControl } from '../input'
 import { ChoiceDialog, ConfirmDialog } from '../ui'
 import { MenuGroupLabel, MenuRow } from './MenuRow'
@@ -101,6 +97,7 @@ function buildKey(control: string, phase: ControlPhase, device: MenuDevice): str
  * row captures the next control for that device. Conflicts ask swap / overwrite.
  */
 export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps) {
+  const { t } = useTranslation()
   const tree = useFocusTree()
   const api = useInputApi()
   const [device, setDevice] = useState<MenuDevice>('gamepad')
@@ -210,7 +207,7 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
         onActivate={() => selectDevice('gamepad')}
         onClick={() => selectDevice('gamepad')}
       >
-        <span>Gamepad bindings</span>
+        <span>{t('keys.gamepad')}</span>
       </MenuRow>
       <MenuRow
         id="system-menu.keys.device.keyboard"
@@ -220,7 +217,7 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
         onActivate={() => selectDevice('keyboard')}
         onClick={() => selectDevice('keyboard')}
       >
-        <span>Keyboard bindings</span>
+        <span>{t('keys.keyboard')}</span>
       </MenuRow>
 
       {capture ? (
@@ -229,25 +226,27 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
           className="sticky top-0 z-10 mt-4 rounded-md border border-accent bg-card px-3 py-2 text-base text-on-card shadow-card"
         >
           <p className="font-medium">
-            Press a new {device === 'gamepad' ? 'button' : 'key'} for{' '}
-            {actionLabel(capture.action)}…
+            {t('keys.capturePrompt', {
+              device: device === 'gamepad' ? t('keys.deviceButton') : t('keys.deviceKey'),
+              action: t(`actions.${capture.action}`, { defaultValue: actionLabel(capture.action) }),
+            })}
           </p>
           <p className="text-code text-text-muted">
-            {holding ? 'Keep holding Start to cancel…' : 'Hold Start for 2 seconds to cancel.'}
+            {holding ? t('keys.keepHolding') : t('keys.holdToCancel')}
           </p>
         </div>
       ) : null}
 
-      <p className="px-3 pt-3 text-code text-text-muted">
-        System menu (Start) and task map (Back) are locked so they always open.
-      </p>
+      <p className="px-3 pt-3 text-code text-text-muted">{t('keys.lockedNotice')}</p>
 
       {groups.length === 0 ? (
-        <p className="px-3 py-4 text-text-muted">No bindings for this device.</p>
+        <p className="px-3 py-4 text-text-muted">{t('keys.none')}</p>
       ) : (
         groups.map(({ context, rows }, groupIndex) => (
           <div key={context}>
-            <MenuGroupLabel>{contextLabel(context)}</MenuGroupLabel>
+            <MenuGroupLabel>
+              {t(`contexts.${context}`, { defaultValue: contextLabel(context) })}
+            </MenuGroupLabel>
             {rows.map((row, rowIndex) => {
               const locked = isLockedBinding(context, row.action)
               return (
@@ -264,9 +263,9 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
                       })}
                 >
                   <span>
-                    {actionLabel(row.action)}
+                    {t(`actions.${row.action}`, { defaultValue: actionLabel(row.action) })}
                     {locked ? (
-                      <span className="ml-2 text-code text-text-muted">Locked</span>
+                      <span className="ml-2 text-code text-text-muted">{t('keys.locked')}</span>
                     ) : null}
                   </span>
                   <span
@@ -290,7 +289,7 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
           onActivate={() => setResetOpen(true)}
           onClick={() => setResetOpen(true)}
         >
-          <span className="text-text-muted">Restore default bindings</span>
+          <span className="text-text-muted">{t('keys.restoreDefault')}</span>
         </MenuRow>
       </div>
 
@@ -299,17 +298,26 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
         onOpenChange={(next) => {
           if (!next) setConflict(null)
         }}
-        title="Key already in use"
+        title={t('keys.conflictTitle')}
         description={
           conflict
-            ? `${formatBindingKey(conflict.newKey, conflict.device)} is bound to ${actionLabel(conflict.other)}.`
+            ? t('keys.conflictDescription', {
+                key: formatBindingKey(conflict.newKey, conflict.device),
+                action: t(`actions.${conflict.other}`, {
+                  defaultValue: actionLabel(conflict.other),
+                }),
+              })
             : undefined
         }
         initialId="swap"
         options={[
-          { id: 'swap', label: 'Swap', description: 'The other action takes the old key.' },
-          { id: 'overwrite', label: 'Overwrite', description: 'The other action becomes unbound.' },
-          { id: 'cancel', label: 'Cancel', destructive: true },
+          { id: 'swap', label: t('keys.swap'), description: t('keys.swapDescription') },
+          {
+            id: 'overwrite',
+            label: t('keys.overwrite'),
+            description: t('keys.overwriteDescription'),
+          },
+          { id: 'cancel', label: t('common.cancel'), destructive: true },
         ]}
         onChoose={(id) => {
           if (id === 'swap' || id === 'overwrite') void resolveConflict(id)
@@ -321,9 +329,9 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
         onOpenChange={(next) => {
           if (!next) setResetOpen(false)
         }}
-        title="Restore default bindings"
-        description="Discards every custom binding for both devices."
-        confirmLabel="Restore"
+        title={t('keys.restoreTitle')}
+        description={t('keys.restoreDescription')}
+        confirmLabel={t('keys.restore')}
         initialFocus="confirm"
         onConfirm={() => void confirmReset()}
       />

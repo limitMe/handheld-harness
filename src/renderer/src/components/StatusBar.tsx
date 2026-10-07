@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useDictationStore } from '../dictation'
 import { useEngineStatus } from '../engine/useEngineStatus'
 import { useFocusable, FOCUS_ORDER } from '../focus'
+import { useTranslation } from '../i18n'
 import { Button } from '../ui'
 
 interface BatteryState {
@@ -128,6 +129,7 @@ export function engineDotClass(state: string | undefined): string | null {
 }
 
 export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
+  const { t } = useTranslation()
   const time = useClock()
   const online = useOnline()
   const battery = useBattery()
@@ -156,7 +158,7 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
             className="min-h-11"
             onClick={onOpenTasks}
           >
-            Tasks
+            {t('status.tasks')}
           </Button>
         ) : null}
         {badge ? (
@@ -180,14 +182,18 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
         {dotClass ? (
           <span
             data-testid="engine-status"
-            title={engineStatus ? `engine: ${engineStatus.state}` : undefined}
+            title={
+              engineStatus ? t('status.engineTooltip', { state: engineStatus.state }) : undefined
+            }
             className={`h-3 w-3 rounded-full ${dotClass}`}
           />
         ) : null}
         {dictationStatus !== 'idle' ? (
           <span data-testid="dictation-indicator" className="flex items-center gap-2 text-accent">
             <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent" />
-            <span>{dictationStatus === 'starting' ? 'Starting…' : 'Listening'}</span>
+            <span>
+              {dictationStatus === 'starting' ? t('status.starting') : t('status.listening')}
+            </span>
             <span className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-raised">
               <span
                 className="block h-full bg-accent transition-[width] duration-fast"
@@ -196,7 +202,9 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
             </span>
           </span>
         ) : null}
-        <span data-testid="status-network">{online ? 'online' : 'offline'}</span>
+        <span data-testid="status-network">
+          {online ? t('status.online') : t('status.offline')}
+        </span>
         {battery ? (
           <span data-testid="status-battery" className="tabular-nums">
             {Math.round(battery.level * 100)}%{battery.charging ? ' ⚡' : ''}

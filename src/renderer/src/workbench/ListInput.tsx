@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import type { CommandInfo } from '@shared/engine'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
+import { useTranslation } from '../i18n'
 import { AnchoredPanel, cn } from '../ui'
 import { orderCommands } from './commands'
 import { useListInputStore } from './listInputStore'
@@ -19,6 +20,7 @@ export interface ListInputProps {
  * Entries come from the engine's `listCommands()` and are ordered by use.
  */
 export function ListInput({ anchor, engineId, onChoose, onCancel }: ListInputProps) {
+  const { t } = useTranslation()
   const [commands, setCommands] = useState<CommandInfo[]>([])
   const [highlighted, setHighlighted] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -80,7 +82,7 @@ export function ListInput({ anchor, engineId, onChoose, onCancel }: ListInputPro
         className="flex max-h-[50vh] flex-col gap-1 overflow-y-auto outline-none"
       >
         {ordered.length === 0 ? (
-          <p className="px-3 py-2 text-text-muted">No commands.</p>
+          <p className="px-3 py-2 text-text-muted">{t('listInput.noCommands')}</p>
         ) : (
           ordered.map((command, index) => (
             <button

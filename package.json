@@ -35,7 +35,9 @@
   "dependencies": {
     "@opencode-ai/sdk": "1.18.34",
     "electron-log": "5.4.4",
+    "i18next": "26.4.2",
     "opencode-ai": "1.18.34",
+    "react-i18next": "17.0.16",
     "react-markdown": "10.1.0",
     "rehype-highlight": "7.0.2",
     "remark-gfm": "4.0.1",

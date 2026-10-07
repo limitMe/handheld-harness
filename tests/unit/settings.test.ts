@@ -66,6 +66,7 @@ describe('settings store', () => {
       zoom: 1.2,
       scrollSpeed: 1,
       theme: 'system',
+      language: 'system',
     })
 
     store.update({ ui: { lastSession: null } })

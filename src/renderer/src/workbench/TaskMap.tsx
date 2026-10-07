@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { motion } from 'motion/react'
 import type { SessionRef, SessionSummary } from '@shared/engine'
 import { FocusContainer, useFocusTree, useFocusable } from '../focus'
+import { useTranslation, type Translate } from '../i18n'
 import { motionTokens } from '../motion'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { useWorkbenchStore } from '../state/store'
@@ -34,12 +35,12 @@ function borderClass(entry: SessionSummary | undefined, isCurrent: boolean): str
   return 'border-surface-raised'
 }
 
-function statusLabel(entry: SessionSummary | undefined, isCurrent: boolean): string {
-  if (isCurrent) return 'Current'
-  if (!entry) return 'Task'
-  if (entry.runState === 'busy') return 'Working…'
-  if (entry.runState === 'error') return 'Error'
-  return formatRelativeTime(entry.updatedAt)
+function statusLabel(entry: SessionSummary | undefined, isCurrent: boolean, t: Translate): string {
+  if (isCurrent) return t('taskMap.current')
+  if (!entry) return t('taskMap.task')
+  if (entry.runState === 'busy') return t('taskMap.working')
+  if (entry.runState === 'error') return t('taskMap.error')
+  return formatRelativeTime(entry.updatedAt, t)
 }
 
 function TaskCardView({
@@ -61,6 +62,7 @@ function TaskCardView({
   elementRef?: RefObject<HTMLButtonElement | null>
   onChoose: (card: TaskCard) => void
 }) {
+  const { t } = useTranslation()
   const innerRef = useRef<HTMLButtonElement>(null)
   const ref = elementRef ?? innerRef
   const focus = useFocusable({
@@ -108,13 +110,13 @@ function TaskCardView({
           />
         ) : null}
         <span className="text-sm uppercase tracking-wide text-text-muted">
-          {card.kind === 'empty' ? 'New' : statusLabel(entry, isCurrent)}
+          {card.kind === 'empty' ? t('taskMap.newBadge') : statusLabel(entry, isCurrent, t)}
         </span>
         <span className="line-clamp-3 text-xl font-semibold">
-          {card.kind === 'empty' ? '+ New task' : (entry?.title ?? 'Task')}
+          {card.kind === 'empty' ? t('taskMap.newTask') : (entry?.title ?? t('taskMap.task'))}
         </span>
         <span className="truncate text-code text-text-muted">
-          {card.kind === 'empty' ? 'X · history' : (entry?.model?.modelId ?? '')}
+          {card.kind === 'empty' ? t('taskMap.historyBadge') : (entry?.model?.modelId ?? '')}
         </span>
       </motion.button>
     </motion.div>
@@ -154,6 +156,7 @@ function TaskMapBindings({
 }
 
 function TaskMapBody({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation()
   const tree = useFocusTree()
   const open = useWorkbenchStore((state) => state.tasks.open)
   const unread = useWorkbenchStore((state) => state.tasks.unread)
@@ -254,7 +257,7 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
         </FocusContainer>
       </div>
       <p className="shrink-0 px-6 pb-4 text-center text-code text-text-muted">
-        ← → select · A open · Y new · X history · B exit · hold B close
+        {t('taskMap.keysHint')}
       </p>
 
       {!historyOpen && !confirmRef ? (
@@ -289,9 +292,9 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
         onOpenChange={(next) => {
           if (!next) setConfirmRef(null)
         }}
-        title="Close task"
-        description="Removes the card from the map. The session is kept and can be reopened from history."
-        confirmLabel="Close"
+        title={t('taskMap.closeTitle')}
+        description={t('taskMap.closeDescription')}
+        confirmLabel={t('common.close')}
         initialFocus="confirm"
         onConfirm={() => void confirmClose()}
       />

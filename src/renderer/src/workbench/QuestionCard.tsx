@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import type { QuestionRequest } from '@shared/engine'
 import { useFocusable, FOCUS_ORDER } from '../focus'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
+import { useTranslation } from '../i18n'
 import { Button, cn } from '../ui'
 
 export interface QuestionCardProps {
@@ -11,9 +12,7 @@ export interface QuestionCardProps {
 }
 
 type QuestionTarget =
-  | { kind: 'option'; questionIndex: number; label: string }
-  | { kind: 'submit' }
-  | { kind: 'ignore' }
+  { kind: 'option'; questionIndex: number; label: string } | { kind: 'submit' } | { kind: 'ignore' }
 
 /**
  * Question prompt. The card itself is the activated focus node and owns a
@@ -21,10 +20,9 @@ type QuestionTarget =
  * (multi-select toggles), B ignores. Buttons stay for touch and keyboard.
  */
 export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) {
+  const { t } = useTranslation()
   const cardRef = useRef<HTMLDivElement>(null)
-  const [selections, setSelections] = useState<string[][]>(() =>
-    request.questions.map(() => []),
-  )
+  const [selections, setSelections] = useState<string[][]>(() => request.questions.map(() => []))
   const [highlight, setHighlight] = useState(0)
 
   const targets = useMemo<QuestionTarget[]>(() => {
@@ -162,7 +160,7 @@ export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) 
             if (canSubmit) onReply(selections)
           }}
         >
-          Submit
+          {t('question.submit')}
         </Button>
         <Button
           data-testid="question-reject"
@@ -171,7 +169,7 @@ export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) 
           onMouseEnter={() => setHighlight(targets.length - 1)}
           onClick={onReject}
         >
-          Ignore
+          {t('question.ignore')}
         </Button>
       </div>
     </div>

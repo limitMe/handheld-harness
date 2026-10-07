@@ -1,25 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Settings, SettingsPatch, SpeechProviderId } from '@shared/ipc'
 import type { SpeechProviderInfo } from '@shared/speech'
+import { useTranslation } from '../i18n'
 import { Slider, cn } from '../ui'
 import { MenuGroupLabel, MenuRow } from './MenuRow'
 
 interface InputDevice {
   deviceId: string
   label: string
+  index: number
 }
 
 interface ResourceOption {
   id: string
-  label: string
+  /** i18n key for the option label. */
+  key: string
 }
 
 /** Doubao streaming resource ids (spec 16); the model and billing mode. */
 const RESOURCE_OPTIONS: ResourceOption[] = [
-  { id: 'volc.seedasr.sauc.duration', label: 'Seed-ASR 2.0 · hourly' },
-  { id: 'volc.seedasr.sauc.concurrent', label: 'Seed-ASR 2.0 · concurrent' },
-  { id: 'volc.bigasr.sauc.duration', label: 'Seed-ASR 1.0 · hourly' },
-  { id: 'volc.bigasr.sauc.concurrent', label: 'Seed-ASR 1.0 · concurrent' },
+  { id: 'volc.seedasr.sauc.duration', key: 'voice.resource.seedAsr2Duration' },
+  { id: 'volc.seedasr.sauc.concurrent', key: 'voice.resource.seedAsr2Concurrent' },
+  { id: 'volc.bigasr.sauc.duration', key: 'voice.resource.seedAsr1Duration' },
+  { id: 'volc.bigasr.sauc.concurrent', key: 'voice.resource.seedAsr1Concurrent' },
 ]
 
 async function loadInputDevices(): Promise<InputDevice[]> {
@@ -28,7 +31,8 @@ async function loadInputDevices(): Promise<InputDevice[]> {
     .filter((device) => device.kind === 'audioinput')
     .map((device, index) => ({
       deviceId: device.deviceId,
-      label: device.label || `Input ${index + 1}`,
+      label: device.label,
+      index: index + 1,
     }))
 }
 
@@ -39,6 +43,7 @@ export interface VoicePageProps {
 
 /** Voice input (spec 15/16): provider + credentials plus the microphone probe. */
 export function VoicePage({ settings, update }: VoicePageProps) {
+  const { t } = useTranslation()
   const providersRef = useRef<SpeechProviderInfo[]>([])
   const [providers, setProviders] = useState<SpeechProviderInfo[]>([])
   const [keyConfigured, setKeyConfigured] = useState(false)
@@ -169,7 +174,8 @@ export function VoicePage({ settings, update }: VoicePageProps) {
         0,
         RESOURCE_OPTIONS.findIndex((option) => option.id === resourceId),
       )
-      const next = RESOURCE_OPTIONS[(index + delta + RESOURCE_OPTIONS.length) % RESOURCE_OPTIONS.length]
+      const next =
+        RESOURCE_OPTIONS[(index + delta + RESOURCE_OPTIONS.length) % RESOURCE_OPTIONS.length]
       if (next) void update({ speech: { doubao: { resourceId: next.id } } })
     },
     [resourceId, update],
@@ -182,16 +188,16 @@ export function VoicePage({ settings, update }: VoicePageProps) {
     await speech.setKey(providerId, key)
     setApiKey('')
     setKeyConfigured(true)
-    setStatus('API key saved.')
-  }, [apiKey, providerId])
+    setStatus(t('voice.keySaved'))
+  }, [apiKey, providerId, t])
 
   const clearKey = useCallback(async (): Promise<void> => {
     const speech = window.handheld?.speech
     if (!speech) return
     await speech.clearKey(providerId)
     setKeyConfigured(false)
-    setStatus('API key cleared.')
-  }, [providerId])
+    setStatus(t('voice.keyCleared'))
+  }, [providerId, t])
 
   const currentDevice = devices.find((device) => device.deviceId === selected)
   const currentProvider = providers.find((provider) => provider.id === providerId)
@@ -199,7 +205,7 @@ export function VoicePage({ settings, update }: VoicePageProps) {
 
   return (
     <div data-testid="voice-page">
-      <MenuGroupLabel>Speech provider</MenuGroupLabel>
+      <MenuGroupLabel>{t('menu.groups.speechProvider')}</MenuGroupLabel>
       <MenuRow
         id="system-menu.first"
         order={0}
@@ -215,9 +221,9 @@ export function VoicePage({ settings, update }: VoicePageProps) {
           return 'pass'
         }}
       >
-        <span>Provider</span>
+        <span>{t('voice.provider')}</span>
         <span className="text-code text-text-muted">
-          {currentProvider?.displayName ?? 'None'}
+          {currentProvider?.displayName ?? t('voice.none')}
         </span>
       </MenuRow>
 
@@ -230,9 +236,9 @@ export function VoicePage({ settings, update }: VoicePageProps) {
             testId="voice-api-key"
             onActivate={() => keyInputRef.current?.focus()}
           >
-            <span>API key</span>
+            <span>{t('voice.apiKey')}</span>
             <span className={cn('text-code', keyConfigured ? 'text-accent' : 'text-text-muted')}>
-              {keyConfigured ? 'Configured' : 'Not set'}
+              {keyConfigured ? t('voice.configured') : t('voice.notSet')}
             </span>
           </MenuRow>
           <div className="px-3 pb-2">
@@ -242,7 +248,7 @@ export function VoicePage({ settings, update }: VoicePageProps) {
               type="password"
               autoComplete="off"
               spellCheck={false}
-              placeholder="Paste the Volcengine API key, then choose Save"
+              placeholder={t('voice.keyPlaceholder')}
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
               className="w-full rounded-md border border-surface-raised bg-card px-3 py-2 text-base text-on-card placeholder:text-text-muted"
@@ -255,7 +261,7 @@ export function VoicePage({ settings, update }: VoicePageProps) {
             onActivate={() => void saveKey()}
             onClick={() => void saveKey()}
           >
-            <span>Save API key</span>
+            <span>{t('voice.saveKey')}</span>
           </MenuRow>
           <MenuRow
             id="system-menu.voice.clearKey"
@@ -264,7 +270,7 @@ export function VoicePage({ settings, update }: VoicePageProps) {
             onActivate={() => void clearKey()}
             onClick={() => void clearKey()}
           >
-            <span>Clear API key</span>
+            <span>{t('voice.clearKey')}</span>
           </MenuRow>
           <MenuRow
             id="system-menu.voice.resource"
@@ -281,8 +287,10 @@ export function VoicePage({ settings, update }: VoicePageProps) {
               return 'pass'
             }}
           >
-            <span>Model / billing</span>
-            <span className="text-code text-text-muted">{currentResource?.label ?? resourceId}</span>
+            <span>{t('voice.modelBilling')}</span>
+            <span className="text-code text-text-muted">
+              {currentResource ? t(currentResource.key) : resourceId}
+            </span>
           </MenuRow>
         </>
       ) : null}
@@ -290,13 +298,10 @@ export function VoicePage({ settings, update }: VoicePageProps) {
       {status ? <p className="px-3 pt-2 text-code text-accent">{status}</p> : null}
 
       <div className="px-3 pt-2">
-        <p className="text-base text-text-muted">
-          Hold Y (or Ctrl+D) while an input is active to dictate. Without a provider, dictation is
-          unavailable — Windows dictation (Win+H) still works.
-        </p>
+        <p className="text-base text-text-muted">{t('voice.help')}</p>
       </div>
 
-      <MenuGroupLabel>Microphone</MenuGroupLabel>
+      <MenuGroupLabel>{t('menu.groups.microphone')}</MenuGroupLabel>
       <MenuRow
         id="system-menu.voice.device"
         order={10}
@@ -311,9 +316,13 @@ export function VoicePage({ settings, update }: VoicePageProps) {
           return 'pass'
         }}
       >
-        <span>Input device</span>
+        <span>{t('voice.inputDevice')}</span>
         <span className="text-code text-text-muted">
-          {currentDevice?.label ?? (devices.length ? 'Select…' : 'None found')}
+          {currentDevice
+            ? currentDevice.label || t('voice.inputN', { index: currentDevice.index })
+            : devices.length
+              ? t('voice.select')
+              : t('voice.noneFound')}
         </span>
       </MenuRow>
 
@@ -324,15 +333,17 @@ export function VoicePage({ settings, update }: VoicePageProps) {
         onActivate={() => (active ? release() : void start())}
         onClick={() => (active ? release() : void start())}
       >
-        <span>{active ? 'Stop test' : 'Test microphone'}</span>
+        <span>{active ? t('voice.stopTest') : t('voice.test')}</span>
         <span className={cn('text-code', active ? 'text-accent' : 'text-text-muted')}>
-          {active ? 'Listening…' : 'Idle'}
+          {active ? t('voice.listening') : t('voice.idle')}
         </span>
       </MenuRow>
 
       <div className="px-3 pt-3">
         <Slider value={level} />
-        <p className="pt-2 text-code text-text-muted">level: {level.toFixed(3)}</p>
+        <p className="pt-2 text-code text-text-muted">
+          {t('voice.level', { value: level.toFixed(3) })}
+        </p>
         {error ? <p className="pt-2 text-code text-danger">{error}</p> : null}
       </div>
     </div>

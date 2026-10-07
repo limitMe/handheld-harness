@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { THEME_MODES, type Settings, type SettingsPatch, type ThemeMode } from '@shared/ipc'
+import { LANGUAGE_MODES, type LanguageMode } from '@shared/i18n'
+import { useTranslation } from '../i18n'
 import { ChoiceDialog, Slider, Switch, type ChoiceOption } from '../ui'
 import { MenuGroupLabel, MenuRow } from './MenuRow'
 import { themeLabel } from './theme'
@@ -92,19 +94,35 @@ function ValueRow({
   )
 }
 
-const THEME_OPTIONS: ChoiceOption[] = [
-  { id: 'system', label: 'Follow system', description: 'Match the OS light/dark preference.' },
-  { id: 'dark', label: 'Dark' },
-  { id: 'light', label: 'Light' },
-]
-
-/** Display & hints (spec 15): font zoom, scroll speed and the action-hint settings (P-09). */
+/** Display & hints (spec 15): font zoom, scroll speed, theme, language and the action-hint settings (P-09). */
 export function DisplayPage({ settings, update }: DisplayPageProps) {
+  const { t } = useTranslation()
   const [themeOpen, setThemeOpen] = useState(false)
+  const [languageOpen, setLanguageOpen] = useState(false)
   const zoom = settings.ui.zoom
   const scrollSpeed = settings.ui.scrollSpeed
   const theme = settings.ui.theme
+  const language = settings.ui.language
   const delayMs = settings.hints.delayMs
+
+  const themeOptions: ChoiceOption[] = [
+    {
+      id: 'system',
+      label: t('display.themeModes.system'),
+      description: t('display.themeSystemDescription'),
+    },
+    { id: 'dark', label: t('display.themeModes.dark') },
+    { id: 'light', label: t('display.themeModes.light') },
+  ]
+  const languageOptions: ChoiceOption[] = [
+    {
+      id: 'system',
+      label: t('display.languageModes.system'),
+      description: t('display.languageModes.systemDescription'),
+    },
+    { id: 'en', label: t('display.languageModes.en') },
+    { id: 'zh', label: t('display.languageModes.zh') },
+  ]
 
   const setZoom = (next: number): void => {
     const factor = Math.round(clamp(next, ZOOM_MIN, ZOOM_MAX) * 100) / 100
@@ -113,12 +131,12 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
 
   return (
     <div data-testid="display-page">
-      <MenuGroupLabel>Display</MenuGroupLabel>
+      <MenuGroupLabel>{t('menu.groups.display')}</MenuGroupLabel>
       <ValueRow
         id="system-menu.first"
         order={0}
         testId="display-zoom"
-        label="Text size"
+        label={t('display.textSize')}
         display={`${Math.round(zoom * 100)}%`}
         value={zoom}
         min={ZOOM_MIN}
@@ -135,16 +153,18 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
         onActivate={() => setThemeOpen(true)}
         onClick={() => setThemeOpen(true)}
       >
-        <span>Theme</span>
-        <span className="text-code text-text-muted">{themeLabel(theme)}</span>
+        <span>{t('display.theme')}</span>
+        <span className="text-code text-text-muted">
+          {t(`display.themeModes.${theme}`, { defaultValue: themeLabel(theme) })}
+        </span>
       </MenuRow>
 
-      <MenuGroupLabel>Scrolling</MenuGroupLabel>
+      <MenuGroupLabel>{t('menu.groups.scrolling')}</MenuGroupLabel>
       <ValueRow
         id="system-menu.display.scroll"
         order={2}
         testId="display-scroll-speed"
-        label="Stick scroll speed"
+        label={t('display.stickScrollSpeed')}
         display={`${Math.round(scrollSpeed * 100)}%`}
         value={scrollSpeed}
         min={SCROLL_MIN}
@@ -164,7 +184,7 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
         onSlide={(next) => void update({ ui: { scrollSpeed: next } })}
       />
 
-      <MenuGroupLabel>Action hints</MenuGroupLabel>
+      <MenuGroupLabel>{t('menu.groups.actionHints')}</MenuGroupLabel>
       <MenuRow
         id="system-menu.display.hints"
         order={3}
@@ -172,14 +192,14 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
         onActivate={() => void update({ hints: { enabled: !settings.hints.enabled } })}
         onClick={() => void update({ hints: { enabled: !settings.hints.enabled } })}
       >
-        <span>Show action hints</span>
+        <span>{t('display.showActionHints')}</span>
         <Switch checked={settings.hints.enabled} />
       </MenuRow>
       <ValueRow
         id="system-menu.display.delay"
         order={4}
         testId="display-hints-delay"
-        label="Wait before showing"
+        label={t('display.waitBeforeShowing')}
         display={`${(delayMs / 1000).toFixed(1)}s`}
         value={delayMs}
         min={DELAY_MIN}
@@ -193,19 +213,43 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
         onSlide={(next) => void update({ hints: { delayMs: next } })}
       />
 
-      <p className="px-3 pt-4 text-code text-text-muted">
-        Reduced motion and power saving arrive with spec 18.
-      </p>
+      <p className="px-3 pt-4 text-code text-text-muted">{t('display.reducedMotion')}</p>
+
+      <MenuGroupLabel>{t('menu.groups.language')}</MenuGroupLabel>
+      <MenuRow
+        id="system-menu.display.language"
+        order={5}
+        activatable
+        testId="display-language"
+        onActivate={() => setLanguageOpen(true)}
+        onClick={() => setLanguageOpen(true)}
+      >
+        <span>{t('display.language')}</span>
+        <span className="text-code text-text-muted">{t(`display.languageModes.${language}`)}</span>
+      </MenuRow>
 
       <ChoiceDialog
         open={themeOpen}
         onOpenChange={setThemeOpen}
-        title="Theme"
-        description="Applies to the whole app."
-        options={THEME_OPTIONS}
+        title={t('display.theme')}
+        description={t('display.themeDescription')}
+        options={themeOptions}
         onChoose={(id) => {
           if (THEME_MODES.includes(id as ThemeMode)) {
             void update({ ui: { theme: id as ThemeMode } })
+          }
+        }}
+      />
+
+      <ChoiceDialog
+        open={languageOpen}
+        onOpenChange={setLanguageOpen}
+        title={t('display.language')}
+        description={t('display.languageDescription')}
+        options={languageOptions}
+        onChoose={(id) => {
+          if (LANGUAGE_MODES.includes(id as LanguageMode)) {
+            void update({ ui: { language: id as LanguageMode } })
           }
         }}
       />

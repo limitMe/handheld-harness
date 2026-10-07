@@ -1,6 +1,7 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog'
 import { useRef, type RefObject } from 'react'
 import { FocusContainer, useDialogNavigation, useFocusable } from '../focus'
+import { useTranslation } from '../i18n'
 import { Button } from './Button'
 
 export interface ConfirmDialogProps {
@@ -100,13 +101,15 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel,
   destructive,
   initialFocus = 'cancel',
   onConfirm,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation()
   const cancelRef = useRef<HTMLButtonElement>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
+  const resolvedCancelLabel = cancelLabel ?? t('common.cancel')
 
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
@@ -126,7 +129,7 @@ export function ConfirmDialog({
             cancelRef={cancelRef}
             confirmRef={confirmRef}
             confirmLabel={confirmLabel}
-            cancelLabel={cancelLabel}
+            cancelLabel={resolvedCancelLabel}
             destructive={destructive}
             initialFocus={initialFocus}
             onConfirm={onConfirm}

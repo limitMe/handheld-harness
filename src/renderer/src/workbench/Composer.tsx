@@ -9,6 +9,7 @@ import {
   type NavigateResult,
 } from '../focus'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
+import { useTranslation } from '../i18n'
 import { Button, cn } from '../ui'
 import { ListInput } from './ListInput'
 import {
@@ -81,6 +82,7 @@ export function Composer({
   engineId,
   commandsAvailable = false,
 }: ComposerProps) {
+  const { t } = useTranslation()
   const tree = useFocusTree()
   const textarea = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement | null>(null)
@@ -273,7 +275,7 @@ export function Composer({
               data-testid="composer"
               rows={1}
               value={value}
-              placeholder="Message the agent…"
+              placeholder={t('composer.placeholder')}
               onChange={(event) => onChange(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Escape') {
@@ -302,7 +304,7 @@ export function Composer({
                 className="min-h-11"
                 onClick={onAbort}
               >
-                Stop
+                {t('composer.stop')}
               </Button>
             ) : (
               <Button
@@ -311,7 +313,7 @@ export function Composer({
                 className="min-h-11"
                 disabled={!canSend}
               >
-                Send
+                {t('composer.send')}
               </Button>
             )}
           </>

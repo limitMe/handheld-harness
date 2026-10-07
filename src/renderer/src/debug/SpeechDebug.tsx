@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Settings, SpeechProviderId } from '@shared/ipc'
 import type { SpeechProviderInfo } from '@shared/speech'
+import { useTranslation } from '../i18n'
 import { startMicCapture, type MicCapture } from '../speech/capture'
 import { Button, Overlay } from '../ui'
 import type { DebugOverlayProps } from './types'
@@ -12,13 +13,14 @@ import type { DebugOverlayProps } from './types'
  * this once the real dictation UI lands.
  */
 export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
+  const { t } = useTranslation()
   const [providers, setProviders] = useState<SpeechProviderInfo[]>([])
   const [settings, setSettings] = useState<Settings>()
   const [keyConfigured, setKeyConfigured] = useState(false)
   const [apiKey, setApiKey] = useState('')
   const [resourceId, setResourceId] = useState('')
   const [endpoint, setEndpoint] = useState('')
-  const [status, setStatus] = useState('Idle')
+  const [status, setStatus] = useState('idle')
   const [level, setLevel] = useState(0)
   const [finalText, setFinalText] = useState('')
   const [partialText, setPartialText] = useState('')
@@ -78,7 +80,7 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
     return speech.onEvent((event) => {
       switch (event.type) {
         case 'started':
-          setStatus('Listening…')
+          setStatus('listening')
           break
         case 'partial':
           setPartialText(event.text)
@@ -92,11 +94,11 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
           break
         case 'error':
           setError(`${event.code}: ${event.message}`)
-          setStatus('Error')
+          setStatus('error')
           stopCapture()
           break
         case 'ended':
-          setStatus('Idle')
+          setStatus('idle')
           stopCapture()
           break
       }
@@ -125,7 +127,7 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
     setError(null)
     setFinalText('')
     setPartialText('')
-    setStatus('Connecting…')
+    setStatus('connecting')
     try {
       const { sessionId } = await speech.start()
       sessionRef.current = sessionId
@@ -139,7 +141,7 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
       })
     } catch (startError) {
       sessionRef.current = undefined
-      setStatus('Idle')
+      setStatus('idle')
       setError(startError instanceof Error ? startError.message : String(startError))
     }
   }, [stopCapture])
@@ -148,7 +150,7 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
     stopCapture()
     const active = sessionRef.current
     sessionRef.current = undefined
-    setStatus('Idle')
+    setStatus('idle')
     if (active) await window.handheld?.speech.stop(active)
   }, [stopCapture])
 
@@ -188,18 +190,18 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
     [],
   )
 
-  const listening = status === 'Listening…' || status === 'Connecting…'
+  const listening = status === 'listening' || status === 'connecting'
 
   return (
     <Overlay
       open={open}
       onOpenChange={handleOpenChange}
-      title="Speech probe"
-      description="Press Ctrl+Shift+V to toggle. Verifies the provider connection and streams the microphone through the speech service."
+      title={t('debug.speech.title')}
+      description={t('debug.speech.description')}
     >
       <div data-testid="speech-debug" className="flex flex-col gap-4">
         <label className="flex flex-col gap-2 text-base">
-          <span className="text-text-muted">Provider</span>
+          <span className="text-text-muted">{t('debug.speech.provider')}</span>
           <select
             className="rounded-md border border-surface-raised bg-card px-3 py-2 text-base text-on-card"
             value={providerId}
@@ -208,7 +210,7 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
             {providers.map((provider) => (
               <option key={provider.id} value={provider.id}>
                 {provider.displayName}
-                {provider.requiresCredentials ? ' (API key required)' : ''}
+                {provider.requiresCredentials ? t('debug.speech.apiKeyRequired') : ''}
               </option>
             ))}
           </select>
@@ -216,34 +218,35 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
 
         <div className="flex flex-col gap-2 text-base">
           <span className="text-text-muted">
-            Doubao API key{keyConfigured ? ' — configured' : ' — not set'}
+            {t('debug.speech.apiKey')}
+            {keyConfigured ? t('debug.speech.apiKeyConfigured') : t('debug.speech.apiKeyNotSet')}
           </span>
           <div className="flex items-center gap-2">
             <input
               type="password"
               className="min-w-0 flex-1 rounded-md border border-surface-raised bg-card px-3 py-2 text-base text-on-card"
-              placeholder="Paste the Volcengine API key"
+              placeholder={t('debug.speech.keyPlaceholder')}
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
             />
             <Button onClick={() => void saveKey()} disabled={apiKey.trim().length === 0}>
-              Save
+              {t('common.save')}
             </Button>
             <Button onClick={() => void clearKey()} disabled={!keyConfigured}>
-              Clear
+              {t('common.clear')}
             </Button>
           </div>
         </div>
 
         <div className="grid grid-cols-[8rem_1fr] items-center gap-2 text-base">
-          <span className="text-text-muted">Resource ID</span>
+          <span className="text-text-muted">{t('debug.speech.resourceId')}</span>
           <input
             className="rounded-md border border-surface-raised bg-card px-3 py-2 text-code text-on-card"
             value={resourceId}
             onChange={(event) => setResourceId(event.target.value)}
             onBlur={() => void commitDoubao({ resourceId })}
           />
-          <span className="text-text-muted">Endpoint</span>
+          <span className="text-text-muted">{t('debug.speech.endpoint')}</span>
           <input
             className="rounded-md border border-surface-raised bg-card px-3 py-2 text-code text-on-card"
             value={endpoint}
@@ -254,12 +257,12 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
 
         <div className="flex flex-wrap items-center gap-3">
           <Button onClick={() => void start()} disabled={listening || providerId === 'none'}>
-            Start
+            {t('debug.speech.start')}
           </Button>
           <Button onClick={() => void stop()} disabled={!listening}>
-            Stop
+            {t('debug.speech.stop')}
           </Button>
-          <span className="text-text-muted">{status}</span>
+          <span className="text-text-muted">{t(`debug.speech.${status}`)}</span>
         </div>
 
         <div className="rounded-card bg-card p-4 text-on-card">
@@ -269,7 +272,9 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
               style={{ width: `${Math.round(level * 100)}%` }}
             />
           </div>
-          <p className="mt-2 text-code text-text-muted">level: {level.toFixed(3)}</p>
+          <p className="mt-2 text-code text-text-muted">
+            {t('debug.speech.level', { value: level.toFixed(3) })}
+          </p>
           <p className="mt-3 whitespace-pre-wrap">
             {finalText}
             <span className="text-text-muted underline">{partialText}</span>

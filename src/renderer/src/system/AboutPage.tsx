@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AppInfo } from '@shared/ipc'
 import { useEngineStatus } from '../engine/useEngineStatus'
+import { useTranslation } from '../i18n'
 import { MenuGroupLabel, MenuRow } from './MenuRow'
 
 export interface AboutPageProps {
@@ -9,6 +10,7 @@ export interface AboutPageProps {
 
 /** About & diagnostics (spec 15): versions, engine state and debug entry points. */
 export function AboutPage({ onOpenDebug }: AboutPageProps) {
+  const { t } = useTranslation()
   const [info, setInfo] = useState<AppInfo>()
   const status = useEngineStatus()
 
@@ -36,10 +38,10 @@ export function AboutPage({ onOpenDebug }: AboutPageProps) {
         onActivate={() => void window.handheld?.app.openLogDir()}
         onClick={() => void window.handheld?.app.openLogDir()}
       >
-        <span>Open log folder</span>
+        <span>{t('about.openLogs')}</span>
       </MenuRow>
 
-      <MenuGroupLabel>Diagnostics</MenuGroupLabel>
+      <MenuGroupLabel>{t('menu.groups.diagnostics')}</MenuGroupLabel>
       <MenuRow
         id="system-menu.about.gamepad"
         order={1}
@@ -47,7 +49,7 @@ export function AboutPage({ onOpenDebug }: AboutPageProps) {
         onActivate={() => onOpenDebug('gamepad')}
         onClick={() => onOpenDebug('gamepad')}
       >
-        <span>Gamepad probe</span>
+        <span>{t('about.gamepadProbe')}</span>
       </MenuRow>
       <MenuRow
         id="system-menu.about.mic"
@@ -56,7 +58,7 @@ export function AboutPage({ onOpenDebug }: AboutPageProps) {
         onActivate={() => onOpenDebug('mic')}
         onClick={() => onOpenDebug('mic')}
       >
-        <span>Microphone probe</span>
+        <span>{t('about.micProbe')}</span>
       </MenuRow>
       <MenuRow
         id="system-menu.about.engine"
@@ -65,7 +67,7 @@ export function AboutPage({ onOpenDebug }: AboutPageProps) {
         onActivate={() => onOpenDebug('engine')}
         onClick={() => onOpenDebug('engine')}
       >
-        <span>Engine probe</span>
+        <span>{t('about.engineProbe')}</span>
       </MenuRow>
       <MenuRow
         id="system-menu.about.speech"
@@ -74,22 +76,25 @@ export function AboutPage({ onOpenDebug }: AboutPageProps) {
         onActivate={() => onOpenDebug('speech')}
         onClick={() => onOpenDebug('speech')}
       >
-        <span>Speech probe</span>
+        <span>{t('about.speechProbe')}</span>
       </MenuRow>
 
-      <MenuGroupLabel>Build</MenuGroupLabel>
-      <dl data-testid="about-info" className="grid grid-cols-[10rem_1fr] gap-x-3 gap-y-1 px-3 text-base">
-        <dt className="text-text-muted">Version</dt>
+      <MenuGroupLabel>{t('menu.groups.build')}</MenuGroupLabel>
+      <dl
+        data-testid="about-info"
+        className="grid grid-cols-[10rem_1fr] gap-x-3 gap-y-1 px-3 text-base"
+      >
+        <dt className="text-text-muted">{t('about.version')}</dt>
         <dd>{info?.version ?? '—'}</dd>
-        <dt className="text-text-muted">Profile</dt>
+        <dt className="text-text-muted">{t('about.profile')}</dt>
         <dd>{info?.profile ?? '—'}</dd>
-        <dt className="text-text-muted">Platform</dt>
+        <dt className="text-text-muted">{t('about.platform')}</dt>
         <dd>{info?.platform ?? '—'}</dd>
-        <dt className="text-text-muted">Engine</dt>
-        <dd>{status?.state ?? 'unknown'}</dd>
-        <dt className="text-text-muted">Engine version</dt>
+        <dt className="text-text-muted">{t('about.engine')}</dt>
+        <dd>{status?.state ?? t('about.unknown')}</dd>
+        <dt className="text-text-muted">{t('about.engineVersion')}</dt>
         <dd>{status?.state === 'ready' ? status.version : '—'}</dd>
-        <dt className="text-text-muted">Workspace</dt>
+        <dt className="text-text-muted">{t('about.workspace')}</dt>
         <dd className="truncate">{status?.state === 'ready' ? status.workspaceDir || '—' : '—'}</dd>
       </dl>
     </div>

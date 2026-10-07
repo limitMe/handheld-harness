@@ -138,4 +138,27 @@ describe('Display & hints', () => {
     fireEvent.keyDown(window, { key: 'ArrowRight' })
     expect(update).toHaveBeenCalledWith({ hints: { delayMs: 2250 } })
   })
+
+  it('changes the UI language from the picker', async () => {
+    const { update } = installBridge()
+    await openDisplayPanel()
+
+    // Text size -> theme -> scroll speed -> hints -> delay -> language.
+    for (let i = 0; i < 6; i += 1) {
+      if (screen.getByTestId('display-language').hasAttribute('data-focused')) break
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+    }
+    await waitFor(() =>
+      expect(screen.getByTestId('display-language').hasAttribute('data-focused')).toBe(true),
+    )
+
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTestId('choice-zh')).not.toBeNull())
+
+    // The first option (Follow system) is focused; step down to 简体中文 and confirm.
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(update).toHaveBeenCalledWith({ ui: { language: 'zh' } })
+  })
 })

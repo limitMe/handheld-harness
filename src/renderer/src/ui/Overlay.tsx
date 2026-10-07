@@ -1,5 +1,6 @@
 import { Dialog } from '@base-ui/react/dialog'
 import type { ReactNode } from 'react'
+import { useTranslation } from '../i18n'
 import { cn } from './cn'
 
 export interface OverlayProps {
@@ -28,6 +29,7 @@ export function Overlay({
   className,
   children,
 }: OverlayProps) {
+  const { t } = useTranslation()
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -35,10 +37,12 @@ export function Overlay({
         <Dialog.Popup finalFocus={false} className={cn(popupStyles, className)}>
           <Dialog.Title className="text-xl font-semibold text-text">{title}</Dialog.Title>
           {description ? (
-            <Dialog.Description className="text-base text-text-muted">{description}</Dialog.Description>
+            <Dialog.Description className="text-base text-text-muted">
+              {description}
+            </Dialog.Description>
           ) : null}
           {children}
-          <Dialog.Close className={closeStyles}>Close</Dialog.Close>
+          <Dialog.Close className={closeStyles}>{t('common.close')}</Dialog.Close>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

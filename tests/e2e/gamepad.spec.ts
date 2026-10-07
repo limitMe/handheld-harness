@@ -1,5 +1,6 @@
 import path from 'node:path'
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
+import { forceEnglish } from './i18n'
 
 const root = path.resolve(__dirname, '..', '..')
 
@@ -38,6 +39,7 @@ async function launch(
   await window.waitForLoadState('domcontentloaded')
   await window.getByTestId('composer').waitFor()
   await installFakePad(window)
+  await forceEnglish(window)
   return { app, window }
 }
 

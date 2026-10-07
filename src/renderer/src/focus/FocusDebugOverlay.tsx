@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from '../i18n'
 import { useFocusTree } from './context'
 import type { FocusNodeDebug } from './types'
 
@@ -14,6 +15,7 @@ function depthOf(node: FocusNodeDebug, index: Map<string, FocusNodeDebug>): numb
 
 /** `Ctrl+Shift+F` overlay: shows the focus tree while DevTools is open (spec 11). */
 export function FocusDebugOverlay({ open }: { open: boolean }) {
+  const { t } = useTranslation()
   const tree = useFocusTree()
   const [, setTick] = useState(0)
 
@@ -34,9 +36,12 @@ export function FocusDebugOverlay({ open }: { open: boolean }) {
       data-testid="focus-debug"
       className="pointer-events-none fixed bottom-3 left-3 z-50 max-h-[60vh] w-[26rem] overflow-auto rounded-card border border-surface-raised bg-surface/95 p-3 text-code text-text shadow-card"
     >
-      <p className="mb-1 font-semibold">Focus tree</p>
+      <p className="mb-1 font-semibold">{t('debug.focus.title')}</p>
       <p className="mb-2 text-text-muted">
-        focused: {focused ?? '—'} · activated: {activated ?? '—'}
+        {t('debug.focus.summary', {
+          focused: focused ?? t('debug.focus.none'),
+          activated: activated ?? t('debug.focus.none'),
+        })}
       </p>
       <ul className="flex flex-col gap-0.5">
         {nodes.map((node) => (
@@ -55,8 +60,8 @@ export function FocusDebugOverlay({ open }: { open: boolean }) {
           >
             <span>{node.container ? '▸' : '•'}</span> {node.id}
             {node.flow !== 'geometric' ? ` [${node.flow}]` : ''}
-            {node.focused ? ' ◀ focused' : ''}
-            {node.activated ? ' ◀ activated' : ''}
+            {node.focused ? ` ${t('debug.focus.focusedMark')}` : ''}
+            {node.activated ? ` ${t('debug.focus.activatedMark')}` : ''}
           </li>
         ))}
       </ul>

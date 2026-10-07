@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 import type { ChatPart } from '@shared/engine'
 import { useFocusable } from '../focus'
+import { useTranslation } from '../i18n'
 import { MarkdownView } from './Markdown'
 
 function ToolStateIcon({ state }: { state: Extract<ChatPart, { type: 'tool' }>['state'] }) {
@@ -42,11 +43,12 @@ function TextPart({
 }
 
 function ToolPart({ part, order }: { part: ToolPartType; order: number }) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const output = useRef<HTMLPreElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const label = part.title ?? part.inputSummary ?? part.tool
-  const detail = part.error ?? part.output ?? part.inputSummary ?? 'No output'
+  const detail = part.error ?? part.output ?? part.inputSummary ?? t('part.noOutput')
   const focus = useFocusable({
     id: `tool-${part.id}`,
     elementRef: buttonRef,
@@ -91,6 +93,7 @@ function ToolPart({ part, order }: { part: ToolPartType; order: number }) {
 }
 
 function ReasoningPart({ part, order }: { part: ReasoningPartType; order: number }) {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDetailsElement>(null)
   const focus = useFocusable({
     id: `part-${part.id}`,
@@ -101,13 +104,9 @@ function ReasoningPart({ part, order }: { part: ReasoningPartType; order: number
     },
   })
   return (
-    <details
-      ref={ref}
-      {...focus.props}
-      className="rounded-md border border-surface-raised bg-card"
-    >
+    <details ref={ref} {...focus.props} className="rounded-md border border-surface-raised bg-card">
       <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-3 py-2 text-code text-text-muted">
-        Thinking
+        {t('part.thinking')}
       </summary>
       <div className="max-h-[40vh] overflow-auto border-t border-surface-raised px-3 py-2 text-text-muted">
         <MarkdownView text={part.text} />

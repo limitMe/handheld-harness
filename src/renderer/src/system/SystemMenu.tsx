@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CONTEXT_ORDER, useInputApi, useInputContext } from '../input'
 import { FocusContainer, useFocusTree } from '../focus'
+import { useTranslation } from '../i18n'
 import { MENU_CATEGORIES, type CategoryId } from './categories'
 import { AboutPage } from './AboutPage'
 import { DisplayPage } from './DisplayPage'
@@ -23,6 +24,7 @@ export function SystemMenu({ open, onClose, onOpenDebug }: SystemMenuProps) {
 }
 
 function SystemMenuBody({ onClose, onOpenDebug }: Omit<SystemMenuProps, 'open'>) {
+  const { t } = useTranslation()
   const tree = useFocusTree()
   const api = useInputApi()
   const { settings, update } = useSettings()
@@ -32,7 +34,11 @@ function SystemMenuBody({ onClose, onOpenDebug }: Omit<SystemMenuProps, 'open'>)
   useEffect(() => api.subscribeMap(setMap), [api])
 
   // Register the menu context so its bindings resolve while it is on top.
-  useInputContext('systemMenu', useMemo(() => ({}), []), CONTEXT_ORDER.overlay)
+  useInputContext(
+    'systemMenu',
+    useMemo(() => ({}), []),
+    CONTEXT_ORDER.overlay,
+  )
 
   const focusPanel = (): void => {
     tree?.setFocus('system-menu.first')
@@ -48,22 +54,22 @@ function SystemMenuBody({ onClose, onOpenDebug }: Omit<SystemMenuProps, 'open'>)
           <div className="w-64 shrink-0">
             <FocusContainer id="system-menu.categories" flow="column" memory>
               <nav className="flex flex-col gap-1">
-                {MENU_CATEGORIES.map((entry, index) => (
+                {MENU_CATEGORIES.map((id, index) => (
                   <MenuRow
-                    key={entry.id}
-                    id={`system-menu.category.${entry.id}`}
+                    key={id}
+                    id={`system-menu.category.${id}`}
                     order={index}
-                    selected={category === entry.id}
-                    testId={`menu-category-${entry.id}`}
-                    onFocus={() => setCategory(entry.id)}
+                    selected={category === id}
+                    testId={`menu-category-${id}`}
+                    onFocus={() => setCategory(id)}
                     onActivate={focusPanel}
                     onCancel={onClose}
                     onClick={() => {
-                      setCategory(entry.id)
+                      setCategory(id)
                       focusPanel()
                     }}
                   >
-                    <span>{entry.label}</span>
+                    <span>{t(`menu.categories.${id}`)}</span>
                   </MenuRow>
                 ))}
               </nav>
@@ -81,7 +87,7 @@ function SystemMenuBody({ onClose, onOpenDebug }: Omit<SystemMenuProps, 'open'>)
                   className="flex h-full flex-col gap-1 overflow-y-auto px-2 py-2"
                 >
                   {!settings ? (
-                    <p className="px-3 py-4 text-text-muted">Loading settings…</p>
+                    <p className="px-3 py-4 text-text-muted">{t('menu.loading')}</p>
                   ) : category === 'keys' ? (
                     <KeyBindingsPage map={map} settings={settings} update={update} />
                   ) : category === 'models' ? (

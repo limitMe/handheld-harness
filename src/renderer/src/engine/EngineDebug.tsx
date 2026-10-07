@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { EngineEvent, EngineInfo, EngineSnapshot } from '@shared/engine'
+import { useTranslation } from '../i18n'
 import { Button, Overlay } from '../ui'
 import type { DebugOverlayProps } from '../debug/types'
 
@@ -25,6 +26,7 @@ function shouldRefresh(event: EngineEvent): boolean {
 }
 
 export default function EngineDebug({ open, onOpenChange }: DebugOverlayProps) {
+  const { t } = useTranslation()
   const [snapshot, setSnapshot] = useState<EngineSnapshot>()
   const [engines, setEngines] = useState<EngineInfo[]>([])
   const [events, setEvents] = useState<LoggedEvent[]>([])
@@ -75,8 +77,8 @@ export default function EngineDebug({ open, onOpenChange }: DebugOverlayProps) {
     <Overlay
       open={open}
       onOpenChange={onOpenChange}
-      title="Engine debug"
-      description="Ctrl+Shift+E toggles. Drives the default engine through the same IPC the UI uses."
+      title={t('debug.engine.title')}
+      description={t('debug.engine.description')}
     >
       <section className="rounded-card bg-card p-4 text-on-card">
         <div className="flex items-center gap-3">
@@ -84,15 +86,20 @@ export default function EngineDebug({ open, onOpenChange }: DebugOverlayProps) {
             data-testid="engine-debug-status"
             className={`h-3 w-3 rounded-full ${statusDotClass(snapshot?.status.state)}`}
           />
-          <span className="font-semibold">{snapshot?.status.state ?? 'unknown'}</span>
+          <span className="font-semibold">
+            {snapshot?.status.state ?? t('debug.engine.unknown')}
+          </span>
           <span className="text-text-muted">{snapshot?.kind ?? '—'}</span>
         </div>
         {snapshot?.status.state === 'ready' ? (
           <p className="mt-2 text-code text-text-muted">
-            mode={snapshot.status.mode} version={snapshot.status.version} pid=
-            {snapshot.status.pid ?? '—'}
+            {t('debug.engine.modeVersion', {
+              mode: snapshot.status.mode,
+              version: snapshot.status.version,
+              pid: snapshot.status.pid ?? '—',
+            })}
             <br />
-            workspace={snapshot.status.workspaceDir}
+            {t('debug.engine.workspace', { value: snapshot.status.workspaceDir })}
           </p>
         ) : null}
         {snapshot?.status.state === 'down' ? (
@@ -102,13 +109,16 @@ export default function EngineDebug({ open, onOpenChange }: DebugOverlayProps) {
           </p>
         ) : null}
         <p className="mt-2 text-code text-text-muted">
-          defaultModel=
-          {snapshot?.defaultModel
-            ? `${snapshot.defaultModel.providerId}/${snapshot.defaultModel.modelId}`
-            : '—'}
+          {t('debug.engine.defaultModel', {
+            value: snapshot?.defaultModel
+              ? `${snapshot.defaultModel.providerId}/${snapshot.defaultModel.modelId}`
+              : '—',
+          })}
         </p>
         <details className="mt-2">
-          <summary className="cursor-pointer text-text-muted">capabilities</summary>
+          <summary className="cursor-pointer text-text-muted">
+            {t('debug.engine.capabilities')}
+          </summary>
           <pre className="mt-2 overflow-auto text-code text-text-muted">
             {JSON.stringify(snapshot?.capabilities ?? {}, null, 2)}
           </pre>
@@ -117,7 +127,7 @@ export default function EngineDebug({ open, onOpenChange }: DebugOverlayProps) {
 
       {engines.length > 1 ? (
         <section className="rounded-card bg-card p-4 text-on-card">
-          <h3 className="text-base font-semibold">Engines</h3>
+          <h3 className="text-base font-semibold">{t('debug.engine.engines')}</h3>
           <ul className="text-code text-text-muted">
             {engines.map((engine) => (
               <li key={engine.engineId}>
@@ -129,7 +139,7 @@ export default function EngineDebug({ open, onOpenChange }: DebugOverlayProps) {
       ) : null}
 
       <section className="rounded-card bg-card p-4 text-on-card">
-        <h3 className="text-base font-semibold">Sessions</h3>
+        <h3 className="text-base font-semibold">{t('debug.engine.sessions')}</h3>
         {snapshot?.sessions.length ? (
           <ul className="mt-2 flex flex-col gap-1">
             {snapshot.sessions.map((session) => (
@@ -149,15 +159,17 @@ export default function EngineDebug({ open, onOpenChange }: DebugOverlayProps) {
             ))}
           </ul>
         ) : (
-          <p className="text-code text-text-muted">No sessions.</p>
+          <p className="text-code text-text-muted">{t('debug.engine.noSessions')}</p>
         )}
       </section>
 
       <section className="rounded-card bg-card p-4 text-on-card">
-        <h3 className="text-base font-semibold">Pending requests</h3>
+        <h3 className="text-base font-semibold">{t('debug.engine.pendingRequests')}</h3>
         <p className="text-code text-text-muted">
-          permissions: {snapshot?.pendingPermissions.length ?? 0} · questions:{' '}
-          {snapshot?.pendingQuestions.length ?? 0}
+          {t('debug.engine.pendingCounts', {
+            permissions: snapshot?.pendingPermissions.length ?? 0,
+            questions: snapshot?.pendingQuestions.length ?? 0,
+          })}
         </p>
         <pre className="mt-2 overflow-auto text-code text-text-muted">
           {JSON.stringify(
@@ -177,8 +189,8 @@ export default function EngineDebug({ open, onOpenChange }: DebugOverlayProps) {
             void run(async () => setSelected((await window.handheld.engine.createSession()).id))
           }
         >
-          New session
-        </Button>
+          {t('debug.engine.newSession')}
+        </Button>{' '}
         <Button
           disabled={!ref}
           onClick={() =>
@@ -187,7 +199,7 @@ export default function EngineDebug({ open, onOpenChange }: DebugOverlayProps) {
             })
           }
         >
-          Send test text
+          {t('debug.engine.sendTest')}
         </Button>
         <Button
           disabled={!ref}
@@ -197,10 +209,10 @@ export default function EngineDebug({ open, onOpenChange }: DebugOverlayProps) {
             })
           }
         >
-          Abort
+          {t('debug.engine.abort')}
         </Button>
         <Button onClick={() => void run(() => window.handheld.engine.restart())}>
-          Restart server
+          {t('debug.engine.restart')}
         </Button>
       </div>
 
@@ -213,9 +225,11 @@ export default function EngineDebug({ open, onOpenChange }: DebugOverlayProps) {
       {status ? <p className="text-code text-danger">{status}</p> : null}
 
       <section className="rounded-card bg-card p-4 text-on-card">
-        <h3 className="text-base font-semibold">Recent events ({events.length})</h3>
+        <h3 className="text-base font-semibold">
+          {t('debug.engine.recentEvents', { value: events.length })}
+        </h3>
         {events.length === 0 ? (
-          <p className="text-code text-text-muted">No events yet.</p>
+          <p className="text-code text-text-muted">{t('debug.engine.noEvents')}</p>
         ) : (
           <ul className="flex flex-col gap-1">
             {events

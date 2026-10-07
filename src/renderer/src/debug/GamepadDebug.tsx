@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { actionLabel } from '@shared/actions'
+import { useTranslation } from '../i18n'
 import { useInputDebugStore } from '../input'
 import { Button, Overlay } from '../ui'
 import type { DebugOverlayProps } from './types'
@@ -74,6 +75,7 @@ function formatValue(value: number): string {
 }
 
 export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) {
+  const { t } = useTranslation()
   const [pads, setPads] = useState<GamepadSnapshot[]>([])
   const [lastInputAgo, setLastInputAgo] = useState(0)
   const [events, setEvents] = useState<string[]>([])
@@ -94,11 +96,15 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
   useEffect(() => {
     const onConnected = (event: Event): void => {
       const pad = (event as GamepadEvent).gamepad
-      setEvents((prev) => [`connected #${pad.index} ${pad.id}`, ...prev].slice(0, 20))
+      setEvents((prev) =>
+        [t('debug.gamepad.connectedEvent', { index: pad.index, id: pad.id }), ...prev].slice(0, 20),
+      )
     }
     const onDisconnected = (event: Event): void => {
       const pad = (event as GamepadEvent).gamepad
-      setEvents((prev) => [`disconnected #${pad.index}`, ...prev].slice(0, 20))
+      setEvents((prev) =>
+        [t('debug.gamepad.disconnectedEvent', { index: pad.index }), ...prev].slice(0, 20),
+      )
     }
     window.addEventListener('gamepadconnected', onConnected)
     window.addEventListener('gamepaddisconnected', onDisconnected)
@@ -106,7 +112,7 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
       window.removeEventListener('gamepadconnected', onConnected)
       window.removeEventListener('gamepaddisconnected', onDisconnected)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (!open) return
@@ -138,15 +144,15 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
   const testVibration = useCallback((): void => {
     const gamepad = Array.from(navigator.getGamepads()).find((pad): pad is Gamepad => pad !== null)
     if (!gamepad) {
-      setVibrationResult('No gamepad connected')
+      setVibrationResult(t('debug.gamepad.noGamepad'))
       return
     }
     const actuator = gamepad.vibrationActuator
     if (!actuator) {
-      setVibrationResult('No vibrationActuator exposed by this gamepad')
+      setVibrationResult(t('debug.gamepad.noActuator'))
       return
     }
-    setVibrationResult('playing dual-rumble...')
+    setVibrationResult(t('debug.gamepad.playing'))
     actuator
       .playEffect('dual-rumble', {
         startDelay: 0,
@@ -154,9 +160,11 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
         weakMagnitude: 0.8,
         strongMagnitude: 0.8,
       })
-      .then(() => setVibrationResult('dual-rumble played'))
-      .catch((error: unknown) => setVibrationResult(`failed: ${String(error)}`))
-  }, [])
+      .then(() => setVibrationResult(t('debug.gamepad.played')))
+      .catch((error: unknown) =>
+        setVibrationResult(t('debug.gamepad.failed', { error: String(error) })),
+      )
+  }, [t])
 
   const recordTenSeconds = useCallback((): void => {
     recordingRef.current = true
@@ -177,19 +185,19 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
     <Overlay
       open={open}
       onOpenChange={onOpenChange}
-      title="Gamepad probe"
-      description="Press Ctrl+Shift+G to toggle. Polls navigator.getGamepads() every frame."
+      title={t('debug.gamepad.title')}
+      description={t('debug.gamepad.description')}
     >
       <div className="flex flex-wrap items-center gap-4 text-base text-text-muted">
-        <span>visibility: {document.visibilityState}</span>
-        <span>focused: {String(document.hasFocus())}</span>
-        <span>last input: {lastInputAgo} ms ago</span>
+        <span>{t('debug.gamepad.visibility', { value: document.visibilityState })}</span>
+        <span>{t('debug.gamepad.focused', { value: String(document.hasFocus()) })}</span>
+        <span>{t('debug.gamepad.lastInput', { ms: lastInputAgo })}</span>
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Button onClick={testVibration}>Test vibration</Button>
+        <Button onClick={testVibration}>{t('debug.gamepad.testVibration')}</Button>
         <Button onClick={recordTenSeconds} disabled={recording}>
-          {recording ? 'Recording...' : 'Record 10s'}
+          {recording ? t('debug.gamepad.recording') : t('debug.gamepad.record')}
         </Button>
         {vibrationResult ? (
           <span className="self-center text-text-muted">{vibrationResult}</span>
@@ -197,7 +205,7 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
       </div>
 
       {pads.length === 0 ? (
-        <p className="text-base text-text-muted">No gamepad connected.</p>
+        <p className="text-base text-text-muted">{t('debug.gamepad.none')}</p>
       ) : (
         pads.map((pad) => (
           <section key={pad.index} className="rounded-card bg-card p-4 text-on-card">
@@ -205,20 +213,24 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
               #{pad.index} · {pad.id}
             </h3>
             <p className="text-code text-text-muted">
-              mapping: {pad.mapping || 'non-standard'} · connected: {String(pad.connected)} ·
-              timestamp: {pad.timestamp}
+              {t('debug.gamepad.mapping', {
+                mapping: pad.mapping || t('debug.gamepad.nonStandard'),
+                connected: String(pad.connected),
+                timestamp: pad.timestamp,
+              })}
             </p>
             <div className="mt-3 grid grid-cols-2 gap-1 text-code sm:grid-cols-3">
               {pad.buttons.map((button, i) => (
                 <div key={i} className={button.pressed ? 'text-accent' : 'text-text-muted'}>
-                  {button.name}: {button.pressed ? 'down' : 'up'} ({formatValue(button.value)})
+                  {button.name}: {button.pressed ? t('debug.gamepad.down') : t('debug.gamepad.up')}{' '}
+                  ({formatValue(button.value)})
                 </div>
               ))}
             </div>
             <div className="mt-3 grid grid-cols-2 gap-1 text-code sm:grid-cols-4">
               {pad.axes.map((axis, i) => (
                 <div key={i} className="text-text-muted">
-                  axis {i}: {formatValue(axis)}
+                  {t('debug.gamepad.axis', { index: i, value: formatValue(axis) })}
                 </div>
               ))}
             </div>
@@ -228,22 +240,23 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
 
       <section className="rounded-card bg-card p-4 text-on-card">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-semibold">Input actions</h3>
-          <Button onClick={clearActions}>Clear</Button>
+          <h3 className="text-base font-semibold">{t('debug.gamepad.inputActions')}</h3>
+          <Button onClick={clearActions}>{t('common.clear')}</Button>
         </div>
         <p className="mt-2 text-code text-text-muted">
-          contexts: {contexts.length === 0 ? '(none)' : contexts.join(' ▸ ')}
+          {t('debug.gamepad.contexts', {
+            value: contexts.length === 0 ? t('debug.gamepad.noContexts') : contexts.join(' ▸ '),
+          })}
         </p>
         {actions.length === 0 ? (
-          <p className="text-code text-text-muted">
-            No actions yet. Press a gamepad button or key.
-          </p>
+          <p className="text-code text-text-muted">{t('debug.gamepad.noActions')}</p>
         ) : (
           <ul className="mt-2 flex flex-col gap-1 text-code">
             {actions.map((entry) => (
               <li key={entry.seq} className={entry.handled ? 'text-accent' : 'text-text-muted'}>
-                {actionLabel(entry.action)} · {entry.phase} · {entry.source}:{entry.control}
-                {entry.handled ? ` → ${entry.contextId}` : ' (unhandled)'}
+                {t(`actions.${entry.action}`, { defaultValue: actionLabel(entry.action) })} ·{' '}
+                {entry.phase} · {entry.source}:{entry.control}
+                {entry.handled ? ` → ${entry.contextId}` : ` ${t('debug.gamepad.unhandled')}`}
               </li>
             ))}
           </ul>
@@ -251,9 +264,9 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
       </section>
 
       <section className="rounded-card bg-card p-4 text-on-card">
-        <h3 className="text-base font-semibold">Connection events</h3>
+        <h3 className="text-base font-semibold">{t('debug.gamepad.connectionEvents')}</h3>
         {events.length === 0 ? (
-          <p className="text-code text-text-muted">No events yet.</p>
+          <p className="text-code text-text-muted">{t('debug.gamepad.noEvents')}</p>
         ) : (
           <ul className="text-code text-text-muted">
             {events.map((entry, i) => (

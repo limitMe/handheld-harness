@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import type { PermissionReply, PermissionRequest } from '@shared/engine'
 import { useFocusable, FOCUS_ORDER } from '../focus'
+import { useTranslation } from '../i18n'
 import { Button } from '../ui'
 
 export interface PermissionCardProps {
@@ -15,6 +16,7 @@ export interface PermissionCardProps {
  * live in the `currentWork.permission` input context.
  */
 export function PermissionCard({ request, permissionAlways, onReply }: PermissionCardProps) {
+  const { t } = useTranslation()
   const cardRef = useRef<HTMLDivElement>(null)
   const focus = useFocusable({
     id: `permission-${request.id}`,
@@ -24,11 +26,17 @@ export function PermissionCard({ request, permissionAlways, onReply }: Permissio
   })
 
   const actions: Array<{ label: string; reply: PermissionReply; testId: string }> = [
-    { label: 'Allow once', reply: 'once', testId: 'permission-once' },
+    { label: t('permission.allowOnce'), reply: 'once', testId: 'permission-once' },
     ...(permissionAlways
-      ? [{ label: 'Always allow', reply: 'always' as PermissionReply, testId: 'permission-always' }]
+      ? [
+          {
+            label: t('permission.alwaysAllow'),
+            reply: 'always' as PermissionReply,
+            testId: 'permission-always',
+          },
+        ]
       : []),
-    { label: 'Reject', reply: 'reject', testId: 'permission-reject' },
+    { label: t('permission.reject'), reply: 'reject', testId: 'permission-reject' },
   ]
 
   return (
@@ -48,7 +56,7 @@ export function PermissionCard({ request, permissionAlways, onReply }: Permissio
     >
       <div className="flex items-center gap-2">
         <span className="text-warning">⚠</span>
-        <span className="font-semibold">Permission requested</span>
+        <span className="font-semibold">{t('permission.title')}</span>
       </div>
       <p className="text-base">{request.title}</p>
       <p className="text-code text-text-muted">

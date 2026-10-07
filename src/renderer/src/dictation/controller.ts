@@ -231,14 +231,14 @@ function toBytes(pcm: Int16Array): Uint8Array {
   return new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength)
 }
 
-/** Turns the main-process failure into a hint a handheld user can act on (spec 16). */
+/** Turns the main-process failure into an i18n key a handheld user can act on (spec 16, 20). */
 function friendlyError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error)
   if (/provider is configured/i.test(message)) {
-    return 'No speech provider configured — use Windows dictation (Win+H) or pick one under System menu › Voice input.'
+    return 'dictation.noProvider'
   }
   if (/API key/i.test(message)) {
-    return 'The speech API key is missing — add it under System menu › Voice input.'
+    return 'dictation.missingKey'
   }
   return message
 }

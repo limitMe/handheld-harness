@@ -7,6 +7,7 @@ import SpeechDebug from './debug/SpeechDebug'
 import { useEngineStatus } from './engine/useEngineStatus'
 import { DictationLayer } from './dictation'
 import { FocusDebugOverlay } from './focus'
+import { useTranslation } from './i18n'
 import { CONTEXT_ORDER, onPress, useInputContext } from './input'
 import { useWorkbenchStore } from './state/store'
 import { sessionKey } from './state/types'
@@ -14,9 +15,11 @@ import { showToast } from './ui'
 import { CurrentWork } from './workbench/CurrentWork'
 import { TaskMap } from './workbench/TaskMap'
 import { SystemMenu } from './system/SystemMenu'
+import { useLanguageSync } from './system/useLanguageSync'
 import { useThemeSync } from './system/useThemeSync'
 
 export default function App() {
+  const { t } = useTranslation()
   const [gamepadOpen, setGamepadOpen] = useState(false)
   const [micOpen, setMicOpen] = useState(false)
   const [engineOpen, setEngineOpen] = useState(false)
@@ -26,6 +29,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   useThemeSync()
+  useLanguageSync()
 
   const initialize = useWorkbenchStore((state) => state.initialize)
   const sessions = useWorkbenchStore((state) => state.sessions)
@@ -73,18 +77,18 @@ export default function App() {
     const state = engineStatus?.state
     const previous = previousEngineState.current
     if (state === 'ready' && (previous === 'reconnecting' || previous === 'down')) {
-      showToast('Engine reconnected')
+      showToast(t('toast.engineReconnected'))
     }
     previousEngineState.current = state
-  }, [engineStatus])
+  }, [engineStatus, t])
 
   const title = menuOpen
-    ? 'System menu'
+    ? t('app.systemMenu')
     : mapOpen
-      ? 'Task map'
+      ? t('app.taskMap')
       : current
-        ? (sessions[sessionKey(current)]?.title ?? 'Task')
-        : 'New task'
+        ? (sessions[sessionKey(current)]?.title ?? t('app.task'))
+        : t('app.newTask')
 
   const adjustZoom = useCallback(async (direction: -1 | 0 | 1): Promise<void> => {
     const settings = await window.handheld.settings.get()

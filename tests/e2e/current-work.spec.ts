@@ -7,6 +7,7 @@ import {
   type ElectronApplication,
   type Page,
 } from '@playwright/test'
+import { forceEnglish } from './i18n'
 
 const root = path.resolve(__dirname, '..', '..')
 const artifacts = path.join(root, 'tests', 'e2e', 'artifacts')
@@ -43,6 +44,7 @@ async function launch(profile: string): Promise<{ app: ElectronApplication; wind
   const window = await app.firstWindow()
   await window.waitForLoadState('domcontentloaded')
   await window.getByTestId('composer').waitFor()
+  await forceEnglish(window)
   return { app, window }
 }
 

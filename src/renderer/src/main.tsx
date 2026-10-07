@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import { FocusProvider } from './focus'
 import { HintsProvider } from './hints'
+import { i18n } from './i18n'
 import { InputProvider } from './input'
 import { ToastProvider } from './ui'
 import './styles/app.css'
@@ -45,9 +46,11 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
     if (this.state.error) {
       return (
         <div className="flex h-full flex-col gap-3 overflow-auto bg-surface p-6 font-mono text-text">
-          <h1 className="text-xl font-semibold text-danger">Something went wrong</h1>
-          <pre className="whitespace-pre-wrap text-code text-text-muted">{this.state.error.message}</pre>
-          <p className="text-code text-text-muted">Details were written to the main log.</p>
+          <h1 className="text-xl font-semibold text-danger">{i18n.t('errors.boundaryTitle')}</h1>
+          <pre className="whitespace-pre-wrap text-code text-text-muted">
+            {this.state.error.message}
+          </pre>
+          <p className="text-code text-text-muted">{i18n.t('errors.boundaryDetails')}</p>
         </div>
       )
     }

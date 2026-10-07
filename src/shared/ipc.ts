@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { ACTION_IDS, type ActionId } from './actions'
 import { DEFAULT_HINTS } from './hints'
+import { DEFAULT_LANGUAGE, LANGUAGE_MODES } from './i18n'
 import type { BindingLayer, BindingValue } from './input'
 import {
   DOUBAO_DEFAULT_ENDPOINT,
@@ -33,6 +34,10 @@ export type WindowMode = z.infer<typeof WindowModeSchema>
 export const THEME_MODES = ['system', 'dark', 'light'] as const
 export const ThemeModeSchema = z.enum(THEME_MODES)
 export type ThemeMode = z.infer<typeof ThemeModeSchema>
+
+/** UI language: follow the OS locale, or pick English / Simplified Chinese (spec 20). */
+export const LanguageModeSchema = z.enum(LANGUAGE_MODES)
+export type { LanguageMode } from './i18n'
 
 export const LogLevelSchema = z.enum(['error', 'warn', 'info', 'verbose', 'debug', 'silly'])
 export type LogLevel = z.infer<typeof LogLevelSchema>
@@ -70,6 +75,8 @@ export const UiSettingsSchema = z.object({
   scrollSpeed: z.number().min(0.25).max(2).default(1),
   /** Theme selection; `system` follows the OS light/dark preference (spec 18). */
   theme: ThemeModeSchema.default('system'),
+  /** UI language; `system` follows the OS locale (spec 20). */
+  language: LanguageModeSchema.default(DEFAULT_LANGUAGE),
 })
 export type UiSettings = z.infer<typeof UiSettingsSchema>
 
@@ -152,7 +159,12 @@ export const SettingsSchema = z.object({
     mode: WindowModeSchema,
   }),
   engine: EngineSettingsSchema.default({}),
-  ui: UiSettingsSchema.default({ zoom: 1, scrollSpeed: 1, theme: 'system' }),
+  ui: UiSettingsSchema.default({
+    zoom: 1,
+    scrollSpeed: 1,
+    theme: 'system',
+    language: DEFAULT_LANGUAGE,
+  }),
   hints: HintsSettingsSchema.default({ ...DEFAULT_HINTS }),
   tasks: TasksSettingsSchema.default({ open: [], unread: [] }),
   model: ModelSettingsSchema.default({}),
@@ -182,6 +194,7 @@ export const SettingsPatchSchema = z.object({
       zoom: z.number().optional(),
       scrollSpeed: z.number().optional(),
       theme: ThemeModeSchema.optional(),
+      language: LanguageModeSchema.optional(),
     })
     .optional(),
   hints: z
@@ -221,7 +234,7 @@ export const DEFAULT_SETTINGS: Settings = {
   schemaVersion: 1,
   window: { mode: 'windowed' },
   engine: {},
-  ui: { zoom: 1, scrollSpeed: 1, theme: 'system' },
+  ui: { zoom: 1, scrollSpeed: 1, theme: 'system', language: DEFAULT_LANGUAGE },
   hints: { ...DEFAULT_HINTS },
   tasks: { open: [], unread: [] },
   model: {},

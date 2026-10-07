@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, type ReactElement } from 'react'
+import { i18n } from '../i18n'
 import { CONTEXT_ORDER, onPress, useInputApi, useInputContext } from '../input'
 import { showToast } from '../ui'
 import { dictation } from './instance'
@@ -30,7 +31,7 @@ export function DictationLayer(): ReactElement | null {
   useEffect(() => {
     if (!error || error === shownError.current) return
     shownError.current = error
-    showToast(error)
+    showToast(i18n.exists(error) ? i18n.t(error) : error)
   }, [error])
 
   useInputContext(

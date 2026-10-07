@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from '../i18n'
 import { Button, Overlay } from '../ui'
 import type { DebugOverlayProps } from './types'
 
 interface InputDevice {
   deviceId: string
   label: string
+  index: number
 }
 
 interface StreamSettings {
@@ -16,13 +18,18 @@ async function loadInputDevices(): Promise<InputDevice[]> {
   const all = await navigator.mediaDevices.enumerateDevices()
   return all
     .filter((device) => device.kind === 'audioinput')
-    .map((device, i) => ({ deviceId: device.deviceId, label: device.label || `Input ${i + 1}` }))
+    .map((device, index) => ({
+      deviceId: device.deviceId,
+      label: device.label,
+      index: index + 1,
+    }))
 }
 
 export default function MicDebug({ open, onOpenChange }: DebugOverlayProps) {
+  const { t } = useTranslation()
   const [devices, setDevices] = useState<InputDevice[]>([])
   const [selected, setSelected] = useState('')
-  const [status, setStatus] = useState('Idle')
+  const [status, setStatus] = useState('idle')
   const [error, setError] = useState<string | null>(null)
   const [level, setLevel] = useState(0)
   const [settings, setSettings] = useState<StreamSettings | null>(null)
@@ -37,9 +44,9 @@ export default function MicDebug({ open, onOpenChange }: DebugOverlayProps) {
       setDevices(inputs)
       setSelected((prev) => prev || inputs[0]?.deviceId || '')
     } catch (err) {
-      setError(`enumerateDevices failed: ${String(err)}`)
+      setError(t('debug.mic.enumerateFailed', { error: String(err) }))
     }
-  }, [])
+  }, [t])
 
   const releaseStream = useCallback((): void => {
     cancelAnimationFrame(frameRef.current)
@@ -52,13 +59,13 @@ export default function MicDebug({ open, onOpenChange }: DebugOverlayProps) {
   const stop = useCallback((): void => {
     releaseStream()
     setLevel(0)
-    setStatus('Idle')
+    setStatus('idle')
   }, [releaseStream])
 
   const start = useCallback(async (): Promise<void> => {
     stop()
     setError(null)
-    setStatus('Requesting microphone...')
+    setStatus('requesting')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: selected ? { deviceId: { exact: selected } } : true,
@@ -85,10 +92,10 @@ export default function MicDebug({ open, onOpenChange }: DebugOverlayProps) {
         frameRef.current = requestAnimationFrame(tick)
       }
       frameRef.current = requestAnimationFrame(tick)
-      setStatus('Live')
+      setStatus('live')
       await refreshDevices()
     } catch (err) {
-      setStatus('Failed')
+      setStatus('failed')
       const name = err instanceof Error ? err.name : 'Error'
       const message = err instanceof Error ? err.message : String(err)
       setError(`${name}: ${message}`)
@@ -105,15 +112,15 @@ export default function MicDebug({ open, onOpenChange }: DebugOverlayProps) {
         setSelected((prev) => prev || inputs[0]?.deviceId || '')
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(`enumerateDevices failed: ${String(err)}`)
+        if (!cancelled) setError(t('debug.mic.enumerateFailed', { error: String(err) }))
       })
     return () => {
       cancelled = true
       releaseStream()
       setLevel(0)
-      setStatus('Idle')
+      setStatus('idle')
     }
-  }, [open, releaseStream])
+  }, [open, releaseStream, t])
 
   useEffect(() => () => releaseStream(), [releaseStream])
 
@@ -121,48 +128,52 @@ export default function MicDebug({ open, onOpenChange }: DebugOverlayProps) {
     <Overlay
       open={open}
       onOpenChange={onOpenChange}
-      title="Microphone probe"
-      description="Press Ctrl+Shift+M to toggle. Verifies enumerateDevices and getUserMedia(audio)."
+      title={t('debug.mic.title')}
+      description={t('debug.mic.description')}
     >
       <label className="flex flex-col gap-2 text-base">
-        <span className="text-text-muted">Input device</span>
+        <span className="text-text-muted">{t('debug.mic.inputDevice')}</span>
         <select
           className="rounded-md border border-surface-raised bg-card px-3 py-2 text-base text-on-card"
           value={selected}
           onChange={(event) => setSelected(event.target.value)}
         >
-          {devices.length === 0 ? <option value="">No audio inputs found</option> : null}
+          {devices.length === 0 ? <option value="">{t('debug.mic.noInputs')}</option> : null}
           {devices.map((device) => (
             <option key={device.deviceId} value={device.deviceId}>
-              {device.label}
+              {device.label || t('debug.mic.inputN', { index: device.index })}
             </option>
           ))}
         </select>
       </label>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={() => void start()}>Start</Button>
-        <Button onClick={stop}>Stop</Button>
-        <Button onClick={() => void refreshDevices()}>Refresh devices</Button>
-        <span className="text-text-muted">{status}</span>
+        <Button onClick={() => void start()}>{t('debug.mic.start')}</Button>
+        <Button onClick={stop}>{t('debug.mic.stop')}</Button>
+        <Button onClick={() => void refreshDevices()}>{t('debug.mic.refresh')}</Button>
+        <span className="text-text-muted">{t(`debug.mic.${status}`)}</span>
       </div>
 
       {error ? (
         <div className="rounded-card bg-card p-4 text-code text-danger">
           <p>{error}</p>
-          <p className="mt-2 text-text-muted">
-            Check Windows privacy settings: allow microphone access and desktop apps (spec 00 step 7).
-          </p>
+          <p className="mt-2 text-text-muted">{t('debug.mic.privacy')}</p>
         </div>
       ) : null}
 
       <div className="rounded-card bg-card p-4 text-on-card">
         <div className="h-4 w-full overflow-hidden rounded-full bg-surface">
-          <div className="h-full bg-accent transition-[width] duration-fast" style={{ width: `${Math.round(level * 100)}%` }} />
+          <div
+            className="h-full bg-accent transition-[width] duration-fast"
+            style={{ width: `${Math.round(level * 100)}%` }}
+          />
         </div>
         <p className="mt-2 text-code text-text-muted">
-          level: {level.toFixed(3)} · sampleRate: {settings?.sampleRate ?? '—'} · channels:{' '}
-          {settings?.channelCount ?? '—'}
+          {t('debug.mic.level', {
+            value: level.toFixed(3),
+            sampleRate: settings?.sampleRate ?? '—',
+            channels: settings?.channelCount ?? '—',
+          })}
         </p>
       </div>
     </Overlay>

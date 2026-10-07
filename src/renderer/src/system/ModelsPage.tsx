@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ModelGroup, ModelRef } from '@shared/engine'
 import type { Settings, SettingsPatch } from '@shared/ipc'
 import { useFocusTree } from '../focus'
+import { useTranslation } from '../i18n'
 import { MenuCancelProvider, MenuRow } from './MenuRow'
 
 export interface ModelsPageProps {
@@ -22,6 +23,7 @@ function sameModel(a: ModelRef | null | undefined, b: ModelRef | null | undefine
  * one focus-node row per model would overwhelm the focus tree.
  */
 export function ModelsPage({ settings, update }: ModelsPageProps) {
+  const { t } = useTranslation()
   const tree = useFocusTree()
   const [groups, setGroups] = useState<ModelGroup[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -75,13 +77,13 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
   }, [status, selected, tree])
 
   const currentLabel = !selected
-    ? 'Engine default (automatic)'
+    ? t('models.engineDefaultAutomatic')
     : (selectedName ?? `${selected.providerId} / ${selected.modelId}`)
 
   return (
     <div data-testid="models-page">
       <p className="px-3 pt-3 pb-1 text-code text-text-muted" data-testid="models-current">
-        Current: {currentLabel}
+        {t('models.current', { name: currentLabel })}
       </p>
       <MenuRow
         id="system-menu.first"
@@ -91,18 +93,16 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
         onActivate={() => void update({ model: { default: null } })}
         onClick={() => void update({ model: { default: null } })}
       >
-        <span>Engine default</span>
-        <span className="text-code text-text-muted">Automatic</span>
+        <span>{t('models.engineDefault')}</span>
+        <span className="text-code text-text-muted">{t('models.automatic')}</span>
       </MenuRow>
 
       {status === 'loading' ? (
-        <p className="px-3 py-4 text-text-muted">Loading models…</p>
+        <p className="px-3 py-4 text-text-muted">{t('models.loading')}</p>
       ) : null}
-      {status === 'error' ? (
-        <p className="px-3 py-4 text-danger">Could not load models from the engine.</p>
-      ) : null}
+      {status === 'error' ? <p className="px-3 py-4 text-danger">{t('models.loadError')}</p> : null}
       {status === 'ready' && groups.length === 0 ? (
-        <p className="px-3 py-4 text-text-muted">The engine reported no models.</p>
+        <p className="px-3 py-4 text-text-muted">{t('models.none')}</p>
       ) : null}
 
       {groups.map((group, index) => {
@@ -119,18 +119,23 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
               order={providerOrder}
               selected={Boolean(currentName)}
               testId={`model-provider-${group.providerId}`}
-              onActivate={() => setExpandedId((id) => (id === group.providerId ? null : group.providerId))}
-              onClick={() => setExpandedId((id) => (id === group.providerId ? null : group.providerId))}
+              onActivate={() =>
+                setExpandedId((id) => (id === group.providerId ? null : group.providerId))
+              }
+              onClick={() =>
+                setExpandedId((id) => (id === group.providerId ? null : group.providerId))
+              }
             >
               <span className="truncate">{group.name}</span>
               <span className="text-code text-text-muted">
-                {expanded ? '▾' : '▸'} {currentName ?? `${group.models.length} models`}
+                {expanded ? '▾' : '▸'}{' '}
+                {currentName ?? t('models.count', { value: group.models.length })}
               </span>
             </MenuRow>
             {expanded ? (
               <MenuCancelProvider onCancel={() => setExpandedId(null)}>
                 {group.models.length === 0 ? (
-                  <p className="px-6 py-2 text-text-muted">This provider reported no models.</p>
+                  <p className="px-6 py-2 text-text-muted">{t('models.providerNone')}</p>
                 ) : (
                   group.models.map((model, modelIndex) => {
                     const ref: ModelRef = { providerId: group.providerId, modelId: model.id }
@@ -147,7 +152,9 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
                         onClick={() => void update({ model: { default: ref } })}
                       >
                         <span className="truncate">{model.name}</span>
-                        {isSelected ? <span className="text-accent">Default</span> : null}
+                        {isSelected ? (
+                          <span className="text-accent">{t('models.default')}</span>
+                        ) : null}
                       </MenuRow>
                     )
                   })

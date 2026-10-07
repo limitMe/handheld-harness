@@ -8,6 +8,7 @@ import type {
   SessionRef,
 } from '@shared/engine'
 import { showToast } from '../ui/Toast'
+import { i18n } from '../i18n'
 import { parseSlashCommand } from '../workbench/commands'
 import { applyEngineEvent } from './applyEngineEvent'
 import {
@@ -293,11 +294,11 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
 
     if (command && (await isKnownCommand(current.engineId, command.name))) {
       await bridge.runCommand(current, command.name, command.args)
-      showToast('Sent')
+      showToast(i18n.t('toast.sent'))
       return
     }
     await bridge.prompt(current, { text })
-    showToast('Sent')
+    showToast(i18n.t('toast.sent'))
   },
 
   async abortCurrent() {
