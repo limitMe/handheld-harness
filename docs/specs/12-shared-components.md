@@ -115,3 +115,9 @@
 - **列表输入的键盘路径**：打开列表时容器会抢 DOM 焦点，从而让键盘方向键走列表上下文；真实键盘（含输入法）下的行为需人工确认，游戏手柄路径已由 e2e 覆盖。
 - **真实 OpenCode 的 `runCommand`**：`client.session.command` 对各命令的实际支持范围、`compact` 回退 `summarize` 是否命中，需用 `npm run engine:smoke` 在有凭据的环境验证（本次只能对 Fake 引擎自动化）。
 - **操作提示的触发细节**：目前只有“聚焦且激活”的组件才提示；授权 / 提问卡片按 P-02 应由 13 在激活后复用，本次未改 13 的交互。
+
+### 修复记录（2026-10-07）
+
+- **对话框被页面盖住**：`AlertDialog` / `Dialog` 的 backdrop 与 popup 没有 z-index，而任务地图 / 系统菜单是 `z-40`，导致确认对话框渲染在卡片背后且看起来半透明。给 `ConfirmDialog`、`ChoiceDialog`、`Overlay` 的 backdrop 与 popup 加上 `z-50`，与其它浮层（操作提示、Toast）同级且高于 `z-40` 的页面。
+- **列表输入的长说明溢出**：`ListInput` 的命令名与说明加 `w-full truncate`，长说明在一行内省略，不再挤出条目边界。
+- **列表输入退出后重新聚焦**：命令列表打开时会抢 DOM 焦点，关闭后由 `Composer` 的 effect 重新激活并聚焦 `<textarea>`；聚焦推迟一帧，避开 Base UI 在卸载时的焦点恢复。

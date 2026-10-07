@@ -99,6 +99,42 @@ test('restores the current task after a reload', async () => {
   }
 })
 
+test('shows the close-task confirmation above the task map', async () => {
+  const { app, window } = await launch('e2e-wb-dialog')
+  try {
+    await send(window, 'hello')
+    await expect(window.getByTestId('message-list')).toContainText('DONE', { timeout: 30_000 })
+
+    await window.getByTestId('open-tasks').click()
+    await expect(window.getByTestId('task-map')).toBeVisible()
+    await window.keyboard.press('Delete')
+
+    const dialog = window.getByRole('alertdialog')
+    await expect(dialog).toBeVisible()
+
+    // The dialog must paint over the task-map cards, not behind them.
+    const onTop = await window.evaluate(() => {
+      const scope = globalThis as unknown as {
+        document: {
+          querySelector(selector: string): {
+            getBoundingClientRect(): { x: number; y: number; width: number; height: number }
+            contains(node: unknown): boolean
+          } | null
+          elementFromPoint(x: number, y: number): unknown
+        }
+      }
+      const popup = scope.document.querySelector('[role="alertdialog"]')
+      if (!popup) return false
+      const rect = popup.getBoundingClientRect()
+      const hit = scope.document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
+      return popup.contains(hit)
+    })
+    expect(onTop).toBe(true)
+  } finally {
+    await app.close()
+  }
+})
+
 test('hides the always-allow button when the capability is off', async () => {
   const { app, window } = await launch('e2e-wb-cap', {
     HANDHELD_FAKE_CAPABILITIES: 'permissionAlways=false',

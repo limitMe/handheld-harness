@@ -12,10 +12,10 @@ export interface OverlayProps {
 }
 
 const backdropStyles =
-  'fixed inset-0 bg-surface/80 transition-opacity duration-ui ease-standard data-[starting-style]:opacity-0 data-[ending-style]:opacity-0'
+  'fixed inset-0 z-50 bg-surface/80 transition-opacity duration-ui ease-standard data-[starting-style]:opacity-0 data-[ending-style]:opacity-0'
 
 const popupStyles =
-  'fixed top-1/2 left-1/2 flex max-h-[85vh] w-[min(90vw,720px)] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto rounded-card bg-surface-raised p-6 text-text shadow-card transition-[opacity,transform] duration-ui ease-standard data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:opacity-0'
+  'fixed top-1/2 left-1/2 z-50 flex max-h-[85vh] w-[min(90vw,720px)] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto rounded-card bg-surface-raised p-6 text-text shadow-card transition-[opacity,transform] duration-ui ease-standard data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:opacity-0'
 
 const closeStyles =
   'self-end rounded-md border border-surface bg-card px-4 py-2 text-base text-on-card transition-colors duration-fast ease-standard hover:bg-surface focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none'
