@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ModelGroup, ModelRef } from '@shared/engine'
 import type { Settings, SettingsPatch } from '@shared/ipc'
+import { useFocusTree } from '../focus'
 import { MenuCancelProvider, MenuRow } from './MenuRow'
 
 export interface ModelsPageProps {
@@ -21,6 +22,7 @@ function sameModel(a: ModelRef | null | undefined, b: ModelRef | null | undefine
  * one focus-node row per model would overwhelm the focus tree.
  */
 export function ModelsPage({ settings, update }: ModelsPageProps) {
+  const tree = useFocusTree()
   const [groups, setGroups] = useState<ModelGroup[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const selected = settings.model.default ?? null
@@ -53,8 +55,34 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
     [groups],
   )
 
+  const selectedName = useMemo(
+    () =>
+      selected
+        ? groups
+            .find((group) => group.providerId === selected.providerId)
+            ?.models.find((model) => model.id === selected.modelId)?.name
+        : undefined,
+    [groups, selected],
+  )
+
+  // Once the catalog arrives, focus the saved model instead of leaving the
+  // highlight on "Engine default", so the page reads as the current selection.
+  useEffect(() => {
+    if (status !== 'ready' || !selected || !tree) return
+    if (tree.getFocusedId() !== 'system-menu.first') return
+    if (tree.setFocus(`system-menu.models.${selected.providerId}.${selected.modelId}`)) return
+    tree.setFocus(`system-menu.models.provider.${selected.providerId}`)
+  }, [status, selected, tree])
+
+  const currentLabel = !selected
+    ? 'Engine default (automatic)'
+    : (selectedName ?? `${selected.providerId} / ${selected.modelId}`)
+
   return (
     <div data-testid="models-page">
+      <p className="px-3 pt-3 pb-1 text-code text-text-muted" data-testid="models-current">
+        Current: {currentLabel}
+      </p>
       <MenuRow
         id="system-menu.first"
         order={0}

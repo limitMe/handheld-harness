@@ -16,7 +16,12 @@ function installBridge(groups?: unknown): void {
   const bridge = {
     settings: {
       get: vi.fn(async () => settings),
-      update: vi.fn(async (patch: object) => Object.assign({}, settings, patch)),
+      update: vi.fn(async (patch: Record<string, unknown>) => {
+        if (patch.model) {
+          settings.model = { ...settings.model, ...(patch.model as typeof settings.model) }
+        }
+        return { ...settings, model: { ...settings.model } }
+      }),
     },
     events: { on: vi.fn(() => () => undefined) },
     app: {
@@ -132,5 +137,49 @@ describe('SystemMenu', () => {
 
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the selected default model and shows it as current', async () => {
+    installBridge()
+    renderMenu()
+    await waitFor(() => expect(screen.getByTestId('key-bindings')).not.toBeNull())
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTestId('model-provider-fake')).not.toBeNull())
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTestId('model-fake-m1')).not.toBeNull())
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+
+    await waitFor(() =>
+      expect(screen.getByTestId('models-current').textContent).toContain('Model 1'),
+    )
+    expect(screen.getByTestId('model-fake-m1').hasAttribute('data-selected')).toBe(true)
+    expect(screen.getByTestId('model-engine-default').hasAttribute('data-selected')).toBe(false)
+  })
+
+  it('does not let a locked system shortcut be rebound', async () => {
+    installBridge()
+    renderMenu()
+    await waitFor(() => expect(screen.getByTestId('key-bindings')).not.toBeNull())
+
+    // The keys category is selected on open; Enter enters its panel.
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() =>
+      expect(screen.getByTestId('keys-device-gamepad').hasAttribute('data-focused')).toBe(true),
+    )
+
+    // Gamepad tab -> keyboard tab -> first global row (System menu).
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    const row = screen.getByTestId('binding-global-menu.toggle')
+    expect(row.hasAttribute('data-focused')).toBe(true)
+    expect(row.textContent).toContain('Locked')
+
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(screen.queryByTestId('capture-banner')).toBeNull()
   })
 })
