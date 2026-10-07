@@ -80,11 +80,12 @@ function TaskCardView({
       onClick={() => onChoose(card)}
       data-testid={card.kind === 'empty' ? 'task-card-empty' : 'task-card'}
       data-card-key={card.id}
+      data-task-card=""
       data-selected={selected ? '' : undefined}
       className={cn(
-        'relative flex h-full shrink-0 flex-col justify-between rounded-card border-2 bg-card p-4 text-left text-on-card shadow-card transition-[transform,opacity,border-color] duration-ui ease-standard',
+        'relative flex h-48 shrink-0 flex-col justify-between rounded-card border-2 bg-card p-4 text-left text-on-card shadow-card transition-[scale,opacity,border-color] duration-ui ease-standard',
         borderClass(entry, isCurrent),
-        selected ? 'scale-105 opacity-100' : 'scale-95 opacity-60',
+        selected ? 'scale-110 opacity-100' : 'scale-90 opacity-60',
       )}
       style={{ width: CARD_WIDTH_PX }}
     >
@@ -220,7 +221,7 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
       <div className="relative flex-1 overflow-hidden">
         <FocusContainer id="task-map" flow="row" scope>
           <div
-            className="absolute top-1/2 left-1/2 flex h-56 transition-transform duration-scene ease-standard"
+            className="absolute top-1/2 left-1/2 flex h-56 items-center transition-transform duration-scene ease-standard"
             style={{ gap: CARD_GAP_PX, transform: `translate(${-offset}px, -50%)` }}
           >
             {cards.map((card, index) => (

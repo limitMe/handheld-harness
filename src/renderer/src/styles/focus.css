@@ -23,3 +23,11 @@
   outline: 1px dashed var(--theme-color-text-muted);
   outline-offset: 2px;
 }
+
+/*
+ * Task map (spec 14): the selected card's ring must not reuse the accent color
+ * that marks the current task, or the two highlights are indistinguishable.
+ */
+[data-focus-id][data-task-card][data-focused] {
+  outline-color: var(--theme-color-text);
+}
