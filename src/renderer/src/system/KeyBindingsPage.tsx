@@ -107,7 +107,7 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
   const [capture, setCapture] = useState<CaptureState | null>(null)
   const [holding, setHolding] = useState(false)
   const [conflict, setConflict] = useState<ConflictState | null>(null)
-  const [resetTarget, setResetTarget] = useState<string | 'all' | null>(null)
+  const [resetOpen, setResetOpen] = useState(false)
 
   const mapRef = useRef(map)
   const tokenRef = useRef(0)
@@ -175,22 +175,14 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
   )
 
   const confirmReset = useCallback(async () => {
-    const target = resetTarget
-    setResetTarget(null)
-    if (!target) return
-    if (target === 'all') {
-      await update({
-        input: {
-          resetContexts: Object.keys(settings.input.contexts),
-          resetKeyboard: Object.keys(settings.input.keyboard),
-        },
-      })
-    } else if (device === 'gamepad') {
-      await update({ input: { resetContexts: [target] } })
-    } else {
-      await update({ input: { resetKeyboard: [target] } })
-    }
-  }, [resetTarget, device, settings, update])
+    setResetOpen(false)
+    await update({
+      input: {
+        resetContexts: Object.keys(settings.input.contexts),
+        resetKeyboard: Object.keys(settings.input.keyboard),
+      },
+    })
+  }, [settings, update])
 
   const groups = listContexts(map, device)
     .map((context) => ({
@@ -286,15 +278,6 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
                 </MenuRow>
               )
             })}
-            <MenuRow
-              id={`${groupPrefix}.${context}.reset`}
-              order={100 + groupIndex * GROUP_STRIDE + GROUP_STRIDE - 1}
-              testId={`binding-reset-${context}`}
-              onActivate={() => setResetTarget(context)}
-              onClick={() => setResetTarget(context)}
-            >
-              <span className="text-text-muted">Reset {contextLabel(context)}</span>
-            </MenuRow>
           </div>
         ))
       )}
@@ -304,10 +287,10 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
           id={`${groupPrefix}.reset-all`}
           order={100 + groups.length * GROUP_STRIDE + GROUP_STRIDE - 1}
           testId="binding-reset-all"
-          onActivate={() => setResetTarget('all')}
-          onClick={() => setResetTarget('all')}
+          onActivate={() => setResetOpen(true)}
+          onClick={() => setResetOpen(true)}
         >
-          <span className="text-text-muted">Restore all bindings</span>
+          <span className="text-text-muted">Restore default bindings</span>
         </MenuRow>
       </div>
 
@@ -334,16 +317,12 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
       />
 
       <ConfirmDialog
-        open={resetTarget !== null}
+        open={resetOpen}
         onOpenChange={(next) => {
-          if (!next) setResetTarget(null)
+          if (!next) setResetOpen(false)
         }}
         title="Restore default bindings"
-        description={
-          resetTarget === 'all'
-            ? 'Discards every custom binding for both devices.'
-            : `Discards custom bindings for ${contextLabel(resetTarget ?? '')}.`
-        }
+        description="Discards every custom binding for both devices."
         confirmLabel="Restore"
         initialFocus="confirm"
         onConfirm={() => void confirmReset()}

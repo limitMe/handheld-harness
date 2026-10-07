@@ -1,6 +1,6 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog'
 import { useRef } from 'react'
-import { FocusContainer, useFocusable } from '../focus'
+import { FocusContainer, useDialogNavigation, useFocusable } from '../focus'
 import { cn } from './cn'
 
 export interface ChoiceOption {
@@ -37,6 +37,7 @@ function ChoiceButtons({
   onChoose,
   onOpenChange,
 }: Pick<ChoiceDialogProps, 'options' | 'initialId' | 'onChoose' | 'onOpenChange'>) {
+  useDialogNavigation()
   const initialIndex = Math.max(
     0,
     options.findIndex((option) => option.id === initialId),

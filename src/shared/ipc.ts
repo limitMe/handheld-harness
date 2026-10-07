@@ -29,6 +29,11 @@ export const WINDOW_MODES = ['windowed', 'fullscreen'] as const
 export const WindowModeSchema = z.enum(['windowed', 'fullscreen'])
 export type WindowMode = z.infer<typeof WindowModeSchema>
 
+/** Light/dark themes, or follow the OS preference (spec 18). */
+export const THEME_MODES = ['system', 'dark', 'light'] as const
+export const ThemeModeSchema = z.enum(THEME_MODES)
+export type ThemeMode = z.infer<typeof ThemeModeSchema>
+
 export const LogLevelSchema = z.enum(['error', 'warn', 'info', 'verbose', 'debug', 'silly'])
 export type LogLevel = z.infer<typeof LogLevelSchema>
 
@@ -63,6 +68,8 @@ export const UiSettingsSchema = z.object({
   zoom: z.number().min(0.8).max(2).default(1),
   /** Analog stick scroll speed multiplier; see `SCROLL_PIXELS_PER_SECOND`. */
   scrollSpeed: z.number().min(0.25).max(2).default(1),
+  /** Theme selection; `system` follows the OS light/dark preference (spec 18). */
+  theme: ThemeModeSchema.default('system'),
 })
 export type UiSettings = z.infer<typeof UiSettingsSchema>
 
@@ -145,7 +152,7 @@ export const SettingsSchema = z.object({
     mode: WindowModeSchema,
   }),
   engine: EngineSettingsSchema.default({}),
-  ui: UiSettingsSchema.default({ zoom: 1, scrollSpeed: 1 }),
+  ui: UiSettingsSchema.default({ zoom: 1, scrollSpeed: 1, theme: 'system' }),
   hints: HintsSettingsSchema.default({ ...DEFAULT_HINTS }),
   tasks: TasksSettingsSchema.default({ open: [], unread: [] }),
   model: ModelSettingsSchema.default({}),
@@ -174,6 +181,7 @@ export const SettingsPatchSchema = z.object({
       lastSession: z.union([SessionRefSchema, z.null()]).optional(),
       zoom: z.number().optional(),
       scrollSpeed: z.number().optional(),
+      theme: ThemeModeSchema.optional(),
     })
     .optional(),
   hints: z
@@ -213,7 +221,7 @@ export const DEFAULT_SETTINGS: Settings = {
   schemaVersion: 1,
   window: { mode: 'windowed' },
   engine: {},
-  ui: { zoom: 1, scrollSpeed: 1 },
+  ui: { zoom: 1, scrollSpeed: 1, theme: 'system' },
   hints: { ...DEFAULT_HINTS },
   tasks: { open: [], unread: [] },
   model: {},

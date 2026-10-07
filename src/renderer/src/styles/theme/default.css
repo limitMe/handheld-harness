@@ -1,4 +1,7 @@
-/* Default dark theme (P-08). Replace this file to restyle the whole app. */
+/*
+ * Dark theme (P-08), the `:root` fallback so the window paints before settings
+ * load. The light values live in `light.css` under `[data-theme='light']`.
+ */
 :root {
   color-scheme: dark;
 

@@ -68,8 +68,9 @@ export function HistoryList({ anchor, entries, onChoose, onCancel }: HistoryList
               onMouseEnter={() => setHighlighted(index)}
               onClick={() => choose(index)}
               className={cn(
+                // `bg-surface` reads against the raised panel in both themes.
                 'flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-left transition-colors duration-fast ease-standard',
-                index === active ? 'bg-card text-on-card' : 'text-text-muted hover:bg-card',
+                index === active ? 'bg-surface text-text' : 'text-text-muted hover:bg-surface',
               )}
             >
               <span className="flex-1 truncate">{entry.summary.title}</span>

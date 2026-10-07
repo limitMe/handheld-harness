@@ -131,3 +131,13 @@ P-20：是否在应用里配置模型服务商凭据。分类 4（显示与提�
 - **模型页显示当前选择**：页面顶部新增 `Current: <模型名 / Engine default (automatic)>`，目录加载完成后把焦点移到已保存的模型行，避免焦点停在 “Engine default” 造成“没生效”的误解。
 - **键位格式化**：模拟量的方向绑定显示为 `LStickX →` / `LStickX ←`；由于方向绑定已隐藏，这条只影响其它模拟量绑定。
 
+### 主题选择（2026-10-07，由 spec 18 追加）
+
+- 「Display & hints」分类新增 **Theme** 行（跟随系统 / 深色 / 浅色），写 `settings.ui.theme`，由 spec 18 的 `useThemeSync` 应用到 `<html data-theme>`；按 A 弹出 `ChoiceDialog` 列表选择（不是取值行的左右微调，因为它是枚举而非连续值）。
+- 同时修了右栏的观感：`MenuRow` 去掉常驻边框（相邻行边框会重叠成一条粗线），右栏滚动区加水平内边距，避免 `data-focused` 的焦点环在左侧被滚动容器裁掉。
+- 「减少动效 / 省电模式」仍未做，见 spec 18 实现记录。
+
+### 键位页只保留整体重置（2026-10-07）
+
+- 键位分类太重、每个上下文都有一行 `Reset <上下文>`，删掉这些逐上下文重置，只保留底部的 **Restore default bindings**（一次清空手柄与键盘的全部用户覆盖，仍走 `ConfirmDialog`）。`settings.input` 的 `resetContexts` / `resetKeyboard` 字段保留（整体重置仍在用）。
+

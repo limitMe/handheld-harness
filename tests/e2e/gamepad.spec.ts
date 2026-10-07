@@ -219,11 +219,12 @@ test('rebinds Send from A to Y in the system menu', async () => {
     expect(override.input.contexts['currentWork.input']?.Y).toBe('input.send')
     expect(override.input.contexts['currentWork.input']?.A).toBeNull()
 
-    // Restore the default so the profile stays clean for later runs.
-    for (let i = 0; i < 8; i += 1) {
+    // Restore the default so the profile stays clean for later runs. The reset
+    // row is the last one on the page.
+    for (let i = 0; i < 40; i += 1) {
       if (
         (await window
-          .locator('[data-testid="binding-reset-currentWork.input"][data-focused]')
+          .locator('[data-testid="binding-reset-all"][data-focused]')
           .count()) > 0
       ) {
         break
@@ -239,6 +240,81 @@ test('rebinds Send from A to Y in the system menu', async () => {
       (globalThis as unknown as SettingsScope).handheld.settings.get(),
     )
     expect(restored.input.contexts['currentWork.input']).toBeUndefined()
+  } finally {
+    await app.close()
+  }
+})
+
+test('switches the theme between dark and light from the system menu', async () => {
+  const { app, window } = await launch('e2e-pad-theme')
+  try {
+    // The profile persists between runs, so start from a known mode.
+    await window.evaluate(() =>
+      (
+        globalThis as unknown as {
+          handheld: { settings: { update(patch: unknown): Promise<unknown> } }
+        }
+      ).handheld.settings.update({ ui: { theme: 'system' } }),
+    )
+
+    // Start opens the menu with the first category focused.
+    await pressPad(window, 'Start')
+    await releasePad(window, 'Start')
+    await expect(window.getByTestId('system-menu')).toBeVisible()
+
+    // Walk down to "Display & hints" (keys -> models -> voice -> display).
+    for (let i = 0; i < 3; i += 1) {
+      if (
+        (await window.locator('[data-testid="menu-category-display"][data-focused]').count()) > 0
+      ) {
+        break
+      }
+      await pressPad(window, 'DpadDown')
+      await releasePad(window, 'DpadDown')
+    }
+    await expect(window.getByTestId('menu-category-display')).toHaveAttribute('data-focused', '')
+
+    // A enters the panel (Text size), then down to the Theme row.
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await pressPad(window, 'DpadDown')
+    await releasePad(window, 'DpadDown')
+    await expect(window.getByTestId('display-theme')).toHaveAttribute('data-focused', '')
+
+    // A opens the picker with the first option (Follow system) focused.
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByTestId('choice-system')).toBeVisible()
+
+    // Step down to Dark and confirm.
+    await pressPad(window, 'DpadDown')
+    await releasePad(window, 'DpadDown')
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await expect(window.getByTestId('display-theme')).toHaveAttribute('data-focused', '')
+
+    // Reopen and pick Light.
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByTestId('choice-system')).toBeVisible()
+    await pressPad(window, 'DpadDown')
+    await releasePad(window, 'DpadDown')
+    await pressPad(window, 'DpadDown')
+    await releasePad(window, 'DpadDown')
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.locator('html')).toHaveAttribute('data-theme', 'light')
+
+    // The selection is persisted (spec 15: settings save immediately).
+    const settings = await window.evaluate(() =>
+      (
+        globalThis as unknown as {
+          handheld: { settings: { get(): Promise<{ ui: { theme: string } }> } }
+        }
+      ).handheld.settings.get(),
+    )
+    expect(settings.ui.theme).toBe('light')
   } finally {
     await app.close()
   }

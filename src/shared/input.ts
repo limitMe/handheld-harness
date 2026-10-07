@@ -105,6 +105,10 @@ export const DEFAULT_BINDINGS: BindingLayer = {
     'currentWork.listInput': {
       DpadUp: 'nav.up',
       DpadDown: 'nav.down',
+      'LStickY+': 'nav.down',
+      'LStickY-': 'nav.up',
+      'RStickY+': 'nav.down',
+      'RStickY-': 'nav.up',
       A: 'nav.activate',
       B: 'nav.deactivate',
     },
@@ -116,6 +120,10 @@ export const DEFAULT_BINDINGS: BindingLayer = {
     'currentWork.question': {
       DpadUp: 'nav.up',
       DpadDown: 'nav.down',
+      'LStickY+': 'nav.down',
+      'LStickY-': 'nav.up',
+      'RStickY+': 'nav.down',
+      'RStickY-': 'nav.up',
       A: 'question.confirm',
       B: 'question.ignore',
     },
@@ -127,6 +135,18 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       'B:hold': 'task.close',
       Y: 'task.new',
       X: 'task.history',
+    },
+    // The map's history popup shadows the map bindings, so it carries its own
+    // up/down navigation for both the D-pad and the sticks.
+    'taskMap.history': {
+      DpadUp: 'nav.up',
+      DpadDown: 'nav.down',
+      'LStickY+': 'nav.down',
+      'LStickY-': 'nav.up',
+      'RStickY+': 'nav.down',
+      'RStickY-': 'nav.up',
+      A: 'nav.activate',
+      B: 'nav.deactivate',
     },
     textEdit: {
       DpadUp: 'nav.up',
@@ -148,6 +168,24 @@ export const DEFAULT_BINDINGS: BindingLayer = {
     'systemMenu.picker': {
       DpadUp: 'nav.up',
       DpadDown: 'nav.down',
+      A: 'nav.activate',
+      B: 'nav.deactivate',
+    },
+    // Modal dialogs own navigation so both the D-pad and the sticks work no
+    // matter which screen or overlay is beneath them (spec 11).
+    dialog: {
+      DpadUp: 'nav.up',
+      DpadDown: 'nav.down',
+      DpadLeft: 'nav.left',
+      DpadRight: 'nav.right',
+      'LStickX+': 'nav.right',
+      'LStickX-': 'nav.left',
+      'LStickY+': 'nav.down',
+      'LStickY-': 'nav.up',
+      'RStickX+': 'nav.right',
+      'RStickX-': 'nav.left',
+      'RStickY+': 'nav.down',
+      'RStickY-': 'nav.up',
       A: 'nav.activate',
       B: 'nav.deactivate',
     },
@@ -180,6 +218,20 @@ export const DEFAULT_BINDINGS: BindingLayer = {
     'currentWork.listInput': {
       ArrowUp: 'nav.up',
       ArrowDown: 'nav.down',
+      Enter: 'nav.activate',
+      Escape: 'nav.deactivate',
+    },
+    'taskMap.history': {
+      ArrowUp: 'nav.up',
+      ArrowDown: 'nav.down',
+      Enter: 'nav.activate',
+      Escape: 'nav.deactivate',
+    },
+    dialog: {
+      ArrowUp: 'nav.up',
+      ArrowDown: 'nav.down',
+      ArrowLeft: 'nav.left',
+      ArrowRight: 'nav.right',
       Enter: 'nav.activate',
       Escape: 'nav.deactivate',
     },

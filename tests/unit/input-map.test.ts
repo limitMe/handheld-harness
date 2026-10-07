@@ -44,6 +44,17 @@ describe('action map layering', () => {
     expect(map.contexts.currentWork?.['RStickX-']).toBe('nav.left')
   })
 
+  it('routes D-pad and both sticks for dialogs and list popups', () => {
+    const map = resolveActionMap(undefined, emptyBindingLayer())
+    expect(map.contexts.dialog?.DpadLeft).toBe('nav.left')
+    expect(map.contexts.dialog?.['LStickY+']).toBe('nav.down')
+    expect(map.contexts.dialog?.['RStickX-']).toBe('nav.left')
+    expect(map.contexts.dialog?.A).toBe('nav.activate')
+    expect(map.contexts['currentWork.listInput']?.['LStickY-']).toBe('nav.up')
+    expect(map.contexts['taskMap.history']?.DpadUp).toBe('nav.up')
+    expect(map.contexts['taskMap.history']?.['LStickY+']).toBe('nav.down')
+  })
+
   it('binds X in the activated input to backspace', () => {
     const map = resolveActionMap(undefined, emptyBindingLayer())
     expect(map.contexts['currentWork.input']?.X).toBe('input.deleteBackward')

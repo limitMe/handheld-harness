@@ -95,6 +95,9 @@ describe('SystemMenu', () => {
 
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() =>
+      expect(screen.getByTestId('model-engine-default').hasAttribute('data-focused')).toBe(true),
+    )
     await waitFor(() => expect(screen.getByTestId('model-provider-fake')).not.toBeNull())
 
     // Models are not rendered until the provider row is activated.
@@ -102,7 +105,9 @@ describe('SystemMenu', () => {
 
     // Focus moves from "Engine default" down to the provider, then expands it.
     fireEvent.keyDown(window, { key: 'ArrowDown' })
-    expect(screen.getByTestId('model-provider-fake').hasAttribute('data-focused')).toBe(true)
+    await waitFor(() =>
+      expect(screen.getByTestId('model-provider-fake').hasAttribute('data-focused')).toBe(true),
+    )
     fireEvent.keyDown(window, { key: 'Enter' })
     await waitFor(() => expect(screen.getByTestId('model-fake-m1')).not.toBeNull())
   })
@@ -146,6 +151,9 @@ describe('SystemMenu', () => {
 
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() =>
+      expect(screen.getByTestId('model-engine-default').hasAttribute('data-focused')).toBe(true),
+    )
     await waitFor(() => expect(screen.getByTestId('model-provider-fake')).not.toBeNull())
 
     fireEvent.keyDown(window, { key: 'ArrowDown' })

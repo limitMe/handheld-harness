@@ -4,6 +4,7 @@ export { FocusContainer, type FocusContainerProps } from './FocusContainer'
 export { FocusProvider } from './FocusProvider'
 export { FocusDebugOverlay } from './FocusDebugOverlay'
 export { useFocusTree, useParentContainer } from './context'
+export { useDialogNavigation } from './useDialogNavigation'
 export {
   useFocusable,
   type FocusableControls,

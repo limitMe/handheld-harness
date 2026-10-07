@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './tokens.css';
 @import './theme/default.css';
+@import './theme/light.css';
 @import './markdown.css';
 @import './focus.css';
 

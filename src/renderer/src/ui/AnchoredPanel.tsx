@@ -13,8 +13,10 @@ export interface AnchoredPanelProps {
   children: ReactNode
 }
 
+// The popup receives DOM focus, so suppress the browser's default focus ring;
+// navigation is shown by the highlighted row instead (spec 18).
 const popupStyles =
-  'rounded-card border border-surface-raised bg-surface-raised text-on-card shadow-card transition-[opacity,transform] duration-fast ease-standard data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:opacity-0'
+  'rounded-card border border-surface-raised bg-surface-raised text-on-card shadow-card outline-none transition-[opacity,transform] duration-fast ease-standard data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:opacity-0'
 
 /**
  * Floating panel positioned against an anchor through Base UI's Floating UI

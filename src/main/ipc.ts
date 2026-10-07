@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeTheme, shell, type IpcMainInvokeEvent } from 'electron'
 import path from 'node:path'
 import {
   EVENT_CHANNELS,
@@ -6,6 +6,7 @@ import {
   type InvokeChannel,
   type InvokeContract,
 } from '../shared/ipc'
+import { resolveTheme, THEME_SURFACE_COLOR, type ResolvedTheme } from '../shared/theme'
 import { isAllowedExternalUrl } from '../shared/url'
 import { createSettingsStore, type SettingsStore } from './settings-store'
 import { isDevMode } from './env'
@@ -57,6 +58,17 @@ function speechService(): SpeechService {
 /** Applies the persisted zoom factor to a freshly created window. */
 export function applySavedZoom(win: BrowserWindow): void {
   win.webContents.setZoomFactor(clampZoom(settingsStore().get().ui.zoom))
+}
+
+/** Resolves the saved theme against the OS preference for window backgrounds. */
+export function resolveSavedTheme(): ResolvedTheme {
+  return resolveTheme(settingsStore().get().ui.theme, nativeTheme.shouldUseDarkColors)
+}
+
+/** Repaints every window background after the theme or OS preference changes. */
+function syncWindowBackgrounds(): void {
+  const color = THEME_SURFACE_COLOR[resolveSavedTheme()]
+  for (const win of BrowserWindow.getAllWindows()) win.setBackgroundColor(color)
 }
 
 function handle<K extends InvokeChannel>(
@@ -115,8 +127,12 @@ export function registerIpc(): void {
   handle('settings:update', (request, event) => {
     const next = settingsStore().update(request)
     event.sender.send(EVENT_CHANNELS[0], next)
+    syncWindowBackgrounds()
     return next
   })
+
+  // A 'system' theme follows the OS preference; repaint the window chrome then.
+  nativeTheme.on('updated', syncWindowBackgrounds)
 
   registerEngineIpc()
   registerSpeechIpc()

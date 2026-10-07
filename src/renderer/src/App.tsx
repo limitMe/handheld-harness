@@ -14,6 +14,7 @@ import { showToast } from './ui'
 import { CurrentWork } from './workbench/CurrentWork'
 import { TaskMap } from './workbench/TaskMap'
 import { SystemMenu } from './system/SystemMenu'
+import { useThemeSync } from './system/useThemeSync'
 
 export default function App() {
   const [gamepadOpen, setGamepadOpen] = useState(false)
@@ -23,6 +24,8 @@ export default function App() {
   const [focusDebugOpen, setFocusDebugOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  useThemeSync()
 
   const initialize = useWorkbenchStore((state) => state.initialize)
   const sessions = useWorkbenchStore((state) => state.sessions)

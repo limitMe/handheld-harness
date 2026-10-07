@@ -10,12 +10,12 @@ export function resolveWindowMode(): WindowMode {
   return isDevMode() ? 'windowed' : 'fullscreen'
 }
 
-export function createMainWindow(): BrowserWindow {
+export function createMainWindow(backgroundColor: string): BrowserWindow {
   const win = new BrowserWindow({
     show: false,
     frame: false,
     autoHideMenuBar: true,
-    backgroundColor: '#0b0d10',
+    backgroundColor,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,

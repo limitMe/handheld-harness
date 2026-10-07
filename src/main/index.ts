@@ -1,11 +1,12 @@
 import path from 'node:path'
 import { app, BrowserWindow, screen } from 'electron'
 import { log } from './log'
-import { applySavedZoom, registerIpc } from './ipc'
+import { applySavedZoom, registerIpc, resolveSavedTheme } from './ipc'
 import { installPermissions } from './permissions'
 import { resolveProfile } from './profile'
 import { stopEngineRuntime } from './engine-runtime'
 import { createMainWindow, resolveWindowMode } from './window'
+import { THEME_SURFACE_COLOR } from '../shared/theme'
 
 const profile = resolveProfile()
 app.setPath('userData', path.join(app.getPath('appData'), 'handheld-ai', profile))
@@ -46,7 +47,7 @@ if (!app.requestSingleInstanceLock()) {
     installPermissions()
     registerIpc()
     logStartupInfo()
-    mainWindow = createMainWindow()
+    mainWindow = createMainWindow(THEME_SURFACE_COLOR[resolveSavedTheme()])
     applySavedZoom(mainWindow)
     mainWindow.on('closed', () => {
       mainWindow = null
@@ -54,7 +55,7 @@ if (!app.requestSingleInstanceLock()) {
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        mainWindow = createMainWindow()
+        mainWindow = createMainWindow(THEME_SURFACE_COLOR[resolveSavedTheme()])
       } else {
         focusMainWindow()
       }

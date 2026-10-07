@@ -78,12 +78,34 @@ describe('Display & hints', () => {
     expect(setZoom).toHaveBeenCalledWith(1.1)
   })
 
+  it('opens a theme picker and applies the chosen mode', async () => {
+    const { update } = installBridge()
+    await openDisplayPanel()
+
+    // Text size -> theme.
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    await waitFor(() =>
+      expect(screen.getByTestId('display-theme').hasAttribute('data-focused')).toBe(true),
+    )
+
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTestId('choice-dark')).not.toBeNull())
+
+    // The first option (Follow system) is focused; step down to Dark and confirm.
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(update).toHaveBeenCalledWith({ ui: { theme: 'dark' } })
+  })
+
   it('adjusts the stick scroll speed after activation', async () => {
     const { update } = installBridge()
     await openDisplayPanel()
 
-    // Text size -> stick scroll speed.
-    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    // Text size -> theme -> stick scroll speed.
+    for (let i = 0; i < 3; i += 1) {
+      if (screen.getByTestId('display-scroll-speed').hasAttribute('data-focused')) break
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+    }
     await waitFor(() =>
       expect(screen.getByTestId('display-scroll-speed').hasAttribute('data-focused')).toBe(true),
     )

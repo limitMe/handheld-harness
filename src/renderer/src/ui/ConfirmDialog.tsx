@@ -1,6 +1,6 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog'
 import { useRef, type RefObject } from 'react'
-import { FocusContainer, useFocusable } from '../focus'
+import { FocusContainer, useDialogNavigation, useFocusable } from '../focus'
 import { Button } from './Button'
 
 export interface ConfirmDialogProps {
@@ -42,6 +42,7 @@ function ConfirmButtons({
   cancelRef: RefObject<HTMLButtonElement | null>
   confirmRef: RefObject<HTMLButtonElement | null>
 }) {
+  useDialogNavigation()
   const confirmFirst = initialFocus === 'confirm'
   const cancel = useFocusable({
     id: 'confirm-dialog-cancel',

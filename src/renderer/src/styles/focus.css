@@ -15,8 +15,10 @@
   outline-offset: 2px;
 }
 
+/* One highlight color everywhere (spec 18); activation is conveyed by the
+   control's own state, not by a second ring color. */
 [data-focus-id][data-activated] {
-  outline-color: var(--theme-color-accent);
+  outline-color: var(--theme-color-focus-ring);
 }
 
 [data-focus-id][data-focus-within]:not([data-focused]) {

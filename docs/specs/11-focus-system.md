@@ -117,6 +117,14 @@ P-15：激活态下左摇杆是否也移动光标，还是只用十字键；消�
   - `focus.spec.ts`：启动即聚焦并激活输入框；退出激活后按“上”移动到状态栏、Enter 打开任务切换器、Escape 关闭并恢复焦点；`Ctrl+Shift+F` 切换焦点树调试浮层；发送消息后从输入框按“上”进入聊天记录、逐条移动选中。
   - `gamepad.spec.ts`（用页内假手柄驱动真实手柄管线）：有会话时聚焦到 Tasks、按 A 打开任务切换器、松开 A 后仍保持打开，且初始焦点在筛选框。
 
+### 弹出层的 D-pad / 摇杆一致性（2026-10-07）
+
+- 之前各处弹出元素的导航绑定不一致：命令选择（`currentWork.listInput`）只绑了十字键，左摇杆会落回 `currentWork` 的 `scroll`；任务地图的关闭确认框在 `TaskMapBindings` 卸载后只剩 `currentWork` 的绑定，表现和别的弹窗对不上。
+- 新增 `shared/input.ts` 的 `dialog` 上下文（十字键 + 左 / 右摇杆四个方向 + A / B，键盘方向键 / Enter / Escape），由 `focus/useDialogNavigation` 在 `ConfirmDialog` / `ChoiceDialog` 打开时以 `modal` 优先级压栈，并把导航转发给焦点树。模态对话框因此不再依赖下层界面提供方向绑定。
+- 只给**弹出层**补齐摇杆方向：`currentWork.listInput`、`currentWork.question`，以及新增的 `taskMap.history`（历史列表此前靠下层绑定“碰巧”能用）。全屏界面（`currentWork` / `systemMenu` / `taskMap`）的摇杆保持原来的 `scroll` 模拟量路径**不动**——那是按手感仔细调过的（`scroll.ts` 的步进间隔与速度曲线），没有改成离散步进。
+- 所有新增动作都是 `nav.*`，在键位页里被 `HIDDEN_BINDING_ACTIONS` 过滤，不会新增可见分类。
+- 单测：`input-map` 增加 dialogs / list popups 的方向绑定断言。
+
 ### 未完成 / 需要人工验证
 
 - “不接键盘、只用手柄完成 03 的第 2–6 条”仍需掌机实测。手柄轮询、短按 / 长按、摇杆在 10 已单测；焦点与分发在 e2e 里用键盘动作（与手柄共用同一 Action）覆盖。第 5 条可用手柄走任务切换器；第 6 条（重载）是键盘快捷键，暂无手柄绑定（14 的任务地图会替换切换器）。

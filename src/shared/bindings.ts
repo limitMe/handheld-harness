@@ -18,9 +18,11 @@ export const CONTEXT_LABELS: Record<string, string> = {
   'currentWork.permission': 'Current work · Permission',
   'currentWork.question': 'Current work · Question',
   taskMap: 'Task map',
+  'taskMap.history': 'Task map · History',
   textEdit: 'Text edit',
   systemMenu: 'System menu',
   'systemMenu.picker': 'System menu · Picker',
+  dialog: 'Dialog',
 }
 
 /** Preferred display order; contexts not listed are appended alphabetically. */
@@ -33,9 +35,11 @@ const CONTEXT_ORDER = [
   'currentWork.permission',
   'currentWork.question',
   'taskMap',
+  'taskMap.history',
   'textEdit',
   'systemMenu',
   'systemMenu.picker',
+  'dialog',
 ]
 
 export function contextLabel(id: string): string {

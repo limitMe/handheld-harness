@@ -76,7 +76,9 @@ function SystemMenuBody({ onClose, onOpenDebug }: Omit<SystemMenuProps, 'open'>)
                 <div
                   data-scroll-region
                   data-testid="system-menu-panel"
-                  className="flex h-full flex-col overflow-y-auto pr-2"
+                  // Horizontal padding leaves room for the focus ring, which the
+                  // scroll container would otherwise clip on the left.
+                  className="flex h-full flex-col gap-1 overflow-y-auto px-2 py-2"
                 >
                   {!settings ? (
                     <p className="px-3 py-4 text-text-muted">Loading settings…</p>

@@ -1,6 +1,8 @@
-import type { Settings, SettingsPatch } from '@shared/ipc'
-import { Slider, Switch } from '../ui'
+import { useState } from 'react'
+import { THEME_MODES, type Settings, type SettingsPatch, type ThemeMode } from '@shared/ipc'
+import { ChoiceDialog, Slider, Switch, type ChoiceOption } from '../ui'
 import { MenuGroupLabel, MenuRow } from './MenuRow'
+import { themeLabel } from './theme'
 
 export interface DisplayPageProps {
   settings: Settings
@@ -90,10 +92,18 @@ function ValueRow({
   )
 }
 
+const THEME_OPTIONS: ChoiceOption[] = [
+  { id: 'system', label: 'Follow system', description: 'Match the OS light/dark preference.' },
+  { id: 'dark', label: 'Dark' },
+  { id: 'light', label: 'Light' },
+]
+
 /** Display & hints (spec 15): font zoom, scroll speed and the action-hint settings (P-09). */
 export function DisplayPage({ settings, update }: DisplayPageProps) {
+  const [themeOpen, setThemeOpen] = useState(false)
   const zoom = settings.ui.zoom
   const scrollSpeed = settings.ui.scrollSpeed
+  const theme = settings.ui.theme
   const delayMs = settings.hints.delayMs
 
   const setZoom = (next: number): void => {
@@ -117,11 +127,22 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
         onAdjust={(direction) => setZoom(zoom + direction * ZOOM_STEP)}
         onSlide={setZoom}
       />
+      <MenuRow
+        id="system-menu.display.theme"
+        order={1}
+        activatable
+        testId="display-theme"
+        onActivate={() => setThemeOpen(true)}
+        onClick={() => setThemeOpen(true)}
+      >
+        <span>Theme</span>
+        <span className="text-code text-text-muted">{themeLabel(theme)}</span>
+      </MenuRow>
 
       <MenuGroupLabel>Scrolling</MenuGroupLabel>
       <ValueRow
         id="system-menu.display.scroll"
-        order={1}
+        order={2}
         testId="display-scroll-speed"
         label="Stick scroll speed"
         display={`${Math.round(scrollSpeed * 100)}%`}
@@ -146,7 +167,7 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
       <MenuGroupLabel>Action hints</MenuGroupLabel>
       <MenuRow
         id="system-menu.display.hints"
-        order={2}
+        order={3}
         testId="display-hints-enabled"
         onActivate={() => void update({ hints: { enabled: !settings.hints.enabled } })}
         onClick={() => void update({ hints: { enabled: !settings.hints.enabled } })}
@@ -156,7 +177,7 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
       </MenuRow>
       <ValueRow
         id="system-menu.display.delay"
-        order={3}
+        order={4}
         testId="display-hints-delay"
         label="Wait before showing"
         display={`${(delayMs / 1000).toFixed(1)}s`}
@@ -175,6 +196,19 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
       <p className="px-3 pt-4 text-code text-text-muted">
         Reduced motion and power saving arrive with spec 18.
       </p>
+
+      <ChoiceDialog
+        open={themeOpen}
+        onOpenChange={setThemeOpen}
+        title="Theme"
+        description="Applies to the whole app."
+        options={THEME_OPTIONS}
+        onChoose={(id) => {
+          if (THEME_MODES.includes(id as ThemeMode)) {
+            void update({ ui: { theme: id as ThemeMode } })
+          }
+        }}
+      />
     </div>
   )
 }

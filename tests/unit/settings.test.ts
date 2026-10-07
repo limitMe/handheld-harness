@@ -65,12 +65,24 @@ describe('settings store', () => {
       lastSession: ref,
       zoom: 1.2,
       scrollSpeed: 1,
+      theme: 'system',
     })
 
     store.update({ ui: { lastSession: null } })
     const reloaded = createSettingsStore(target).get().ui
     expect(reloaded.lastSession).toBeNull()
     expect(reloaded.zoom).toBe(1.2)
+  })
+
+  it('persists the theme selection and keeps the other ui fields', () => {
+    const target = makeDir()
+    const store = createSettingsStore(target)
+
+    expect(store.get().ui.theme).toBe('system')
+
+    store.update({ ui: { theme: 'light' } })
+    expect(store.get().ui.theme).toBe('light')
+    expect(createSettingsStore(target).get().ui.theme).toBe('light')
   })
 
   it('merges the hints slice and keeps untouched fields', () => {

@@ -1,0 +1,22 @@
+/*
+ * Light theme (spec 18). Overrides the color values from `default.css`; the
+ * structural values (fonts, sizes, durations, easing) stay shared.
+ * `data-theme` is set on <html> by the renderer from `settings.ui.theme`.
+ */
+[data-theme='light'] {
+  color-scheme: light;
+
+  --theme-color-surface: #eef0f4;
+  --theme-color-surface-raised: #ffffff;
+  --theme-color-card: #ffffff;
+  --theme-color-on-card: #14181d;
+  --theme-color-text: #1b1f24;
+  --theme-color-text-muted: #5c6673;
+  --theme-color-accent: #2f6fed;
+  --theme-color-focus-ring: #1f6feb;
+  --theme-color-danger: #d92d20;
+  --theme-color-success: #12874a;
+  --theme-color-warning: #b45309;
+
+  --theme-shadow-card: 0 12px 32px rgb(15 23 42 / 0.16);
+}

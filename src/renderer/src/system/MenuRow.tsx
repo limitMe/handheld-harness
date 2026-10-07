@@ -33,8 +33,11 @@ export interface MenuRowProps {
   children: ReactNode
 }
 
+// No resting border: adjacent rows would double theirs up and read as a heavy
+// line. The focused row is singled out by the focus ring (spec 18), and the
+// selected row by its background.
 const baseStyles =
-  'flex min-h-11 w-full items-center justify-between gap-4 rounded-md border border-surface-raised bg-surface px-3 py-2 text-left text-base text-text transition-colors duration-fast ease-standard'
+  'flex min-h-11 w-full items-center justify-between gap-4 rounded-md bg-surface px-3 py-2 text-left text-base text-text transition-colors duration-fast ease-standard'
 
 /**
  * One focusable settings row. It uses a div rather than a button so Enter does

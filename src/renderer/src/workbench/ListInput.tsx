@@ -91,8 +91,10 @@ export function ListInput({ anchor, engineId, onChoose, onCancel }: ListInputPro
               onMouseEnter={() => setHighlighted(index)}
               onClick={() => choose(index)}
               className={cn(
+                // `bg-surface` reads against the raised panel in both themes;
+                // `bg-card` is white on white in the light theme.
                 'flex min-h-11 flex-col items-start rounded-md px-3 py-2 text-left transition-colors duration-fast ease-standard',
-                index === active ? 'bg-card text-on-card' : 'text-text-muted hover:bg-card',
+                index === active ? 'bg-surface text-text' : 'text-text-muted hover:bg-surface',
               )}
             >
               <span className="w-full truncate font-mono">/{command.name}</span>

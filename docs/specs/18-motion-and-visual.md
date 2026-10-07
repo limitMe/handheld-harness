@@ -69,3 +69,52 @@
 ## 待定输入
 
 P-21：是否要做背景层（PixiJS / Rive）。P-08 已决定。
+
+## 实现记录
+
+实现日期：2026-10-07（分支 `feat/spec18-theme-motion`，逐步提交）。经用户确认，本次按外部工具辅助开发，先做**主题系统**与**任务地图卡片动效**；「减少动效」「省电模式」两个开关留到后续。
+
+### 用户确认
+
+- 主题选项为 **跟随系统 / 深色 / 浅色** 三选一（比 spec 只要求「运行时切换多套主题」多一档），默认跟随系统，在系统菜单的「Display & hints」分类里改。
+- 「减少动效」「省电模式」开关**本次不做**，仍由 `prefers-reduced-motion` 兜底（见 `app.css`）。
+- 允许新增 **Motion** 依赖（`motion@14.0.0`，devDependency，精确版本），用于元素进出场和弹簧效果。
+
+### 交付物
+
+- **主题机制**（`settings.ui.theme`）：
+  - `shared/ipc.ts` 增加 `ThemeMode = 'system' | 'dark' | 'light'`，默认 `system`；`SettingsPatchSchema.ui` 同步开放。
+  - `styles/theme/default.css` 保持深色取值（`:root`，作为设置加载前的兜底），新增 `styles/theme/light.css`，用 `[data-theme='light']` 覆盖颜色与阴影；`styles/app.css` 引入该文件。结构值（字体、字号、时长、缓动）仍共享，换主题只改颜色类取值。
+  - `system/theme.ts`：纯函数 `resolveTheme` / `nextTheme` / `themeLabel` / `applyTheme`；`system/useThemeSync.ts`：读取 `settings.ui.theme`，跟随 `prefers-color-scheme` 解析后写到 `<html data-theme>` 与 `color-scheme`，并在设置变化 / 系统偏好变化时重算。`App.tsx` 挂载。
+  - `shared/theme.ts`：`resolveTheme` 与 `THEME_SURFACE_COLOR`（`--theme-color-surface` 的镜像）。主进程据此设置 `BrowserWindow` 背景色，并在设置变化或 `nativeTheme` 更新时重绘，避免浅色主题下开窗瞬间闪深色（spec 01 的「背景色与主题一致」）。
+- **DisplayPage**：新增 Theme 行（左右循环 跟随系统 → 深色 → 浅色），沿用「按 A 激活后用左右键调节」的取值行交互。
+- **动效**（Motion）：
+  - `motion/tokens.ts`：从 `:root` 读取 `--t-fast` / `--t-ui` / `--t-scene` / `--theme-ease-standard`，转成 Motion 需要的秒与贝塞尔控制点，组件不出现硬编码时长。
+  - `workbench/TaskMap.tsx`：卡片错峰入场（间隔取 `--t-fast / 4` ≈ 30 ms），选中卡片用弹簧在 1.0 / 0.9 之间缩放；整排平移仍是 CSS transition（`duration-scene` + `ease-standard`）。去掉原先用 CSS 类做的 scale/opacity 过渡，避免与 Motion 重复。
+
+### 与 spec 的出入 / 决策
+
+- **只做主题、不做「减少动效 / 省电模式」开关**（用户确认）：`app.css` 里对 `prefers-reduced-motion` 的全局降级保留，但没有应用内开关；「省电模式」未实现。
+- **Motion 只用在地图卡片进出场与选中弹簧**：spec 18「关键动效」表里的其它场景（任务地图开合、系统菜单展开、文本编辑叠层、输入框共享元素、长按进度环、Agent busy 流光）本次未做，留待后续。
+- **主题默认值从「深色」改为「跟随系统」**：spec 01 的默认主题仍是深色；这里把 `settings.ui.theme` 默认设为 `system`，未设置过的新 profile 在浅色系统上会显示浅色。深色取值仍是 `:root` 兜底。
+- **浅色主题沿用现有语义 token**：`surface-raised` 同时充当「浮层底色」和部分组件的「描边色」（如 `border-surface-raised`），浅色下取白色，卡片描边在浅灰底上偏淡。要不要新增独立的 `border` token 属于 token 扩容，本次不做，先记入此处。
+- **构建体积**：引入 Motion 后渲染进程 bundle 从约 2.24 MB 增至 2.51 MB（未压缩）。掌机上是否可接受需实测。
+
+### 已自动验证
+
+- `npm run check` 通过（48 个测试文件 289 个用例，lint 零 warning）。
+- 新增单测：`theme`（system 跟随系统、显式模式忽略系统、循环切换、标签、写到 `<html>`）、`motion-tokens`（无 CSS 变量时回退到 token 默认值）；`settings` 增加 `ui.theme` 用例；`display-page` 增加主题循环用例并修正滚动速度用例的导航步数。
+- `npm run test:e2e`：新增 `gamepad.spec.ts` 用例「switches the theme between dark and light from the system menu」（Start → 选到 Display & hints → A 进面板 → 下移到 Theme → A → 右切到 dark / light，校验 `<html data-theme>` 与 `settings.ui.theme`）；任务地图用例在 Motion 改造后仍通过。
+
+### 高亮与对比度修正（2026-10-07）
+
+- **统一高亮颜色**：`styles/focus.css` 里 `data-activated` 原本用 `accent`、`data-focused` 用 `focus-ring`，看起来是两种蓝色。现在两者都用 `focus-ring`，激活态由组件自身状态表达（spec 18「焦点是主角」，不再用第二个颜色）。
+- **去掉浏览器默认焦点轮廓**：`ui/AnchoredPanel` 的浮层会取得 DOM 焦点，没被抑制时会显示系统默认的焦点环（实测 Windows 上是金 `rgb(229,151,0)`），和应用的蓝色焦点环并存。给浮层加 `outline-none`，命令选择 / 操作提示面板不再出现第二种高亮色。
+- **浅色主题下的列表选中**：`ListInput` / `HistoryList` 的选中项原来用 `bg-card`，而它们所在面板是 `bg-surface-raised`；浅色主题里两者都是白色，选中项看不见。改为 `bg-surface`（浅灰），两个主题下都能和面板区分。
+
+### 未完成 / 需要人工验证
+
+- **掌机实测**：深色 / 浅色两套主题在 1080p 7 英寸上的对比度与可读性；地图卡片弹簧与错峰入场的手感。
+- **其余关键动效**：见上文「与 spec 的出入 / 决策」。
+- **减少动效 / 省电模式开关**：未做。
+- **浅色主题描边**是否需要新增 `border` 语义 token。

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { motion } from 'motion/react'
 import type { SessionRef, SessionSummary } from '@shared/engine'
 import { FocusContainer, useFocusTree, useFocusable } from '../focus'
+import { motionTokens } from '../motion'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { useWorkbenchStore } from '../state/store'
 import { sameSessionRef, sessionKey } from '../state/types'
@@ -71,40 +73,51 @@ function TaskCardView({
     onActivate: () => undefined,
     onNavigate: () => 'handled',
   })
+  const tokens = motionTokens()
 
   return (
-    <button
-      ref={ref}
-      {...focus.props}
-      type="button"
-      onClick={() => onChoose(card)}
-      data-testid={card.kind === 'empty' ? 'task-card-empty' : 'task-card'}
-      data-card-key={card.id}
-      data-task-card=""
-      data-selected={selected ? '' : undefined}
-      className={cn(
-        'relative flex h-48 shrink-0 flex-col justify-between rounded-card border-2 bg-card p-4 text-left text-on-card shadow-card transition-[scale,opacity,border-color] duration-ui ease-standard',
-        borderClass(entry, isCurrent),
-        selected ? 'scale-110 opacity-100' : 'scale-90 opacity-60',
-      )}
-      style={{ width: CARD_WIDTH_PX }}
+    // Staggered entrance (spec 18): cards fade/slide in ~30 ms apart. The
+    // interval scales with the fast duration token rather than a fixed number.
+    <motion.div
+      className="shrink-0"
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: tokens.ui, ease: tokens.ease, delay: order * (tokens.fast / 4) }}
     >
-      {unread ? (
-        <span
-          data-testid="task-unread"
-          className="absolute top-2 right-2 h-3 w-3 rounded-full bg-danger"
-        />
-      ) : null}
-      <span className="text-sm uppercase tracking-wide text-text-muted">
-        {card.kind === 'empty' ? 'New' : statusLabel(entry, isCurrent)}
-      </span>
-      <span className="line-clamp-3 text-xl font-semibold">
-        {card.kind === 'empty' ? '+ New task' : (entry?.title ?? 'Task')}
-      </span>
-      <span className="truncate text-code text-text-muted">
-        {card.kind === 'empty' ? 'X · history' : (entry?.model?.modelId ?? '')}
-      </span>
-    </button>
+      <motion.button
+        ref={ref}
+        {...focus.props}
+        type="button"
+        onClick={() => onChoose(card)}
+        data-testid={card.kind === 'empty' ? 'task-card-empty' : 'task-card'}
+        data-card-key={card.id}
+        data-task-card=""
+        data-selected={selected ? '' : undefined}
+        className={cn(
+          'relative flex h-48 flex-col justify-between rounded-card border-2 bg-card p-4 text-left text-on-card shadow-card transition-[border-color] duration-ui ease-standard',
+          borderClass(entry, isCurrent),
+        )}
+        style={{ width: CARD_WIDTH_PX }}
+        animate={{ scale: selected ? 1.1 : 0.9, opacity: selected ? 1 : 0.6 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+      >
+        {unread ? (
+          <span
+            data-testid="task-unread"
+            className="absolute top-2 right-2 h-3 w-3 rounded-full bg-danger"
+          />
+        ) : null}
+        <span className="text-sm uppercase tracking-wide text-text-muted">
+          {card.kind === 'empty' ? 'New' : statusLabel(entry, isCurrent)}
+        </span>
+        <span className="line-clamp-3 text-xl font-semibold">
+          {card.kind === 'empty' ? '+ New task' : (entry?.title ?? 'Task')}
+        </span>
+        <span className="truncate text-code text-text-muted">
+          {card.kind === 'empty' ? 'X · history' : (entry?.model?.modelId ?? '')}
+        </span>
+      </motion.button>
+    </motion.div>
   )
 }
 

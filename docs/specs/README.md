@@ -24,7 +24,7 @@
 | 15 | [界面：系统菜单](15-screen-system-menu.md) | B | 已实现（自动化通过，待掌机实测） |
 | 16 | [语音输入协议与实现](16-voice-input.md) | B | 已实现（协议层 + 豆包适配器 + 长按 Y 听写 + 设置页；自动化通过，待掌机实测；离线兜底未做） |
 | 17 | [界面：文本编辑](17-screen-text-edit.md) | B | 草案 |
-| 18 | [动效与视觉系统](18-motion-and-visual.md) | B | 草案 |
+| 18 | [动效与视觉系统](18-motion-and-visual.md) | B | 部分实现（主题系统 + 任务地图卡片动效；减少动效 / 省电模式未做） |
 | 19 | [打包、原生辅助进程与设备集成](19-packaging-and-native.md) | B | 草案 |
 
 **执行顺序**：00 → 01 → 02 → 03 → 04 必须严格串行。04 通过后进入阶段 B，此时开发方式切换为"在应用里对 Agent 提需求"。阶段 B 的建议顺序是 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19，其中 16 的协议部分可以和 10/11 并行。
@@ -156,7 +156,7 @@
 |---|---|---|
 | `schemaVersion`、`window.mode` | 版本号、窗口模式 | 01 |
 | `engine.workspaceDir` | 工作区目录 | 02 |
-| `ui.lastSession`（`SessionRef`）、`ui.zoom`、`ui.scrollSpeed` | 上次打开的任务、字号缩放、摇杆滚动速度 | 03, 10 |
+| `ui.lastSession`（`SessionRef`）、`ui.zoom`、`ui.scrollSpeed`、`ui.theme` | 上次打开的任务、字号缩放、摇杆滚动速度、主题（`system` / `dark` / `light`） | 03, 10, 18 |
 | `input` | 用户键位配置（ActionMap 的用户层） | 10 |
 | `tasks.open`（`SessionRef[]`）、`tasks.unread`（`SessionRef[]`） | 任务地图里打开的任务（按创建时间）和显示红点的任务 | 14 |
 | `hints = { enabled, delayMs }` | 操作提示的开关和等待时间 | 12, 15 |
