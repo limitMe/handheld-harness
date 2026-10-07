@@ -198,7 +198,11 @@ export function Composer({
 
   const canSend = value.trim().length > 0
   const send = useCallback(() => {
-    if (!busy && !listOpen) onSend()
+    if (busy || listOpen) return
+    // Settle dictation into the draft just before it is read, and detach so a
+    // late final result cannot repopulate the field after it is cleared (spec 16).
+    if (dictation.active) dictation.finish()
+    onSend()
   }, [busy, listOpen, onSend])
 
   const insertCommand = useCallback(

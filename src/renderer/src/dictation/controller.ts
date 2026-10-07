@@ -80,6 +80,12 @@ export class DictationController {
     this.options.setStatus('starting')
     try {
       const { sessionId } = await speech.start()
+      // `cancel()` / `finish()` may have run while the provider was starting;
+      // drop the session they never saw instead of writing into the field.
+      if (!this.starting) {
+        void speech.cancel(sessionId)
+        return
+      }
       this.starting = false
       if (this.pendingStop) {
         this.pendingStop = false
@@ -127,6 +133,27 @@ export class DictationController {
     this.sessionId = null
     if (sessionId) void this.options.speech()?.cancel(sessionId)
     this.settle('discard')
+  }
+
+  /**
+   * Ends the session now, keeping the text already written into the field. Used
+   * when the field is consumed (send): it promotes the pending partial once and
+   * detaches, so late `partial`/`final`/`ended` events cannot write it back.
+   */
+  finish(): void {
+    const editor = this.editor
+    const target = this.target
+    const sessionId = this.sessionId
+    this.clearSettleTimer()
+    this.starting = false
+    this.pendingStop = false
+    this.sessionId = null
+    this.editor = null
+    if (sessionId) void this.options.speech()?.stop(sessionId)
+    this.options.audio.release()
+    this.options.setStatus('idle')
+    this.options.setLevel(0)
+    if (editor && target?.isAlive()) target.apply(editor.finalize())
   }
 
   private handleEvent(event: SpeechEvent): void {

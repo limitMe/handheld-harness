@@ -128,6 +128,39 @@ describe('DictationController', () => {
     h.off()
   })
 
+  it('finish keeps the text and ignores later events', async () => {
+    const { target, state } = createTarget('', 0, 0)
+    const h = setup(target)
+
+    await h.controller.start()
+    h.speech.emit({ type: 'partial', sessionId: h.speech.id(), text: '你好' })
+    h.controller.finish()
+
+    expect(state.value).toBe('你好')
+    expect(h.controller.active).toBe(false)
+
+    // Late results must not write into the consumed field.
+    h.speech.emit({ type: 'final', sessionId: h.speech.id(), text: '呀' })
+    h.speech.emit({ type: 'ended', sessionId: h.speech.id() })
+    expect(state.value).toBe('你好')
+    h.off()
+  })
+
+  it('finish while starting drops the session instead of writing back', async () => {
+    const { target, state } = createTarget('', 0, 0)
+    const h = setup(target)
+
+    const starting = h.controller.start()
+    h.controller.finish()
+    await starting
+
+    expect(state.value).toBe('')
+    expect(h.controller.active).toBe(false)
+    h.speech.emit({ type: 'partial', sessionId: h.speech.id(), text: '你好' })
+    expect(state.value).toBe('')
+    h.off()
+  })
+
   it('ends the session when the caret moves away', async () => {
     const { target, state } = createTarget('', 0, 0)
     const h = setup(target)
