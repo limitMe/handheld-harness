@@ -95,9 +95,11 @@ export function ListInput({ anchor, engineId, onChoose, onCancel }: ListInputPro
                 index === active ? 'bg-card text-on-card' : 'text-text-muted hover:bg-card',
               )}
             >
-              <span className="font-mono">/{command.name}</span>
+              <span className="w-full truncate font-mono">/{command.name}</span>
               {command.description ? (
-                <span className="text-code text-text-muted">{command.description}</span>
+                <span className="w-full truncate text-code text-text-muted">
+                  {command.description}
+                </span>
               ) : null}
             </button>
           ))
