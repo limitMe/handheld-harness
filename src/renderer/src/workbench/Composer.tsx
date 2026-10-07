@@ -280,6 +280,9 @@ export function Composer({
               onKeyDown={(event) => {
                 if (event.key === 'Escape') {
                   event.preventDefault()
+                  // Keep the global chrome layer from also seeing this Escape: by
+                  // now the field has blurred, so it would look non-editable.
+                  event.stopPropagation()
                   if (dictation.active) {
                     dictation.cancel()
                   } else if (busy) {

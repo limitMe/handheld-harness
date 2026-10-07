@@ -101,8 +101,8 @@ test('moves focus into the chat transcript', async () => {
       .evaluate((element) => element.hasAttribute('data-scroll-region'))
     expect(scrolled).toBe(true)
 
-    // Exit the composer, then step up into the transcript. Message parts are focus stops.
-    await window.keyboard.press('Escape')
+    // Sending leaves the composer deactivated (focus stays on the form); step
+    // up into the transcript. Message parts are focus stops.
     await window.keyboard.press('ArrowUp')
     const first = await focusedFocusId(window)
     expect(first).toMatch(/^(part|tool)-/)

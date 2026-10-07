@@ -141,6 +141,9 @@ function ModelSearchRow({
           onKeyDown={(event) => {
             if (event.key !== 'Escape') return
             event.preventDefault()
+            // The field blurs before the window handler runs; stop the event so
+            // the chrome layer cannot treat the Escape as a page-level shortcut.
+            event.stopPropagation()
             tree?.deactivate()
           }}
           className="min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
