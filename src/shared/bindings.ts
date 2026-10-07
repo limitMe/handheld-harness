@@ -40,6 +40,17 @@ export function contextLabel(id: string): string {
   return CONTEXT_LABELS[id] ?? id
 }
 
+/**
+ * Directions are universal (D-pad / stick) and described by the focus ring, so
+ * they are not worth rebinding: the key-bindings page leaves them out (spec 15).
+ */
+export const HIDDEN_BINDING_ACTIONS: ReadonlySet<ActionId> = new Set<ActionId>([
+  'nav.up',
+  'nav.down',
+  'nav.left',
+  'nav.right',
+])
+
 export function bindingTable(
   map: ActionMap,
   device: MenuDevice,

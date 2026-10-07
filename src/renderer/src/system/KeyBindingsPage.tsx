@@ -9,6 +9,7 @@ import {
   bindingTable,
   contextLabel,
   formatBindingKey,
+  HIDDEN_BINDING_ACTIONS,
   listContexts,
   listBindings,
   rebindConflict,
@@ -191,7 +192,14 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
     }
   }, [resetTarget, device, settings, update])
 
-  const contexts = listContexts(map, device)
+  const groups = listContexts(map, device)
+    .map((context) => ({
+      context,
+      rows: listBindings(map, device, context).filter(
+        (row) => !HIDDEN_BINDING_ACTIONS.has(row.action),
+      ),
+    }))
+    .filter((group) => group.rows.length > 0)
   const groupPrefix = `system-menu.keys.${device}`
 
   const selectDevice = (next: MenuDevice): void => {
@@ -242,13 +250,13 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
         System menu (Start) and task map (Back) are locked so they always open.
       </p>
 
-      {contexts.length === 0 ? (
+      {groups.length === 0 ? (
         <p className="px-3 py-4 text-text-muted">No bindings for this device.</p>
       ) : (
-        contexts.map((context, groupIndex) => (
+        groups.map(({ context, rows }, groupIndex) => (
           <div key={context}>
             <MenuGroupLabel>{contextLabel(context)}</MenuGroupLabel>
-            {listBindings(map, device, context).map((row, rowIndex) => {
+            {rows.map((row, rowIndex) => {
               const locked = isLockedBinding(context, row.action)
               return (
                 <MenuRow
@@ -294,7 +302,7 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
       <div className="pt-4">
         <MenuRow
           id={`${groupPrefix}.reset-all`}
-          order={100 + contexts.length * GROUP_STRIDE + GROUP_STRIDE - 1}
+          order={100 + groups.length * GROUP_STRIDE + GROUP_STRIDE - 1}
           testId="binding-reset-all"
           onActivate={() => setResetTarget('all')}
           onClick={() => setResetTarget('all')}
