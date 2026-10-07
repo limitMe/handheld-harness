@@ -68,7 +68,6 @@ function ValueRow({
       id={id}
       order={order}
       activatable
-      autoActivate
       testId={testId}
       onActivate={() => undefined}
       onNavigate={(direction) => {

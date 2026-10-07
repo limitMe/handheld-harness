@@ -61,18 +61,24 @@ async function openDisplayPanel(): Promise<void> {
 }
 
 describe('Display & hints', () => {
-  it('adjusts text size with left/right as soon as the row is focused', async () => {
+  it('requires A to activate before adjusting a value', async () => {
     const { setZoom } = installBridge()
     await openDisplayPanel()
 
-    // No extra activation step: a focused value row enters its internal mode.
-    expect(screen.getByTestId('display-zoom').hasAttribute('data-activated')).toBe(true)
+    const row = screen.getByTestId('display-zoom')
+    expect(row.hasAttribute('data-activated')).toBe(false)
 
+    // Moving right while merely focused must not change the value.
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    expect(setZoom).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(row.hasAttribute('data-activated')).toBe(true))
     fireEvent.keyDown(window, { key: 'ArrowRight' })
     expect(setZoom).toHaveBeenCalledWith(1.1)
   })
 
-  it('adjusts the stick scroll speed with left/right once focused', async () => {
+  it('adjusts the stick scroll speed after activation', async () => {
     const { update } = installBridge()
     await openDisplayPanel()
 
@@ -81,13 +87,16 @@ describe('Display & hints', () => {
     await waitFor(() =>
       expect(screen.getByTestId('display-scroll-speed').hasAttribute('data-focused')).toBe(true),
     )
-    expect(screen.getByTestId('display-scroll-speed').hasAttribute('data-activated')).toBe(true)
 
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() =>
+      expect(screen.getByTestId('display-scroll-speed').hasAttribute('data-activated')).toBe(true),
+    )
     fireEvent.keyDown(window, { key: 'ArrowRight' })
     expect(update).toHaveBeenCalledWith({ ui: { scrollSpeed: 1.25 } })
   })
 
-  it('adjusts the hint delay with left/right once focused', async () => {
+  it('adjusts the hint delay after activation', async () => {
     const { update } = installBridge()
     await openDisplayPanel()
 
@@ -99,8 +108,11 @@ describe('Display & hints', () => {
     await waitFor(() =>
       expect(screen.getByTestId('display-hints-delay').hasAttribute('data-focused')).toBe(true),
     )
-    expect(screen.getByTestId('display-hints-delay').hasAttribute('data-activated')).toBe(true)
 
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() =>
+      expect(screen.getByTestId('display-hints-delay').hasAttribute('data-activated')).toBe(true),
+    )
     fireEvent.keyDown(window, { key: 'ArrowRight' })
     expect(update).toHaveBeenCalledWith({ hints: { delayMs: 2250 } })
   })

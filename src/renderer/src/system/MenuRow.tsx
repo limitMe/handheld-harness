@@ -1,10 +1,5 @@
 import { createContext, useContext, useRef, type ReactNode } from 'react'
-import {
-  useFocusable,
-  useFocusTree,
-  type FocusDirection,
-  type NavigateResult,
-} from '../focus'
+import { useFocusable, type FocusDirection, type NavigateResult } from '../focus'
 import { cn } from '../ui'
 
 /** Default Back handler for the settings column: return to the category list. */
@@ -26,8 +21,6 @@ export interface MenuRowProps {
   selected?: boolean
   /** When true the row enters an internal mode on A (spec 11). */
   activatable?: boolean
-  /** Enter the internal mode as soon as the row is focused (left/right values). */
-  autoActivate?: boolean
   onActivate?: () => void
   onDeactivate?: () => void
   onCancel?: () => void
@@ -52,7 +45,6 @@ export function MenuRow({
   order,
   selected,
   activatable,
-  autoActivate,
   onActivate,
   onDeactivate,
   onCancel,
@@ -64,7 +56,6 @@ export function MenuRow({
   children,
 }: MenuRowProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const tree = useFocusTree()
   const cancelFallback = useContext(MenuCancelContext)
   const handleCancel = onCancel ?? (cancelFallback ? () => cancelFallback() : undefined)
   const focus = useFocusable({
@@ -76,14 +67,7 @@ export function MenuRow({
     ...(onDeactivate ? { onDeactivate } : {}),
     ...(handleCancel ? { onCancel: handleCancel } : {}),
     ...(onNavigate ? { onNavigate } : {}),
-    ...(onFocus || autoActivate
-      ? {
-          onFocus: () => {
-            onFocus?.()
-            if (autoActivate) tree?.activate(id)
-          },
-        }
-      : {}),
+    ...(onFocus ? { onFocus } : {}),
   })
 
   return (
