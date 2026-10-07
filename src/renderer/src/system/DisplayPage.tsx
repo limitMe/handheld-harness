@@ -35,6 +35,7 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
         id="system-menu.first"
         order={0}
         activatable
+        autoActivate
         testId="display-zoom"
         onActivate={() => undefined}
         onNavigate={(direction) => {
@@ -64,6 +65,7 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
         id="system-menu.display.delay"
         order={2}
         activatable
+        autoActivate
         testId="display-hints-delay"
         onActivate={() => undefined}
         onNavigate={(direction) => {
