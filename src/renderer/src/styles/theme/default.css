@@ -28,6 +28,14 @@
   --theme-color-success: #4ade80;
   --theme-color-warning: #fbbf24;
 
+  /* Face-button colours follow the Xbox convention and stay identical in both
+   * themes; the shared label colour keeps the letter white on the disc. */
+  --theme-color-pad-a: #34a853;
+  --theme-color-pad-b: #ea4335;
+  --theme-color-pad-x: #4285f4;
+  --theme-color-pad-y: #fbbc05;
+  --theme-color-pad-label: #ffffff;
+
   --theme-radius-card: 12px;
   --theme-shadow-card: 0 12px 32px rgb(0 0 0 / 0.45);
   --theme-ease-standard: cubic-bezier(0.2, 0, 0, 1);

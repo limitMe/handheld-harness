@@ -121,3 +121,26 @@
 - **对话框被页面盖住**：`AlertDialog` / `Dialog` 的 backdrop 与 popup 没有 z-index，而任务地图 / 系统菜单是 `z-40`，导致确认对话框渲染在卡片背后且看起来半透明。给 `ConfirmDialog`、`ChoiceDialog`、`Overlay` 的 backdrop 与 popup 加上 `z-50`，与其它浮层（操作提示、Toast）同级且高于 `z-40` 的页面。
 - **列表输入的长说明溢出**：`ListInput` 的命令名与说明加 `w-full truncate`，长说明在一行内省略，不再挤出条目边界。
 - **列表输入退出后重新聚焦**：命令列表打开时会抢 DOM 焦点，关闭后由 `Composer` 的 effect 重新激活并聚焦 `<textarea>`；聚焦推迟一帧，避开 Base UI 在卸载时的焦点恢复。
+
+### 按键图标系统（2026-10-07）
+
+- **交付物**：
+  - `src/renderer/src/glyphs/GamepadGlyph.tsx`（+ `index.ts`）：纯 SVG 手柄按键图标。`A`/`B`/`X`/`Y` 用实心彩色圆 + 白色加粗字母（短按）或同色粗圆环 + 当前文字色字母（长按）；`LB`/`RB` 圆角肩键、`LT`/`RT` 倾斜扳机、十字键（实心十字 + `mask` 敲掉方向缺口）、`LS`/`RS` 摇杆圆、`Back`（两个叠方块）、`Start`（三条横线）。没有专用图标的控件（如 `LStickX+`、`Guide`）回退到文字键帽。`hold-ring` 的 `data-testid` 与进度环第二圆的 `stroke-dashoffset` 几何保持不变，沿用 `action-hints` 单测。
+  - 语义 token 新增 `pad-a` / `pad-b` / `pad-x` / `pad-y` / `pad-label`（`tokens.css` 映射，取值放 `theme/default.css`）。四个面键颜色取 Google 四色（绿 `#34a853`、红 `#ea4335`、蓝 `#4285f4`、黄 `#fbbc05`），两个主题一致；`pad-label` 为白色。
+  - 接入位置：`ActionHints`（键帽换成图标）、任务地图底部按键图例与空卡片上的「Y 新建 / X 历史」徽标、系统菜单「按键绑定」的游戏手柄列、手柄调试页的按键列表。
+- **决策 / 与 spec 的出入**：
+  - **没有复用现成图标包**：可选的 CC0 图标包（Xelu 系、meritite-union 等）是整包 zip / 单一巨型 SVG 或 128px 光栅，风格与参考图不同；引入外部资源还要新增依赖（需先关掉 dev 实例）。改为按参考图手写一套内联 SVG，体量小、可随主题反色。图例文案新增 `taskMap.hints.*`，替换原来的 `taskMap.keysHint` 静态句。
+  - **单色图标随主题反色**：用 `currentColor`（面板上的 `on-card`）绘制，深色主题为浅色、浅色主题为深色，符合「浅色模式一套、深色取反色」。
+  - **长按面键的字母颜色**：环内透明，白色字母在浅色主题下不可读，因此长按态字母取 `on-card`（深色主题仍是白色，浅色主题自动转深色）；短按保持白色。
+  - **长按的单色图标**：无对应「非实心」参考图，统一用描边（空心）表示长按，并叠加同样的进度环。
+- **已自动验证**：`npm run check` 通过（51 个测试文件 306 个用例，lint 零 warning）；新增 `gamepad-glyph` 单测（图标覆盖判断、文字回退、短按无环、长按进度）。`npx playwright test gamepad current-work` 通过（含「把 Send 从 A 改绑到 Y」对绑定键的断言、操作提示浮层）。
+- **未完成 / 需人工验证**：掌机上图标在 7 英寸屏的辨识度与浅色主题对比度；肩键 / 扳机形状是否够直观（当前用标签区分）。
+
+#### 跟进调整（2026-10-07，用户反馈）
+
+- **非面键的长按改为文字提示**：`A/B/X/Y` 之外的长按（如 `LB:hold` 的「停止 Agent」）不再画空心图标 + 进度环，直接显示「长按 LB / hold LB」（复用 `part.hold` + `controlLabel`，注意 i18n）。面键仍用圆环，操作提示里对应的 `hold` 后缀只在面键长按时追加，避免重复。`GamepadGlyph` 新增 `hasFaceGlyph`；`LB:hold` 之后的肩键 / 扳机 / 十字键不再需要空心变体，已删掉死代码。
+- **键位绑定页瘦身**：
+  - `HIDDEN_BINDING_ACTIONS` 增加 `scroll`、`nav.activate`、`nav.deactivate`；新增 `HIDDEN_BINDING_CONTEXTS`（`systemMenu`、`systemMenu.picker`），`listContexts` 不再列出它们。于是「当前工作 - 滚动」和系统菜单的全部逐页键位都不再出现。
+  - **选择 / 返回收口成一处**：新增 `SHARED_BINDING_ACTIONS` 与 `sharedBindings` / `sharedConflict` / `sharedRebindRows`。设置页在设备页签下方显示一组「通用」，只列 Select / Back 两行；改键时把新键扇出写入所有绑定该动作的上下文（`dialog`、`listInput`、`taskMap.history` 等一并更新），运行时仍是各上下文各自绑定，因此「任务地图上弹出的确认框」这类模态隔离不受影响（用户已确认可接受选择 / 返回影响系统菜单）。冲突检测跨所有目标上下文。
+  - 保留 `global` 里 locked 的 Start / Back（打开系统菜单 / 任务地图）两行作为说明——它们本来就不可改。
+- **已自动验证**：`npm run check` 通过（311 个用例）；`bindings` 新增共用绑定 / 扇出 / 冲突用例，`gamepad-glyph` 新增非面键长按文字用例，`system-menu` 的锁定用例改为循环导航到目标行。全量 e2e 23 个通过。

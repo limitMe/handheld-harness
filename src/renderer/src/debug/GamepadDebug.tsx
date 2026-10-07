@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { actionLabel } from '@shared/actions'
+import { GamepadGlyph } from '../glyphs'
 import { useTranslation } from '../i18n'
 import { useInputDebugStore } from '../input'
 import { Button, Overlay } from '../ui'
@@ -222,8 +223,11 @@ export default function GamepadDebug({ open, onOpenChange }: DebugOverlayProps) 
             <div className="mt-3 grid grid-cols-2 gap-1 text-code sm:grid-cols-3">
               {pad.buttons.map((button, i) => (
                 <div key={i} className={button.pressed ? 'text-accent' : 'text-text-muted'}>
-                  {button.name}: {button.pressed ? t('debug.gamepad.down') : t('debug.gamepad.up')}{' '}
-                  ({formatValue(button.value)})
+                  <span className="inline-flex items-center gap-1 align-middle">
+                    <GamepadGlyph control={button.name} size={20} />
+                    {button.pressed ? t('debug.gamepad.down') : t('debug.gamepad.up')} (
+                    {formatValue(button.value)})
+                  </span>
                 </div>
               ))}
             </div>

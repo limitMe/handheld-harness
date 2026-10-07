@@ -15,6 +15,12 @@
   --color-success: var(--theme-color-success);
   --color-warning: var(--theme-color-warning);
 
+  --color-pad-a: var(--theme-color-pad-a);
+  --color-pad-b: var(--theme-color-pad-b);
+  --color-pad-x: var(--theme-color-pad-x);
+  --color-pad-y: var(--theme-color-pad-y);
+  --color-pad-label: var(--theme-color-pad-label);
+
   --font-sans: var(--theme-font-sans);
   --font-mono: var(--theme-font-mono);
 

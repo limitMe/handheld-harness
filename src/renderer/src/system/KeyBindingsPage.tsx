@@ -9,12 +9,16 @@ import {
   listBindings,
   rebindConflict,
   rebindRows,
+  sharedBindings,
+  sharedConflict,
+  sharedRebindRows,
   type ConflictResolution,
   type MenuDevice,
 } from '@shared/bindings'
 import { isLockedBinding, type ActionMap } from '@shared/input'
 import type { Settings, SettingsPatch } from '@shared/ipc'
 import { useFocusTree } from '../focus'
+import { GamepadGlyph } from '../glyphs'
 import { useTranslation } from '../i18n'
 import { useInputApi, type CapturedControl } from '../input'
 import { ChoiceDialog, ConfirmDialog } from '../ui'
@@ -23,6 +27,10 @@ import { MenuGroupLabel, MenuRow } from './MenuRow'
 const HOLD_CANCEL_MS = 2000
 /** Sibling-order stride between context groups, so each group's reset stays last. */
 const GROUP_STRIDE = 100
+/** Sibling-order slot for the shared select / back rows, after the device tabs. */
+const SHARED_ORDER = 50
+/** Sentinel context for a shared rebind; fanned out to every matching context. */
+const SHARED_CONTEXT = '__shared__'
 
 export interface KeyBindingsPageProps {
   map: ActionMap
@@ -92,6 +100,16 @@ function buildKey(control: string, phase: ControlPhase, device: MenuDevice): str
   return phase === 'hold' ? `${control}:hold` : control
 }
 
+/** Renders a stored binding: a gamepad glyph or the keyboard key text. */
+function BindingValue({ binding, device }: { binding: string | undefined; device: MenuDevice }) {
+  if (!binding) return <span className="text-text-muted">—</span>
+  if (device === 'keyboard') return <>{formatBindingKey(binding, device)}</>
+  const { control, phase } = splitControlKey(binding)
+  return (
+    <GamepadGlyph control={control} phase={phase} size={24} label={formatBindingKey(binding, device)} />
+  )
+}
+
 /**
  * Key-binding page (spec 15). Groups the effective ActionMap by context; A on a
  * row captures the next control for that device. Conflicts ask swap / overwrite.
@@ -133,6 +151,22 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
     [update],
   )
 
+  const applyShared = useCallback(
+    async (
+      action: ActionId,
+      target: MenuDevice,
+      oldKey: string | undefined,
+      newKey: string,
+      resolution?: ConflictResolution,
+    ) => {
+      const rows = sharedRebindRows(mapRef.current, target, action, oldKey, newKey, resolution)
+      const patch: SettingsPatch =
+        target === 'gamepad' ? { input: { contexts: rows } } : { input: { keyboard: rows } }
+      await update(patch)
+    },
+    [update],
+  )
+
   const beginCapture = useCallback(
     async (context: string, action: ActionId, oldKey: string | undefined) => {
       const phase: ControlPhase = oldKey ? splitControlKey(oldKey).phase : 'press'
@@ -156,11 +190,37 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
     [api, device, applyRows],
   )
 
+  const beginSharedCapture = useCallback(
+    async (action: ActionId, oldKey: string | undefined) => {
+      const phase: ControlPhase = oldKey ? splitControlKey(oldKey).phase : 'press'
+      const token = ++tokenRef.current
+      setCapture({ context: SHARED_CONTEXT, action, device, oldKey, phase })
+      const captured = await captureForDevice(api, device, setHolding)
+      if (tokenRef.current !== token) return
+      setCapture(null)
+      setHolding(false)
+      if (captured === 'cancelled') return
+      const newKey = buildKey(captured.control, phase, device)
+      if (newKey === oldKey) return
+      const other = sharedConflict(mapRef.current, device, action, newKey)
+      if (other) {
+        setConflict({ context: SHARED_CONTEXT, action, device, oldKey, newKey, other })
+        return
+      }
+      await applyShared(action, device, oldKey, newKey)
+    },
+    [api, device, applyShared],
+  )
+
   const resolveConflict = useCallback(
     async (resolution: ConflictResolution) => {
       const pending = conflict
       if (!pending) return
       setConflict(null)
+      if (pending.context === SHARED_CONTEXT) {
+        await applyShared(pending.action, pending.device, pending.oldKey, pending.newKey, resolution)
+        return
+      }
       const table = bindingTable(mapRef.current, pending.device)[pending.context]
       await applyRows(
         pending.context,
@@ -168,7 +228,7 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
         rebindRows(table, pending.action, pending.oldKey, pending.newKey, resolution),
       )
     },
-    [conflict, applyRows],
+    [conflict, applyRows, applyShared],
   )
 
   const confirmReset = useCallback(async () => {
@@ -189,6 +249,7 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
       ),
     }))
     .filter((group) => group.rows.length > 0)
+  const shared = sharedBindings(map, device)
   const groupPrefix = `system-menu.keys.${device}`
 
   const selectDevice = (next: MenuDevice): void => {
@@ -239,6 +300,28 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
 
       <p className="px-3 pt-3 text-code text-text-muted">{t('keys.lockedNotice')}</p>
 
+      <div data-testid="shared-bindings">
+        <MenuGroupLabel>{t('keys.shared')}</MenuGroupLabel>
+        {shared.map(({ action, key }, index) => (
+          <MenuRow
+            key={action}
+            id={`${groupPrefix}.shared.${action}`}
+            order={SHARED_ORDER + index}
+            testId={`binding-shared-${action}`}
+            onActivate={() => void beginSharedCapture(action, key)}
+            onClick={() => void beginSharedCapture(action, key)}
+          >
+            <span>{t(`actions.${action}`, { defaultValue: actionLabel(action) })}</span>
+            <span
+              data-testid={`binding-key-shared-${action}`}
+              className="inline-flex items-center gap-2 text-code text-text-muted"
+            >
+              <BindingValue binding={key} device={device} />
+            </span>
+          </MenuRow>
+        ))}
+      </div>
+
       {groups.length === 0 ? (
         <p className="px-3 py-4 text-text-muted">{t('keys.none')}</p>
       ) : (
@@ -270,9 +353,9 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
                   </span>
                   <span
                     data-testid={`binding-key-${context}-${row.action}`}
-                    className="text-code text-text-muted"
+                    className="inline-flex items-center gap-2 text-code text-text-muted"
                   >
-                    {formatBindingKey(row.key, device)}
+                    <BindingValue binding={row.key} device={device} />
                   </span>
                 </MenuRow>
               )

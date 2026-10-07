@@ -53,9 +53,16 @@ export const en = {
     working: 'Working…',
     error: 'Error',
     newBadge: 'New',
-    newTask: '+ New task',
-    historyBadge: 'X · history',
-    keysHint: '← → select · A open · Y new · X history · B exit · hold B close',
+    newTask: 'New task',
+    historyBadge: 'history',
+    hints: {
+      select: 'select',
+      open: 'open',
+      new: 'new',
+      history: 'history',
+      exit: 'exit',
+      close: 'close',
+    },
     closeTitle: 'Close task',
     closeDescription:
       'Removes the card from the map. The session is kept and can be reopened from history.',
@@ -109,6 +116,7 @@ export const en = {
   keys: {
     gamepad: 'Gamepad bindings',
     keyboard: 'Keyboard bindings',
+    shared: 'Shared',
     capturePrompt: 'Press a new {{device}} for {{action}}…',
     deviceButton: 'button',
     deviceKey: 'key',

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { motion } from 'motion/react'
 import type { SessionRef, SessionSummary } from '@shared/engine'
 import { FocusContainer, useFocusTree, useFocusable } from '../focus'
+import { GamepadGlyph, type GamepadGlyphPhase } from '../glyphs'
 import { useTranslation, type Translate } from '../i18n'
 import { motionTokens } from '../motion'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
@@ -22,6 +23,24 @@ import { formatRelativeTime } from './time'
 const CARD_WIDTH_PX = 208
 const CARD_GAP_PX = 24
 const CARD_STRIDE_PX = CARD_WIDTH_PX + CARD_GAP_PX
+
+/** One glyph + label pair in the map's bottom legend. */
+function LegendItem({
+  control,
+  phase,
+  label,
+}: {
+  control: string
+  phase?: GamepadGlyphPhase
+  label: string
+}) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <GamepadGlyph control={control} {...(phase ? { phase } : {})} size={22} />
+      <span>{label}</span>
+    </span>
+  )
+}
 
 export interface TaskMapProps {
   open: boolean
@@ -113,10 +132,24 @@ function TaskCardView({
           {card.kind === 'empty' ? t('taskMap.newBadge') : statusLabel(entry, isCurrent, t)}
         </span>
         <span className="line-clamp-3 text-xl font-semibold">
-          {card.kind === 'empty' ? t('taskMap.newTask') : (entry?.title ?? t('taskMap.task'))}
+          {card.kind === 'empty' ? (
+            <span className="inline-flex items-center gap-2">
+              <GamepadGlyph control="Y" size={24} />
+              {t('taskMap.newTask')}
+            </span>
+          ) : (
+            (entry?.title ?? t('taskMap.task'))
+          )}
         </span>
         <span className="truncate text-code text-text-muted">
-          {card.kind === 'empty' ? t('taskMap.historyBadge') : (entry?.model?.modelId ?? '')}
+          {card.kind === 'empty' ? (
+            <span className="inline-flex items-center gap-1">
+              <GamepadGlyph control="X" size={18} />
+              {t('taskMap.historyBadge')}
+            </span>
+          ) : (
+            (entry?.model?.modelId ?? '')
+          )}
         </span>
       </motion.button>
     </motion.div>
@@ -256,9 +289,22 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
           </div>
         </FocusContainer>
       </div>
-      <p className="shrink-0 px-6 pb-4 text-center text-code text-text-muted">
-        {t('taskMap.keysHint')}
-      </p>
+      <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-1 px-6 pb-4 text-code text-text-muted">
+        <span className="inline-flex items-center gap-1">
+          <GamepadGlyph control="DpadLeft" size={22} />
+          <GamepadGlyph control="DpadRight" size={22} />
+          <span>{t('taskMap.hints.select')}</span>
+        </span>
+        <LegendItem control="A" label={t('taskMap.hints.open')} />
+        <LegendItem control="Y" label={t('taskMap.hints.new')} />
+        <LegendItem control="X" label={t('taskMap.hints.history')} />
+        <LegendItem control="B" label={t('taskMap.hints.exit')} />
+        <span className="inline-flex items-center gap-1">
+          <span className="uppercase tracking-wide">{t('part.hold')}</span>
+          <GamepadGlyph control="B" phase="hold" size={22} />
+          <span>{t('taskMap.hints.close')}</span>
+        </span>
+      </div>
 
       {!historyOpen && !confirmRef ? (
         <TaskMapBindings
