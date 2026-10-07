@@ -96,6 +96,27 @@ async function send(window: Page, text: string): Promise<void> {
   await composer.press('Enter')
 }
 
+test('reactivates the composer after the command list closes', async () => {
+  const { app, window } = await launch('e2e-cw-listinput')
+  try {
+    await installFakePad(window)
+
+    await pressPad(window, 'LB')
+    await releasePad(window, 'LB')
+    await expect(window.getByTestId('list-input')).toBeVisible()
+
+    // B leaves the list and must hand focus and activation back to the field.
+    await pressPad(window, 'B')
+    await releasePad(window, 'B')
+    await expect(window.getByTestId('list-input')).toHaveCount(0)
+
+    await expect(window.getByTestId('composer-form')).toHaveAttribute('data-activated', '')
+    await expect(window.getByTestId('composer')).toBeFocused()
+  } finally {
+    await app.close()
+  }
+})
+
 test('collapses the composer when focus leaves and expands it again', async () => {
   const { app, window } = await launch('e2e-cw-collapse')
   try {

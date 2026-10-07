@@ -228,15 +228,21 @@ export function Composer({
     (command: CommandInfo) => {
       onChange(`/${command.name}`)
       setListOpen(false)
-      window.requestAnimationFrame(() => textarea.current?.focus())
     },
     [onChange],
   )
 
-  const closeListInput = useCallback(() => {
-    setListOpen(false)
-    window.requestAnimationFrame(() => textarea.current?.focus())
-  }, [])
+  const closeListInput = useCallback(() => setListOpen(false), [])
+
+  // The list takes DOM focus while open; once it closes, hand focus back to the
+  // field and re-activate it. The frame defers past Base UI's own focus restore
+  // on unmount, which would otherwise leave focus on the form or the body.
+  useEffect(() => {
+    if (listOpen || !focus.activated) return undefined
+    tree?.activate(COMPOSER_ID)
+    const frame = window.requestAnimationFrame(() => textarea.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [listOpen, focus.activated, tree])
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-3">
