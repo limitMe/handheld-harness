@@ -137,38 +137,47 @@ function TaskCardView({
         <span className="text-sm uppercase tracking-wide text-text-muted">
           {card.kind === 'empty' ? t('taskMap.newBadge') : statusLabel(entry, isCurrent, t)}
         </span>
-        <span className="line-clamp-3 text-xl font-semibold">
-          {card.kind === 'empty' ? (
-            <span className="inline-flex items-center gap-2">
-              <GamepadGlyph control="Y" size={24} />
-              {t('taskMap.newTask')}
-            </span>
-          ) : (
-            (entry?.title ?? t('taskMap.task'))
-          )}
-        </span>
         {card.kind === 'empty' ? (
-          <span
-            data-testid="task-card-empty-hints"
-            className="flex flex-col gap-1 text-sm leading-tight text-text-muted"
-          >
-            <span className="flex items-center gap-2">
-              <span className="flex w-14 shrink-0 justify-center">
-                <GamepadGlyph control="X" size={18} />
+          // Centered block: the glyph column lines the Y button up with the X and
+          // LB hints below, and the two hint rows are spaced apart as options.
+          <span className="flex flex-1 flex-col items-center justify-center">
+            <span className="flex flex-col gap-3">
+              <span className="inline-flex items-center gap-2 text-xl font-semibold">
+                <span className="flex w-8 shrink-0 justify-center">
+                  <GamepadGlyph control="Y" size={24} />
+                </span>
+                <span>{t('taskMap.newTask')}</span>
               </span>
-              <span>{t('taskMap.hints.openFromHistory')}</span>
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="flex w-14 shrink-0 justify-center">
-                <GamepadGlyph control="LB" phase="hold" size={18} />
-              </span>
-              <span className="break-words">
-                {t('taskMap.hints.chooseModel', { name: modelName ?? t('models.engineDefault') })}
+              <span
+                data-testid="task-card-empty-hints"
+                className="flex flex-col gap-3 text-sm leading-tight text-text-muted"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="flex w-8 shrink-0 justify-center">
+                    <GamepadGlyph control="X" size={18} />
+                  </span>
+                  <span>{t('taskMap.hints.openFromHistory')}</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="flex w-8 shrink-0 justify-center">
+                    <GamepadGlyph control="LB" phase="hold" size={18} />
+                  </span>
+                  <span className="break-words">
+                    {t('taskMap.hints.chooseModel', {
+                      name: modelName ?? t('models.engineDefault'),
+                    })}
+                  </span>
+                </span>
               </span>
             </span>
           </span>
         ) : (
-          <span className="truncate text-code text-text-muted">{entry?.model?.modelId ?? ''}</span>
+          <>
+            <span className="line-clamp-3 text-xl font-semibold">
+              {entry?.title ?? t('taskMap.task')}
+            </span>
+            <span className="truncate text-code text-text-muted">{entry?.model?.modelId ?? ''}</span>
+          </>
         )}
       </motion.button>
     </motion.div>
