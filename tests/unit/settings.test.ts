@@ -61,7 +61,11 @@ describe('settings store', () => {
     const ref = { engineId: 'fake', sessionId: 'ses_1' }
 
     store.update({ ui: { lastSession: ref, zoom: 1.2 } })
-    expect(createSettingsStore(target).get().ui).toEqual({ lastSession: ref, zoom: 1.2 })
+    expect(createSettingsStore(target).get().ui).toEqual({
+      lastSession: ref,
+      zoom: 1.2,
+      scrollSpeed: 1,
+    })
 
     store.update({ ui: { lastSession: null } })
     const reloaded = createSettingsStore(target).get().ui

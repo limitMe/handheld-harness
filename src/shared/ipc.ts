@@ -53,6 +53,8 @@ export const UiSettingsSchema = z.object({
   // Null means "new task"; a ref reopens the last task on the next launch.
   lastSession: z.union([SessionRefSchema, z.null()]).optional(),
   zoom: z.number().min(0.8).max(2).default(1),
+  /** Analog stick scroll speed multiplier; see `SCROLL_PIXELS_PER_SECOND`. */
+  scrollSpeed: z.number().min(0.25).max(2).default(1),
 })
 export type UiSettings = z.infer<typeof UiSettingsSchema>
 
@@ -109,7 +111,7 @@ export const SettingsSchema = z.object({
     mode: WindowModeSchema,
   }),
   engine: EngineSettingsSchema.default({}),
-  ui: UiSettingsSchema.default({ zoom: 1 }),
+  ui: UiSettingsSchema.default({ zoom: 1, scrollSpeed: 1 }),
   hints: HintsSettingsSchema.default({ ...DEFAULT_HINTS }),
   tasks: TasksSettingsSchema.default({ open: [], unread: [] }),
   model: ModelSettingsSchema.default({}),
@@ -132,6 +134,7 @@ export const SettingsPatchSchema = z.object({
     .object({
       lastSession: z.union([SessionRefSchema, z.null()]).optional(),
       zoom: z.number().optional(),
+      scrollSpeed: z.number().optional(),
     })
     .optional(),
   hints: z
@@ -159,7 +162,7 @@ export const DEFAULT_SETTINGS: Settings = {
   schemaVersion: 1,
   window: { mode: 'windowed' },
   engine: {},
-  ui: { zoom: 1 },
+  ui: { zoom: 1, scrollSpeed: 1 },
   hints: { ...DEFAULT_HINTS },
   tasks: { open: [], unread: [] },
   model: {},
