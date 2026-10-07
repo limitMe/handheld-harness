@@ -119,6 +119,26 @@ test('collapses the composer when focus leaves and expands it again', async () =
   }
 })
 
+test('deletes one character behind the caret with X', async () => {
+  const { app, window } = await launch('e2e-cw-backspace')
+  try {
+    await installFakePad(window)
+    const composer = window.getByTestId('composer')
+    await composer.fill('hello')
+
+    await pressPad(window, 'X')
+    await releasePad(window, 'X')
+
+    await expect(composer).toHaveValue('hell')
+    const caret = await composer.evaluate(
+      (element) => (element as unknown as { selectionStart: number }).selectionStart,
+    )
+    expect(caret).toBe(4)
+  } finally {
+    await app.close()
+  }
+})
+
 test('auto-activates the question card and confirms with gamepad A', async () => {
   const { app, window } = await launch('e2e-cw-question')
   try {

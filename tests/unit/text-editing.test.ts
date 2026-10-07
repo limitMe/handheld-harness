@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  deleteBackward,
   isOnFirstLine,
   lineBounds,
   moveCaretHorizontal,
@@ -48,5 +49,19 @@ describe('moveCaretHorizontal', () => {
     expect(moveCaretHorizontal(0, -1, 5)).toBe(0)
     expect(moveCaretHorizontal(5, 1, 5)).toBe(5)
     expect(moveCaretHorizontal(2, 1, 5)).toBe(3)
+  })
+})
+
+describe('deleteBackward', () => {
+  it('removes the character before the caret', () => {
+    expect(deleteBackward('abc', 2, 2)).toEqual({ value: 'ac', position: 1 })
+  })
+
+  it('does nothing at the start of the text', () => {
+    expect(deleteBackward('abc', 0, 0)).toEqual({ value: 'abc', position: 0 })
+  })
+
+  it('removes the selection when there is one', () => {
+    expect(deleteBackward('abcdef', 1, 4)).toEqual({ value: 'aef', position: 1 })
   })
 })

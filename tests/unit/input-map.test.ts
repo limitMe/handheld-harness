@@ -44,6 +44,11 @@ describe('action map layering', () => {
     expect(map.contexts.currentWork?.['RStickX-']).toBe('nav.left')
   })
 
+  it('binds X in the activated input to backspace', () => {
+    const map = resolveActionMap(undefined, emptyBindingLayer())
+    expect(map.contexts['currentWork.input']?.X).toBe('input.deleteBackward')
+  })
+
   it('overlays a device preset matched by gamepad id', () => {
     const preset: DevicePreset = {
       name: 'Test pad',

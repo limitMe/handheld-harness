@@ -56,7 +56,7 @@ Gamepad API 轮询（rAF）    键盘 keydown / keyup
   "contexts": {
     "global":            { "Start": "menu.toggle", "Back": "map.toggle", "Y:hold": "voice.dictate" },
     "currentWork":       { "DpadUp": "nav.up", "RStickY": "scroll" },
-    "currentWork.input": { "A": "input.send", "B": "input.deactivate", "LB": "input.listInput", "RB": "input.textEdit" },
+    "currentWork.input": { "A": "input.send", "B": "input.deactivate", "X": "input.deleteBackward", "LB": "input.listInput", "RB": "input.textEdit" },
     "currentWork.permission": { "A": "permission.once", "X": "permission.always", "B": "permission.reject" },
     "taskMap":           { "A": "task.open", "B": "map.exit", "B:hold": "task.close", "Y": "task.new", "X": "task.history" },
     "textEdit":          { "X": "sentence.delete" }

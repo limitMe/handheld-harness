@@ -32,3 +32,19 @@ export function moveCaretVertical(value: string, position: number, delta: number
 export function moveCaretHorizontal(position: number, delta: number, length: number): number {
   return Math.max(0, Math.min(length, position + delta))
 }
+
+/**
+ * Backspace at the caret: removes the selection, or one character before the
+ * caret when nothing is selected. Returns the new text and caret position.
+ */
+export function deleteBackward(
+  value: string,
+  start: number,
+  end: number,
+): { value: string; position: number } {
+  if (start !== end) {
+    return { value: value.slice(0, start) + value.slice(end), position: start }
+  }
+  if (start <= 0) return { value, position: 0 }
+  return { value: value.slice(0, start - 1) + value.slice(start), position: start - 1 }
+}

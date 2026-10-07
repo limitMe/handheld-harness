@@ -98,6 +98,7 @@ export const DEFAULT_BINDINGS: BindingLayer = {
     'currentWork.input': {
       A: 'input.send',
       B: 'input.deactivate',
+      X: 'input.deleteBackward',
       LB: 'input.listInput',
       RB: 'input.textEdit',
     },

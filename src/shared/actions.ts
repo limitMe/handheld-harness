@@ -28,6 +28,7 @@ export const ACTIONS = {
   'input.deactivate': { label: 'Exit input' },
   'input.listInput': { label: 'List input' },
   'input.textEdit': { label: 'Text edit' },
+  'input.deleteBackward': { label: 'Delete character' },
 
   'permission.once': { label: 'Allow once' },
   'permission.always': { label: 'Always allow' },

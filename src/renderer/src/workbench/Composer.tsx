@@ -11,7 +11,12 @@ import {
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { Button, cn } from '../ui'
 import { ListInput } from './ListInput'
-import { isOnFirstLine, moveCaretHorizontal, moveCaretVertical } from './textEditing'
+import {
+  deleteBackward,
+  isOnFirstLine,
+  moveCaretHorizontal,
+  moveCaretVertical,
+} from './textEditing'
 
 export interface ComposerProps {
   value: string
@@ -35,10 +40,12 @@ const COMPOSER_ID = 'composer'
 function ComposerInputContext({
   onSend,
   onDeactivate,
+  onDeleteBackward,
   onListInput,
 }: {
   onSend: () => void
   onDeactivate: () => void
+  onDeleteBackward: () => void
   onListInput?: () => void
 }) {
   useInputContext(
@@ -46,6 +53,7 @@ function ComposerInputContext({
     {
       'input.send': onPress(() => onSend()),
       'input.deactivate': onPress(() => onDeactivate()),
+      'input.deleteBackward': onPress(() => onDeleteBackward()),
       ...(onListInput ? { 'input.listInput': onPress(() => onListInput()) } : {}),
     },
     CONTEXT_ORDER.activated,
@@ -91,6 +99,17 @@ export function Composer({
     textarea.current?.blur()
     formRef.current?.focus()
   }, [])
+
+  // X deletes one character behind the caret (spec 10). Mirror the value into
+  // the DOM so the caret lands immediately, then let the controlled update run.
+  const deleteBackwardAtCaret = useCallback(() => {
+    const element = textarea.current
+    if (!element) return
+    const next = deleteBackward(element.value, element.selectionStart, element.selectionEnd)
+    element.value = next.value
+    setCaret(element, next.position)
+    onChange(next.value)
+  }, [onChange])
 
   const handleNavigate = useCallback((direction: FocusDirection): NavigateResult => {
     const element = textarea.current
@@ -301,6 +320,7 @@ export function Composer({
           <ComposerInputContext
             onSend={send}
             onDeactivate={() => tree?.deactivate()}
+            onDeleteBackward={deleteBackwardAtCaret}
             {...(commandsAvailable ? { onListInput: () => setListOpen(true) } : {})}
           />
         ) : null}

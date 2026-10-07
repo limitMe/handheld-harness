@@ -168,7 +168,7 @@ test('A on the Tasks button opens the task map and releasing A keeps it open', a
   }
 })
 
-test('rebinds Send from A to X in the system menu', async () => {
+test('rebinds Send from A to Y in the system menu', async () => {
   const { app, window } = await launch('e2e-pad-system-menu')
   try {
     const composer = window.getByTestId('composer')
@@ -203,24 +203,24 @@ test('rebinds Send from A to X in the system menu', async () => {
       window.locator('[data-testid="binding-currentWork.input-input.send"]'),
     ).toHaveAttribute('data-focused', '')
 
-    // A starts capture; X becomes the new key.
+    // A starts capture; Y becomes the new key (X is taken by delete-backspace).
     await pressPad(window, 'A')
     await releasePad(window, 'A')
     await expect(window.getByTestId('capture-banner')).toBeVisible()
-    await pressPad(window, 'X')
-    await releasePad(window, 'X')
+    await pressPad(window, 'Y')
+    await releasePad(window, 'Y')
     await expect(window.getByTestId('capture-banner')).toHaveCount(0)
-    await expect(window.getByTestId('binding-key-currentWork.input-input.send')).toHaveText('X')
+    await expect(window.getByTestId('binding-key-currentWork.input-input.send')).toHaveText('Y')
 
     // The override is persisted to settings (spec 15 acceptance).
     const override = await window.evaluate(() =>
       (globalThis as unknown as SettingsScope).handheld.settings.get(),
     )
-    expect(override.input.contexts['currentWork.input']?.X).toBe('input.send')
+    expect(override.input.contexts['currentWork.input']?.Y).toBe('input.send')
     expect(override.input.contexts['currentWork.input']?.A).toBeNull()
 
     // Restore the default so the profile stays clean for later runs.
-    for (let i = 0; i < 6; i += 1) {
+    for (let i = 0; i < 8; i += 1) {
       if (
         (await window
           .locator('[data-testid="binding-reset-currentWork.input"][data-focused]')

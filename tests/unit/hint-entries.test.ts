@@ -23,12 +23,14 @@ describe('buildHintEntries', () => {
     expect(entries.map((entry) => entry.action)).toEqual([
       'input.send',
       'input.deactivate',
+      'input.deleteBackward',
       'input.listInput',
       'input.textEdit',
       'voice.dictate',
     ])
     expect(entries[0]).toEqual({ action: 'input.send', control: 'A', phase: 'press' })
-    expect(entries[4]).toEqual({ action: 'voice.dictate', control: 'Y', phase: 'hold' })
+    expect(entries[2]).toEqual({ action: 'input.deleteBackward', control: 'X', phase: 'press' })
+    expect(entries[5]).toEqual({ action: 'voice.dictate', control: 'Y', phase: 'hold' })
   })
 
   it('hides navigation and global chrome', () => {

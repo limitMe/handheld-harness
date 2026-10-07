@@ -39,6 +39,7 @@ describe('binding helpers', () => {
       'input.deactivate',
       'input.listInput',
       'input.textEdit',
+      'input.deleteBackward',
     ])
     expect(rows[0]).toMatchObject({ action: 'input.send', key: 'A' })
   })
