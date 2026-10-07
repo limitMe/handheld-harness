@@ -17,6 +17,15 @@ body {
   font-family: var(--theme-font-sans);
 }
 
+/* Console UI: scrollable regions stay scrollable but hide the native scrollbar. */
+@utility scrollbar-hidden {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
