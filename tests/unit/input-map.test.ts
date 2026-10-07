@@ -33,6 +33,16 @@ describe('action map layering', () => {
     expect(merged.contexts.global?.Start).toBe('menu.toggle')
   })
 
+  it('binds both sticks: vertical scroll and horizontal navigation', () => {
+    const map = resolveActionMap(undefined, emptyBindingLayer())
+    expect(map.contexts.currentWork?.LStickY).toBe('scroll')
+    expect(map.contexts.currentWork?.RStickY).toBe('scroll')
+    expect(map.contexts.currentWork?.['LStickX+']).toBe('nav.right')
+    expect(map.contexts.currentWork?.['LStickX-']).toBe('nav.left')
+    expect(map.contexts.currentWork?.['RStickX+']).toBe('nav.right')
+    expect(map.contexts.currentWork?.['RStickX-']).toBe('nav.left')
+  })
+
   it('overlays a device preset matched by gamepad id', () => {
     const preset: DevicePreset = {
       name: 'Test pad',

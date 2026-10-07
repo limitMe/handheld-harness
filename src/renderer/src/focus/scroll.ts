@@ -2,7 +2,7 @@
 
 import type { FocusTree } from './tree'
 
-export const SCROLL_STEP = 36
+export const SCROLL_STEP = 24
 
 /**
  * Finds the nearest marked scroll region from a focused element; falls back to

@@ -5,6 +5,11 @@ export const DEFAULT_DEADZONE = 0.25
 export const BUTTON_PRESS_THRESHOLD = 0.5
 /** Ignore analog jitter below this delta while a control stays pressed. */
 export const AXIS_EPSILON = 0.05
+/**
+ * Horizontal stick deflection required before the axis is treated as a D-pad
+ * direction. Higher than the scroll deadzone so scrolling never drifts sideways.
+ */
+export const STICK_NAV_DEADZONE = 0.55
 
 export interface ControlSample {
   pressed: boolean
@@ -14,6 +19,7 @@ export interface ControlSample {
 export type ControlStates = Partial<Record<GamepadControl, ControlSample>>
 
 const AXIS_CONTROLS = new Set<string>(GAMEPAD_AXES)
+const HORIZONTAL_AXES = new Set<string>(['LStickX', 'RStickX'])
 
 export function isAnalogControl(control: string): boolean {
   return AXIS_CONTROLS.has(control)
@@ -38,7 +44,10 @@ export function readGamepadStates(pad: Gamepad, deadzone = DEFAULT_DEADZONE): Co
   for (let index = 0; index < GAMEPAD_AXES.length; index += 1) {
     const name = GAMEPAD_AXES[index]
     if (!name) continue
-    const value = applyDeadzone(pad.axes[index] ?? 0, deadzone)
+    const axisDeadzone = HORIZONTAL_AXES.has(name)
+      ? Math.max(deadzone, STICK_NAV_DEADZONE)
+      : deadzone
+    const value = applyDeadzone(pad.axes[index] ?? 0, axisDeadzone)
     states[name] = { pressed: value !== 0, value }
   }
   return states

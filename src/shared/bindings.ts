@@ -135,5 +135,9 @@ export function rebindRows(
 export function formatBindingKey(key: string, device: MenuDevice): string {
   const { control, phase } = splitControlKey(key)
   if (device === 'keyboard') return control
-  return phase === 'hold' ? `${control} (hold)` : control
+  const suffix = phase === 'hold' ? ' (hold)' : ''
+  // Sticks resolve by direction: `LStickX+` reads as `LStickX →`.
+  if (control.endsWith('+')) return `${control.slice(0, -1)} →${suffix}`
+  if (control.endsWith('-')) return `${control.slice(0, -1)} ←${suffix}`
+  return `${control}${suffix}`
 }

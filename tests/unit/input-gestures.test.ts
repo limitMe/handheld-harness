@@ -133,6 +133,27 @@ describe('GestureResolver simultaneous and analog controls', () => {
     expect(phases(resolver.handle(release('RStickY'), 20))).toEqual(['scroll:end'])
   })
 
+  it('resolves a stick direction before the bare control', () => {
+    const resolver = makeResolver({
+      'LStickX+': { short: 'nav.right' },
+      'LStickX-': { short: 'nav.left' },
+      LStickX: { short: 'scroll' },
+    })
+
+    expect(phases(resolver.handle(analog('LStickX', 0.7), 0))).toEqual(['nav.right:start'])
+    expect(phases(resolver.handle(release('LStickX'), 10))).toEqual(['nav.right:end'])
+    expect(phases(resolver.handle(analog('LStickX', -0.7), 20))).toEqual(['nav.left:start'])
+  })
+
+  it('repeats scroll with a slower cadence than navigation', () => {
+    const resolver = makeResolver({ RStickY: { short: 'scroll' } })
+
+    resolver.handle(analog('RStickY', 0.8), 0)
+    expect(resolver.tick(350)).toHaveLength(1)
+    expect(resolver.tick(409)).toEqual([])
+    expect(phases(resolver.tick(470))).toEqual(['scroll:repeat'])
+  })
+
   it('releases every held control on reset', () => {
     const resolver = makeResolver({ A: { short: 'nav.activate' }, B: { short: 'nav.deactivate' } })
 

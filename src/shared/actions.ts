@@ -8,6 +8,8 @@ export interface ActionDefinition {
   readonly label: string
   /** Only repeatable actions emit `repeat` phases while a control is held. */
   readonly repeatable?: boolean
+  /** Repeat cadence in ms; analog scroll uses a slower cadence than the D-pad. */
+  readonly repeatMs?: number
 }
 
 export const ACTIONS = {
@@ -21,7 +23,7 @@ export const ACTIONS = {
   'nav.right': { label: 'Move right', repeatable: true },
   'nav.activate': { label: 'Select' },
   'nav.deactivate': { label: 'Back' },
-  scroll: { label: 'Scroll', repeatable: true },
+  scroll: { label: 'Scroll', repeatable: true, repeatMs: 120 },
 
   'input.send': { label: 'Send' },
   'input.deactivate': { label: 'Exit input' },
@@ -61,6 +63,14 @@ export function actionLabel(id: ActionId): string {
 export function isRepeatable(id: ActionId): boolean {
   const definition = ACTIONS[id]
   return 'repeatable' in definition && definition.repeatable === true
+}
+
+/** Repeat cadence for an action, falling back to the caller's default (spec 10). */
+export function repeatIntervalFor(id: ActionId, fallback: number): number {
+  const definition = ACTIONS[id]
+  return 'repeatMs' in definition && typeof definition.repeatMs === 'number'
+    ? definition.repeatMs
+    : fallback
 }
 
 /** Standard-mapping gamepad button names. Guide (index 16) is intentionally omitted: the OS owns it. */

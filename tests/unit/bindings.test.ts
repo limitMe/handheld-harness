@@ -74,9 +74,11 @@ describe('binding helpers', () => {
     })
   })
 
-  it('formats hold and keyboard keys', () => {
+  it('formats hold, keyboard and stick-direction keys', () => {
     expect(formatBindingKey('B:hold', 'gamepad')).toBe('B (hold)')
     expect(formatBindingKey('B', 'gamepad')).toBe('B')
+    expect(formatBindingKey('LStickX+', 'gamepad')).toBe('LStickX →')
+    expect(formatBindingKey('LStickX-', 'gamepad')).toBe('LStickX ←')
     expect(formatBindingKey('Ctrl+K', 'keyboard')).toBe('Ctrl+K')
   })
 })

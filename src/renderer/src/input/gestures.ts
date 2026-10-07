@@ -1,4 +1,4 @@
-import { isRepeatable, type ActionId } from '@shared/actions'
+import { isRepeatable, repeatIntervalFor, type ActionId } from '@shared/actions'
 import { isAnalogControl } from './gamepad'
 import type { ControlChange, InputActionEvent } from './types'
 
@@ -85,8 +85,8 @@ export class GestureResolver {
   }
 
   private onPress(change: ControlChange, now: number): InputActionEvent[] {
-    const short = this.resolve(change.control, 'press')
-    const hold = this.resolve(change.control, 'hold')
+    const short = this.resolveControl(change.control, 'press', change.value)
+    const hold = this.resolveControl(change.control, 'hold', change.value)
     if (!short && !hold) return []
 
     const analog = isAnalogControl(change.control)
@@ -160,11 +160,29 @@ export class GestureResolver {
   }
 
   private scheduleRepeat(gesture: ActiveGesture, action: ActionId, now: number): void {
+    gesture.repeatInterval = repeatIntervalFor(action, this.repeatIntervalMs)
     gesture.nextRepeatAt = isRepeatable(action) ? now + this.repeatDelayMs : null
   }
 
   private actionFor(gesture: ActiveGesture): ActionId | undefined {
     return gesture.fired === 'hold' ? gesture.hold : gesture.short
+  }
+
+  /**
+   * Sticks resolve by direction first (`LStickX+` / `LStickX-`) so one axis can
+   * carry both directions, then fall back to the bare control (spec 10).
+   */
+  private resolveControl(
+    control: string,
+    phase: 'press' | 'hold',
+    value: number,
+  ): ActionId | undefined {
+    if (isAnalogControl(control)) {
+      const signed = `${control}${value < 0 ? '-' : '+'}`
+      const directional = this.resolve(signed, phase)
+      if (directional) return directional
+    }
+    return this.resolve(control, phase)
   }
 
   private event(

@@ -43,6 +43,18 @@ describe('readGamepadStates', () => {
     expect(states.LStickX).toEqual({ pressed: false, value: 0 })
     expect(states.RStickY).toEqual({ pressed: true, value: -0.8 })
   })
+
+  it('needs a larger horizontal deflection before a stick acts like a D-pad', () => {
+    const half = readGamepadStates(makePad([], [0.4, 0, 0, 0]))
+    expect(half.LStickX).toEqual({ pressed: false, value: 0 })
+
+    const pushed = readGamepadStates(makePad([], [0.7, 0, 0, 0]))
+    expect(pushed.LStickX).toEqual({ pressed: true, value: 0.7 })
+
+    // Vertical keeps the normal deadzone so scrolling stays responsive.
+    const vertical = readGamepadStates(makePad([], [0, 0.4, 0, 0]))
+    expect(vertical.LStickY).toEqual({ pressed: true, value: 0.4 })
+  })
 })
 
 describe('diffControlStates', () => {
