@@ -49,13 +49,28 @@ export function contextLabel(id: string): string {
 /**
  * Directions are universal (D-pad / stick) and described by the focus ring, so
  * they are not worth rebinding: the key-bindings page leaves them out (spec 15).
+ * Select / back are shared by every screen (they appear once, see
+ * `SHARED_BINDING_ACTIONS`), and scrolling follows the sticks.
  */
 export const HIDDEN_BINDING_ACTIONS: ReadonlySet<ActionId> = new Set<ActionId>([
   'nav.up',
   'nav.down',
   'nav.left',
   'nav.right',
+  'nav.activate',
+  'nav.deactivate',
+  'scroll',
 ])
+
+/** Screens whose bindings are fixed and never surfaced in settings (spec 15). */
+export const HIDDEN_BINDING_CONTEXTS: ReadonlySet<string> = new Set(['systemMenu', 'systemMenu.picker'])
+
+/**
+ * Bindings that every screen repeats for the same purpose. The settings page
+ * shows them once and fans a rebind out to all the contexts that use them, so
+ * select / back stay identical across pages.
+ */
+export const SHARED_BINDING_ACTIONS: readonly ActionId[] = ['nav.activate', 'nav.deactivate']
 
 export function bindingTable(
   map: ActionMap,
@@ -82,7 +97,9 @@ export interface ContextBindings {
 /** Contexts that have at least one binding on the device, in display order. */
 export function listContexts(map: ActionMap, device: MenuDevice): string[] {
   const table = bindingTable(map, device)
-  const ids = Object.keys(table).filter((id) => Object.keys(table[id] ?? {}).length > 0)
+  const ids = Object.keys(table).filter(
+    (id) => !HIDDEN_BINDING_CONTEXTS.has(id) && Object.keys(table[id] ?? {}).length > 0,
+  )
   const known = CONTEXT_ORDER.filter((id) => ids.includes(id))
   const extra = ids.filter((id) => !CONTEXT_ORDER.includes(id)).sort()
   return [...known, ...extra]
@@ -144,6 +161,67 @@ export function rebindRows(
     rows[oldKey] = conflict
   } else {
     rows[oldKey] = null
+  }
+  return rows
+}
+
+/** Contexts whose device bindings map to `action`. */
+export function contextsForAction(
+  map: ActionMap,
+  device: MenuDevice,
+  action: ActionId,
+): string[] {
+  const table = bindingTable(map, device)
+  return Object.keys(table).filter((context) =>
+    Object.values(table[context] ?? {}).includes(action),
+  )
+}
+
+export interface SharedBinding {
+  action: ActionId
+  /** Key currently bound, taken from the first context that binds the action. */
+  key: string | undefined
+  /** Contexts a rebind has to update so the key stays identical everywhere. */
+  contexts: string[]
+}
+
+export function sharedBindings(map: ActionMap, device: MenuDevice): SharedBinding[] {
+  const table = bindingTable(map, device)
+  return SHARED_BINDING_ACTIONS.map((action) => {
+    const contexts = contextsForAction(map, device, action)
+    const first = contexts[0]
+    return { action, key: first ? findKeyForAction(table[first], action) : undefined, contexts }
+  })
+}
+
+/** First conflicting action when `newKey` is applied to a shared binding. */
+export function sharedConflict(
+  map: ActionMap,
+  device: MenuDevice,
+  action: ActionId,
+  newKey: string,
+): ActionId | null {
+  const table = bindingTable(map, device)
+  for (const context of contextsForAction(map, device, action)) {
+    const conflict = rebindConflict(table[context], action, newKey)
+    if (conflict) return conflict
+  }
+  return null
+}
+
+/** Per-context rows that move a shared binding to `newKey` in every context. */
+export function sharedRebindRows(
+  map: ActionMap,
+  device: MenuDevice,
+  action: ActionId,
+  oldKey: string | undefined,
+  newKey: string,
+  resolution: ConflictResolution = 'overwrite',
+): Record<string, Record<string, BindingValue>> {
+  const table = bindingTable(map, device)
+  const rows: Record<string, Record<string, BindingValue>> = {}
+  for (const context of contextsForAction(map, device, action)) {
+    rows[context] = rebindRows(table[context], action, oldKey, newKey, resolution)
   }
   return rows
 }

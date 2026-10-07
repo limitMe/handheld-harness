@@ -121,3 +121,64 @@ P-16：首次运行时是否自动打开最近的任务；关闭当前卡片后�
 
 - **选中卡片一开始就放大**：卡片高度由 `h-full` 改为 `h-48`（容器 `h-56` 加 `items-center`），避免放大后被裁切；选中 / 两侧比例改为 `scale-110` / `scale-90`，并把 `scale` 纳入过渡属性。
 - **区分“当前任务”与“选中卡片”**：当前任务的强调色边框保持 `accent`，选中卡片的焦点环改为 `text` 色（`focus.css` 里用 `[data-task-card]` 覆盖），避免两种蓝色高亮难以区分。
+
+### 空卡片聚焦、历史文案与模型环（2026-10-07）
+
+用户在本机 dogfooding 后提出的一组任务地图改进（模型环相关决策由用户确认）。
+
+#### 空卡片只聚焦、不自动激活
+
+- **Bug**：按 Y 新建空卡片后，代码用同一个 effect 对选中卡片 `setFocus` + `activate`，把“聚焦”和“激活”当成了一件事。
+- **规则**：任务卡片照旧聚焦 + 激活（供 12 的操作提示）；**空卡片永远只聚焦**，不自动激活（`TaskMap` 的 effect 对 `card.kind === 'empty'` 提前返回）。激活是独立概念（spec 11），空卡片的按键由地图自己的图例说明。
+- 键盘动作 `N` / 手柄 `Y` 新建后，空卡片获得 `data-focused` 与 `data-selected`，不再有 `data-activated`。
+
+#### 空卡片内部的按键提示
+
+- **不改动任务地图底部那一列按钮**（`select / A / Y / X / B / 长按 B` 保持不变）。
+- 空卡片**正面**原本底部是“X 最近”，现在改成**两排两个按钮提示**（X 与长按 LB，`data-testid="task-card-empty-hints"`）：
+  - `X` → **“打开最近任务”**（en `Open a recent task`），复用原来的历史列表（列表输入形态，确认后打开并切到当前工作）。
+  - 长按 `LB` → **“选择模型：<当前默认>”**，当前默认从 `settings.model.default` 取名（不在最近列表里时退回 `modelId`；为 `null` 时显示“引擎默认”）。模型名过长时在卡片内换行，不再用底部的“历史”小徽标。
+
+#### 模型环浮层
+
+- **入口**：`taskMap` 新增默认绑定 `LB:hold → task.model`（新动作，`Choose model`）。只在空卡片上生效；`task.model` 加入 `hints/entries.ts` 的 `HIDDEN_ACTIONS`，所以任务卡片的操作提示不会出现它，空卡片的信息由地图图例承载。
+- **浮层**（`ModelRing.tsx`）：长按 `LB` 后在地图上覆盖一层居中浮层，画六个大小相同的同心扇环（`ringGeometry.ts` 的 `sectorPath`），相邻扇环间留 4° 间距拼成一个圆；**最上面的扇环中心落在画面 X 轴中心**（0° 在正上方，顺时针 0→5）。每个已分配扇环显示模型名，空位留空。中心是一个实心圆盘，中央显示**右摇杆（RS）符号**提示怎么选择。模型名的字号压到扇环内，超过扇环宽度的名字用 `textLength` + `lengthAdjust` 压缩，保证不出界。
+- **选择**：`LS` / `RS` 的**角度直接指向扇环**（`ringSlotFromStick`，死区 0.5），摇杆指向哪个扇环、光标就落在哪个：指向有模型的扇环时用低饱和的强调色高亮（`fill-accent/35`），指向空位时用灰度高亮（`fill-text-muted/25`），让人知道滚轮起效了、只是那里没得选。松开时只有指向有模型的扇环才采用，指向空位则不改变。打开时高亮当前默认所在的扇环，没有默认时高亮第一个非空扇环。
+- **确认 / 取消**：**松开 `LB` 即采用高亮模型并关闭**；`B` / `Escape` 取消。浮层用自己的输入上下文（`taskMap.modelPicker`，`modal` 优先级）吞掉 `nav.*` / `scroll` / `task.*` 等动作，避免漏到底下的地图或当前工作。
+- **采用后**：写 `settings.model.default`（同时更新 `model.recent`），因此提示文案即时更新，之后在空卡片按 A 新建的会话就用这个模型（`sendCurrent` 读 store 的 `defaultModel`）。
+
+#### 最近使用的模型列表
+
+- 新增设置字段 `settings.model.recent: Array<{ model, slot, name? }>`，**按最近使用排序（最近在前）**，`slot` 是它加入六扇环时记住的位置（0 顶部，顺时针）。纯逻辑在 `shared/model-recents.ts` 的 `touchRecentModel`：
+  - 已在列表里：**保留原 slot**，只把它移到最前（用同一个模型不会打乱扇环顺序）。
+  - 不在列表里且有空位：从最顶开始顺时针取**第一个空 slot**。
+  - 已满（6 个）：用**第 7 近（即最久未用）那条的 slot**，该条被顶出列表。
+  - `ringSlots()` 按 slot 铺开，空位为 `null`。
+- **写入时机**：① 在模型环里采用某模型；② 在「系统菜单 › 模型」里选择模型（`ModelsPage` 把 `touchRecentModel(...)` 和 `default` 一起写）。选“Engine default”不进最近列表（它不是模型）。
+- 没有最近记录、但已有默认模型时，模型环用默认模型填 slot 0 兜底；两者都没有时浮层为空环（按用户要求不显示 Engine default）。
+
+#### 交付物
+
+- `shared/model-recents.ts`（新）、`shared/ipc.ts`（`RecentModelSchema`、`model.recent`、patch）、`main/settings-store.ts`、`shared/actions.ts`（`task.model`）、`shared/input.ts`（`LB:hold` 绑定）、`renderer/src/hints/entries.ts`（隐藏 `task.model`）。
+- `renderer/src/workbench/ringGeometry.ts`（新，角度 / 路径）、`ModelRing.tsx`（新，浮层）、`TaskMap.tsx`（聚焦 Bug、图例、入口）、`system/ModelsPage.tsx`（选择时更新最近列表）、`state/store.ts`（`recentModels` + `setDefaultModel`）。
+- i18n：`actions.task.model`、`taskMap.hints.openFromHistory` / `chooseModel`。
+
+#### 已自动验证
+
+- `npm run check` 通过（55 个测试文件 333 个用例，lint 零 warning）。
+- 新增单测：`model-recents`（slot 分配 / 保留 / 满了顶掉最久未用 / 名称刷新 / 上限）、`model-ring`（角度映射与扇环路径）、`model-ring-view`（六个扇环、高亮首选与回退、名称截断）、`task-map`（空卡片只聚焦不激活、空卡片两行图例、默认名、任务卡片仍是历史提示）；`settings` 增加 `model.recent` 持久化用例。
+- `npm run test:e2e` 24 个用例通过：`gamepad.spec.ts` 新增“长按 LB 打开模型环 → 松开采用并写入设置”，以及“用摇杆角度指向另一个扇环 → 松开采用该模型”；并补充任务地图用例中断言空卡片 `data-focused` 且无 `data-activated`。
+
+#### 未完成 / 需要人工验证
+
+- 掌机实测：模型环在 1080p 7 英寸上的观感、摇杆角度选择的手感（当前 `ringSlotFromStick` 要求摇杆幅度 ≥ 0.5）、长按 LB 400 ms 的开环时机。
+- 真实 OpenCode 下模型名来自最近列表里缓存的 `name`；若某模型从未在应用里选过（只在旧设置里设成默认），环上会显示 `modelId`。
+
+### 卡片 2:1 与空卡片提示对齐（2026-10-07，用户反馈）
+
+- **任务卡片改为 2:1 长方形**：宽度 384px、高度保持 192px（`CARD_WIDTH_PX` / `CARD_HEIGHT_PX`），不再接近正方形；整排滑动 / 选中的缩放逻辑不变。
+- **空卡片内的两排提示对齐**：两行各自给 glyph 一个固定宽度列（`w-14` 居中），所以 “X” 与 “长按 LB” 宽度不同也不会让文字左缘错位；“打开最近任务” 与 “选择模型：…” 左缘对齐。
+- **提示字号缩小**：两排提示从 `text-code`（15px）降到 `text-sm`，模型名过长时仍在卡片内换行。
+
+（本轮之后：单测 337 用例、`npm run test:e2e` 25 用例通过。）
+

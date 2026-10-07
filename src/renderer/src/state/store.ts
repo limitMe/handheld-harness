@@ -9,6 +9,7 @@ import type {
 } from '@shared/engine'
 import { showToast } from '../ui/Toast'
 import { i18n } from '../i18n'
+import { touchRecentModel, type RecentModel } from '@shared/model-recents'
 import { parseSlashCommand } from '../workbench/commands'
 import { applyEngineEvent } from './applyEngineEvent'
 import {
@@ -46,6 +47,8 @@ export interface WorkbenchStore extends WorkbenchState {
   defaultEngineId?: string
   /** Model new tasks are created with (spec 15, `settings.model.default`). */
   defaultModel?: ModelRef
+  /** Recently used models backing the task map's model ring (spec 14). */
+  recentModels: RecentModel[]
   initialized: boolean
   initialize(): Promise<void>
   handleEngineEvent(payload: EngineEventPayload): void
@@ -54,6 +57,7 @@ export interface WorkbenchStore extends WorkbenchState {
   openSession(ref: SessionRef): Promise<void>
   closeTask(ref: SessionRef): Promise<void>
   newTask(): void
+  setDefaultModel(model: ModelRef, name?: string): Promise<void>
   draftKey(): string
   setDraft(value: string): void
   sendCurrent(): Promise<void>
@@ -137,6 +141,7 @@ function mergeSnapshot(
 
 export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
   ...initialWorkbenchState(),
+  recentModels: [],
   initialized: false,
 
   draftKey() {
@@ -150,11 +155,12 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     set({ initialized: true })
     bridge.onEvent((payload) => get().handleEngineEvent(payload))
     window.handheld.events.on('settings:changed', (next) => {
-      set({ defaultModel: next.model.default ?? undefined })
+      set({ defaultModel: next.model.default ?? undefined, recentModels: next.model.recent })
     })
     const [engines, settings] = await Promise.all([bridge.list(), window.handheld.settings.get()])
     set((state) => ({
       defaultModel: settings.model.default ?? undefined,
+      recentModels: settings.model.recent,
       tasks: {
         ...state.tasks,
         open: settings.tasks.open,
@@ -251,6 +257,11 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     const { watched, unread } = switchCurrent(state, null)
     set({ tasks: { ...state.tasks, watched, unread }, ui: { ...state.ui, current: null } })
     void window.handheld.settings.update({ ui: { lastSession: null } })
+  },
+
+  async setDefaultModel(model, name) {
+    const recent = touchRecentModel(get().recentModels, model, name)
+    await window.handheld.settings.update({ model: { default: model, recent } })
   },
 
   setDraft(value) {

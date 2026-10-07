@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { motion } from 'motion/react'
 import type { SessionRef, SessionSummary } from '@shared/engine'
+import { ringSlots, sameModelRef } from '@shared/model-recents'
 import { FocusContainer, useFocusTree, useFocusable } from '../focus'
 import { GamepadGlyph, type GamepadGlyphPhase } from '../glyphs'
 import { useTranslation, type Translate } from '../i18n'
@@ -10,6 +11,7 @@ import { useWorkbenchStore } from '../state/store'
 import { sameSessionRef, sessionKey } from '../state/types'
 import { ConfirmDialog, cn } from '../ui'
 import { HistoryList } from './HistoryList'
+import { ModelRing } from './ModelRing'
 import {
   buildTaskCards,
   EMPTY_CARD_ID,
@@ -20,7 +22,8 @@ import {
 } from './taskCards'
 import { formatRelativeTime } from './time'
 
-const CARD_WIDTH_PX = 208
+const CARD_WIDTH_PX = 384
+const CARD_HEIGHT_PX = 192
 const CARD_GAP_PX = 24
 const CARD_STRIDE_PX = CARD_WIDTH_PX + CARD_GAP_PX
 
@@ -70,6 +73,7 @@ function TaskCardView({
   isCurrent,
   unread,
   elementRef,
+  modelName,
   onChoose,
 }: {
   card: TaskCard
@@ -79,6 +83,8 @@ function TaskCardView({
   isCurrent: boolean
   unread: boolean
   elementRef?: RefObject<HTMLButtonElement | null>
+  /** Current default model, shown as the empty card's model hint. */
+  modelName?: string
   onChoose: (card: TaskCard) => void
 }) {
   const { t } = useTranslation()
@@ -115,10 +121,10 @@ function TaskCardView({
         data-task-card=""
         data-selected={selected ? '' : undefined}
         className={cn(
-          'relative flex h-48 flex-col justify-between rounded-card border-2 bg-card p-4 text-left text-on-card shadow-card transition-[border-color] duration-ui ease-standard',
+          'relative flex flex-col justify-between rounded-card border-2 bg-card p-4 text-left text-on-card shadow-card transition-[border-color] duration-ui ease-standard',
           borderClass(entry, isCurrent),
         )}
-        style={{ width: CARD_WIDTH_PX }}
+        style={{ width: CARD_WIDTH_PX, height: CARD_HEIGHT_PX }}
         animate={{ scale: selected ? 1.1 : 0.9, opacity: selected ? 1 : 0.6 }}
         transition={{ type: 'spring', stiffness: 420, damping: 32 }}
       >
@@ -141,16 +147,29 @@ function TaskCardView({
             (entry?.title ?? t('taskMap.task'))
           )}
         </span>
-        <span className="truncate text-code text-text-muted">
-          {card.kind === 'empty' ? (
-            <span className="inline-flex items-center gap-1">
-              <GamepadGlyph control="X" size={18} />
-              {t('taskMap.historyBadge')}
+        {card.kind === 'empty' ? (
+          <span
+            data-testid="task-card-empty-hints"
+            className="flex flex-col gap-1 text-sm leading-tight text-text-muted"
+          >
+            <span className="flex items-center gap-2">
+              <span className="flex w-14 shrink-0 justify-center">
+                <GamepadGlyph control="X" size={18} />
+              </span>
+              <span>{t('taskMap.hints.openFromHistory')}</span>
             </span>
-          ) : (
-            (entry?.model?.modelId ?? '')
-          )}
-        </span>
+            <span className="flex items-center gap-2">
+              <span className="flex w-14 shrink-0 justify-center">
+                <GamepadGlyph control="LB" phase="hold" size={18} />
+              </span>
+              <span className="break-words">
+                {t('taskMap.hints.chooseModel', { name: modelName ?? t('models.engineDefault') })}
+              </span>
+            </span>
+          </span>
+        ) : (
+          <span className="truncate text-code text-text-muted">{entry?.model?.modelId ?? ''}</span>
+        )}
       </motion.button>
     </motion.div>
   )
@@ -164,6 +183,7 @@ function TaskMapBindings({
   onHistory,
   onCloseTask,
   onMove,
+  onModel,
 }: {
   onOpen: () => void
   onExit: () => void
@@ -171,6 +191,7 @@ function TaskMapBindings({
   onHistory: () => void
   onCloseTask: () => void
   onMove: (delta: number) => void
+  onModel: () => void
 }) {
   useInputContext(
     'taskMap',
@@ -180,6 +201,7 @@ function TaskMapBindings({
       'task.close': onPress(() => onCloseTask()),
       'task.new': onPress(() => onNew()),
       'task.history': onPress(() => onHistory()),
+      'task.model': onPress(() => onModel()),
       'nav.left': onPress(() => onMove(-1)),
       'nav.right': onPress(() => onMove(1)),
     },
@@ -198,9 +220,13 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
   const openSession = useWorkbenchStore((state) => state.openSession)
   const closeTask = useWorkbenchStore((state) => state.closeTask)
   const newTask = useWorkbenchStore((state) => state.newTask)
+  const setDefaultModel = useWorkbenchStore((state) => state.setDefaultModel)
+  const defaultModel = useWorkbenchStore((state) => state.defaultModel)
+  const recentModels = useWorkbenchStore((state) => state.recentModels)
 
   const [empty, setEmpty] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [modelRingOpen, setModelRingOpen] = useState(false)
   const [confirmRef, setConfirmRef] = useState<SessionRef | null>(null)
   const [rawSelectedId, setSelectedId] = useState(() =>
     initialCardId(buildTaskCards(open, open.length === 0), current),
@@ -220,14 +246,35 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
   )
   const selectedCard = cards.find((card) => card.id === selectedId) ?? cards[0]
 
-  // Focus and activate the selected card so action hints describe the map.
+  // Focus the selected card. The empty card is only focused: activation is a
+  // separate concept (spec 11) and the map's own legend describes its actions, so
+  // it is never force-activated when it is created or selected.
   useEffect(() => {
     if (!tree || !selectedId) return
     tree.setFocus(selectedId)
+    if (selectedCard?.kind === 'empty') return
     tree.activate(selectedId)
-  }, [tree, selectedId])
+  }, [tree, selectedId, selectedCard?.kind])
 
   const history = useMemo(() => historyEntries(sessions, open), [sessions, open])
+
+  const defaultModelName = defaultModel
+    ? (recentModels.find((entry) => sameModelRef(entry.model, defaultModel))?.name ??
+      defaultModel.modelId)
+    : t('models.engineDefault')
+
+  // The ring lists the recent models; before any model has been chosen it falls
+  // back to the current default so there is at least one sector to pick.
+  const ring = useMemo(() => {
+    if (recentModels.length > 0) return ringSlots(recentModels)
+    if (defaultModel) return ringSlots([{ model: defaultModel, slot: 0 }])
+    return ringSlots([])
+  }, [recentModels, defaultModel])
+  const ringInitialSlot = useMemo(() => {
+    if (!defaultModel) return null
+    const index = ring.findIndex((entry) => entry && sameModelRef(entry.model, defaultModel))
+    return index >= 0 ? index : null
+  }, [ring, defaultModel])
 
   const choose = (card: TaskCard): void => {
     if (card.kind === 'empty') {
@@ -282,7 +329,9 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
                 entry={card.kind === 'task' ? sessions[card.id] : undefined}
                 isCurrent={card.kind === 'task' && sameSessionRef(card.ref, current)}
                 unread={card.kind === 'task' && Boolean(unread[card.id])}
-                {...(card.kind === 'empty' ? { elementRef: emptyRef } : {})}
+                {...(card.kind === 'empty'
+                  ? { elementRef: emptyRef, modelName: defaultModelName }
+                  : {})}
                 onChoose={choose}
               />
             ))}
@@ -306,7 +355,7 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
         </span>
       </div>
 
-      {!historyOpen && !confirmRef ? (
+      {!historyOpen && !confirmRef && !modelRingOpen ? (
         <TaskMapBindings
           onOpen={() => selectedCard && choose(selectedCard)}
           onExit={onClose}
@@ -321,6 +370,21 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
             if (selectedCard?.kind === 'task') setConfirmRef(selectedCard.ref)
           }}
           onMove={(delta) => setSelectedId(stepCardId(cards, selectedId, delta))}
+          onModel={() => {
+            if (selectedCard?.kind === 'empty') setModelRingOpen(true)
+          }}
+        />
+      ) : null}
+
+      {modelRingOpen ? (
+        <ModelRing
+          slots={ring}
+          initialSlot={ringInitialSlot}
+          onConfirm={(entry) => {
+            setModelRingOpen(false)
+            void setDefaultModel(entry.model, entry.name)
+          }}
+          onCancel={() => setModelRingOpen(false)}
         />
       ) : null}
 

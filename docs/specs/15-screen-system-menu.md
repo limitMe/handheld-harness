@@ -141,3 +141,9 @@ P-20：是否在应用里配置模型服务商凭据。分类 4（显示与提�
 
 - 键位分类太重、每个上下文都有一行 `Reset <上下文>`，删掉这些逐上下文重置，只保留底部的 **Restore default bindings**（一次清空手柄与键盘的全部用户覆盖，仍走 `ConfirmDialog`）。`settings.input` 的 `resetContexts` / `resetKeyboard` 字段保留（整体重置仍在用）。
 
+### 模型页同时维护最近模型（2026-10-07，由 spec 14 追加）
+
+- 模型页选择某个模型时，除了写 `settings.model.default`，还把 `touchRecentModel(settings.model.recent, ref, name)` 一起写回，供任务地图的模型环使用（spec 14「最近使用的模型列表」）。选 **Engine default** 只清空默认，不动最近列表。
+- 模型名在写入最近列表时缓存（`name` 字段），模型环据此显示，避免为取名再拉一次 `/provider`（真实 OpenCode 有 8401 个模型）。
+
+

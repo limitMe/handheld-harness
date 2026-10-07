@@ -46,6 +46,7 @@ async function launch(
 type PadScope = {
   navigator: object
   __setPad: (name: string, pressed: boolean) => void
+  __setAxis: (index: number, value: number) => void
 }
 
 type SettingsScope = {
@@ -78,7 +79,20 @@ async function installFakePad(window: Page): Promise<void> {
       if (index === undefined) return
       buttons[index] = { pressed, value: pressed ? 1 : 0 }
     }
+    scope.__setAxis = (index: number, value: number) => {
+      pad.axes[index] = value
+    }
   }, BUTTONS)
+}
+
+async function setAxis(window: Page, index: number, value: number): Promise<void> {
+  await window.evaluate(
+    (args: { index: number; value: number }) => {
+      ;(globalThis as unknown as PadScope).__setAxis(args.index, args.value)
+    },
+    { index, value },
+  )
+  await window.waitForTimeout(150)
 }
 
 async function pressPad(window: Page, name: string): Promise<void> {
@@ -336,10 +350,18 @@ test('creates, switches, closes and reopens tasks from the map', async () => {
     await expect(window.getByTestId('task-map')).toBeVisible()
     await expect(window.getByTestId('task-card').first()).toHaveAttribute('data-selected', '')
 
-    // Y adds an empty card at the right and selects it.
+    // Y adds an empty card at the right and selects it. It is focused but never
+    // auto-activated: activation is a separate concept (spec 11/14).
     await pressPad(window, 'Y')
     await releasePad(window, 'Y')
     await expect(window.getByTestId('task-card-empty')).toHaveAttribute('data-selected', '')
+    await expect(window.getByTestId('task-card-empty')).toHaveAttribute('data-focused', '')
+    await expect(window.getByTestId('task-card-empty')).not.toHaveAttribute('data-activated', '')
+    // The map's bottom legend is unchanged; the new hints live inside the card.
+    await expect(window.getByTestId('task-card-empty')).toContainText('Open a recent task')
+    await window.screenshot({
+      path: path.join(root, 'tests', 'e2e', 'artifacts', 'task-map-empty-card.png'),
+    })
 
     // A creates a new task and returns to the chat.
     await pressPad(window, 'A')
@@ -395,6 +417,147 @@ test('creates, switches, closes and reopens tasks from the map', async () => {
     await expect(window.getByTestId('task-history')).toHaveCount(0)
     await expect(window.getByTestId('status-title')).toHaveText('Fake session 1')
     await expect(window.getByTestId('message-list')).toContainText('hello')
+  } finally {
+    await app.close()
+  }
+})
+
+test('picks a model from the recent-model ring on the empty task card', async () => {
+  const { app, window } = await launch('e2e-pad-model-ring')
+  try {
+    // The profile persists between runs, so start from a clean model state.
+    await window.evaluate(() =>
+      (
+        globalThis as unknown as {
+          handheld: { settings: { update(patch: unknown): Promise<unknown> } }
+        }
+      ).handheld.settings.update({ model: { default: null, recent: [] } }),
+    )
+
+    // Choosing a model in System menu › Models also fills the recent ring.
+    await pressPad(window, 'Start')
+    await releasePad(window, 'Start')
+    await expect(window.getByTestId('system-menu')).toBeVisible()
+    await pressPad(window, 'DpadDown')
+    await releasePad(window, 'DpadDown')
+    await expect(window.getByTestId('menu-category-models')).toHaveAttribute('data-focused', '')
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByTestId('model-engine-default')).toHaveAttribute('data-focused', '')
+    await pressPad(window, 'DpadDown')
+    await releasePad(window, 'DpadDown')
+    await expect(window.getByTestId('model-provider-fake')).toHaveAttribute('data-focused', '')
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByTestId('model-fake-fake-model')).not.toBeNull()
+    await pressPad(window, 'DpadDown')
+    await releasePad(window, 'DpadDown')
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+
+    const chosen = await window.evaluate(() =>
+      (
+        globalThis as unknown as {
+          handheld: { settings: { get(): Promise<{ model: { default: unknown; recent: unknown[] } }> } }
+        }
+      ).handheld.settings.get(),
+    )
+    expect(chosen.model.default).toEqual({ providerId: 'fake', modelId: 'fake-model' })
+    expect(chosen.model.recent).toEqual([
+      { model: { providerId: 'fake', modelId: 'fake-model' }, slot: 0, name: 'Fake model' },
+    ])
+
+    // Close the menu, open the map and add the empty card.
+    await pressPad(window, 'Start')
+    await releasePad(window, 'Start')
+    await expect(window.getByTestId('system-menu')).toHaveCount(0)
+    await pressPad(window, 'Back')
+    await releasePad(window, 'Back')
+    await expect(window.getByTestId('task-map')).toBeVisible()
+    await pressPad(window, 'Y')
+    await releasePad(window, 'Y')
+    await expect(window.getByTestId('task-card-empty')).toBeVisible()
+
+    // Long-press LB opens the ring; the current default is the highlighted sector.
+    await pressPad(window, 'LB')
+    await window.waitForTimeout(500)
+    await expect(window.getByTestId('model-ring')).toBeVisible()
+    await expect(window.getByTestId('model-ring-slot-0')).toHaveAttribute(
+      'data-model',
+      'fake/fake-model',
+    )
+    await expect(window.getByTestId('model-ring-slot-0')).toHaveAttribute('data-selected', '')
+    await window.screenshot({ path: path.join(root, 'tests', 'e2e', 'artifacts', 'model-ring.png') })
+
+    // Pointing at an empty sector still highlights it (grey) but has no model.
+    await setAxis(window, 1, 1)
+    await expect(window.getByTestId('model-ring-slot-3')).toHaveAttribute('data-selected', '')
+    await expect(window.getByTestId('model-ring-slot-3')).not.toHaveAttribute('data-occupied', '')
+
+    // Back to the model, then release to adopt it.
+    await setAxis(window, 1, -1)
+    await expect(window.getByTestId('model-ring-slot-0')).toHaveAttribute('data-selected', '')
+    await releasePad(window, 'LB')
+    await expect(window.getByTestId('model-ring')).toHaveCount(0)
+  } finally {
+    await app.close()
+  }
+})
+
+test('rotates the model ring with the stick and adopts the pointed sector', async () => {
+  const { app, window } = await launch('e2e-pad-model-rotate')
+  try {
+    const recent = [
+      { model: { providerId: 'fake', modelId: 'm0' }, slot: 0, name: 'Model 0' },
+      { model: { providerId: 'fake', modelId: 'm1' }, slot: 1, name: 'Model 1' },
+      { model: { providerId: 'fake', modelId: 'm2' }, slot: 2, name: 'Model 2' },
+      { model: { providerId: 'fake', modelId: 'm3' }, slot: 3, name: 'Model 3' },
+      { model: { providerId: 'fake', modelId: 'm4' }, slot: 4, name: 'Model 4' },
+      { model: { providerId: 'fake', modelId: 'm5' }, slot: 5, name: 'Model 5' },
+    ]
+    await window.evaluate(
+      (models) =>
+        (
+          globalThis as unknown as {
+            handheld: { settings: { update(patch: unknown): Promise<unknown> } }
+          }
+        ).handheld.settings.update({ model: { default: models.m3, recent: models.recent } }),
+      { m3: recent[3]!.model, recent },
+    )
+
+    // Open the map, add the empty card and long-press LB.
+    await pressPad(window, 'Back')
+    await releasePad(window, 'Back')
+    await expect(window.getByTestId('task-map')).toBeVisible()
+    await pressPad(window, 'Y')
+    await releasePad(window, 'Y')
+    await pressPad(window, 'LB')
+    await window.waitForTimeout(500)
+    await expect(window.getByTestId('model-ring')).toBeVisible()
+
+    // The ring opens on the current default (slot 3, the bottom sector).
+    await expect(window.getByTestId('model-ring-slot-3')).toHaveAttribute('data-selected', '')
+
+    // Pointing the left stick up selects the top sector (slot 0); the angle is
+    // read directly, so the sector under the stick wins.
+    await setAxis(window, 1, -1)
+    await expect(window.getByTestId('model-ring-slot-0')).toHaveAttribute('data-selected', '')
+    await expect(window.getByTestId('model-ring-slot-3')).not.toHaveAttribute('data-selected', '')
+    await window.screenshot({
+      path: path.join(root, 'tests', 'e2e', 'artifacts', 'model-ring-full.png'),
+    })
+
+    // Releasing LB adopts the pointed model.
+    await releasePad(window, 'LB')
+    await expect(window.getByTestId('model-ring')).toHaveCount(0)
+    const after = await window.evaluate(() =>
+      (
+        globalThis as unknown as {
+          handheld: { settings: { get(): Promise<{ model: { default: { modelId: string } } }> } }
+        }
+      ).handheld.settings.get(),
+    )
+    expect(after.model.default).toEqual({ providerId: 'fake', modelId: 'm0' })
   } finally {
     await app.close()
   }

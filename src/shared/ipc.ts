@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { ACTION_IDS, type ActionId } from './actions'
 import { DEFAULT_HINTS } from './hints'
 import { DEFAULT_LANGUAGE, LANGUAGE_MODES } from './i18n'
+import { RING_SLOTS } from './model-recents'
 import type { BindingLayer, BindingValue } from './input'
 import {
   DOUBAO_DEFAULT_ENDPOINT,
@@ -80,12 +81,23 @@ export const UiSettingsSchema = z.object({
 })
 export type UiSettings = z.infer<typeof UiSettingsSchema>
 
+/** One entry of the recent-model ring (spec 14): a model plus its remembered sector. */
+export const RecentModelSchema = z.object({
+  model: ModelRefSchema,
+  slot: z.number().int().min(0).max(RING_SLOTS - 1),
+  name: z.string().optional(),
+})
+
 /**
  * Model defaults (spec 15). New tasks use `model.default`; existing tasks keep
  * their own model (P-01). Null/absent means "let the engine decide".
+ *
+ * `recent` backs the task map's model ring (spec 14): the recently used models,
+ * most recent first, each with the sector it was assigned.
  */
 export const ModelSettingsSchema = z.object({
   default: z.union([ModelRefSchema, z.null()]).optional(),
+  recent: z.array(RecentModelSchema).default([]),
 })
 export type ModelSettings = z.infer<typeof ModelSettingsSchema>
 
@@ -167,7 +179,7 @@ export const SettingsSchema = z.object({
   }),
   hints: HintsSettingsSchema.default({ ...DEFAULT_HINTS }),
   tasks: TasksSettingsSchema.default({ open: [], unread: [] }),
-  model: ModelSettingsSchema.default({}),
+  model: ModelSettingsSchema.default({ recent: [] }),
   input: BindingLayerSchema.default({ contexts: {}, keyboard: {} }),
   speech: SpeechSettingsSchema.default({
     provider: SPEECH_PROVIDER_NONE,
@@ -212,6 +224,7 @@ export const SettingsPatchSchema = z.object({
   model: z
     .object({
       default: z.union([ModelRefSchema, z.null()]).optional(),
+      recent: z.array(RecentModelSchema).optional(),
     })
     .optional(),
   input: BindingPatchSchema.optional(),
@@ -237,7 +250,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ui: { zoom: 1, scrollSpeed: 1, theme: 'system', language: DEFAULT_LANGUAGE },
   hints: { ...DEFAULT_HINTS },
   tasks: { open: [], unread: [] },
-  model: {},
+  model: { recent: [] },
   input: { contexts: {}, keyboard: {} },
   speech: {
     provider: SPEECH_PROVIDER_NONE,

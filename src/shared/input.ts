@@ -135,6 +135,8 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       'B:hold': 'task.close',
       Y: 'task.new',
       X: 'task.history',
+      // Only the empty card acts on this: it opens the model ring (spec 14).
+      'LB:hold': 'task.model',
     },
     // The map's history popup shadows the map bindings, so it carries its own
     // up/down navigation for both the D-pad and the sticks.

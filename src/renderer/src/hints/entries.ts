@@ -26,6 +26,9 @@ const HIDDEN_ACTIONS = new Set<ActionId>([
   'scroll',
   'menu.toggle',
   'map.toggle',
+  // Shown by the task map's own legend on the empty card only, not as a hint
+  // anchored to every card (spec 14).
+  'task.model',
 ])
 
 export interface HintOptions {

@@ -42,6 +42,7 @@ export const ACTIONS = {
   'task.close': { label: 'Close task' },
   'task.new': { label: 'New task' },
   'task.history': { label: 'History' },
+  'task.model': { label: 'Choose model' },
 
   'sentence.delete': { label: 'Delete sentence' },
 

@@ -169,6 +169,22 @@ describe('SystemMenu', () => {
     expect(screen.getByTestId('model-engine-default').hasAttribute('data-selected')).toBe(false)
   })
 
+  it('shows select / back once and hides the fixed bindings', async () => {
+    installBridge()
+    renderMenu()
+    await waitFor(() => expect(screen.getByTestId('key-bindings')).not.toBeNull())
+
+    // Shared select / back appear exactly once, after the device tabs.
+    expect(screen.getByTestId('binding-key-shared-nav.activate').textContent).toBe('A')
+    expect(screen.getByTestId('binding-key-shared-nav.deactivate').textContent).toBe('B')
+    expect(screen.queryByTestId('binding-currentWork-nav.activate')).toBeNull()
+    expect(screen.queryByTestId('binding-dialog-nav.deactivate')).toBeNull()
+
+    // Scrolling and the whole system-menu context are fixed and not listed.
+    expect(screen.queryByTestId('binding-currentWork-scroll')).toBeNull()
+    expect(screen.queryByTestId('binding-systemMenu-nav.up')).toBeNull()
+  })
+
   it('does not let a locked system shortcut be rebound', async () => {
     installBridge()
     renderMenu()
@@ -180,9 +196,12 @@ describe('SystemMenu', () => {
       expect(screen.getByTestId('keys-device-gamepad').hasAttribute('data-focused')).toBe(true),
     )
 
-    // Gamepad tab -> keyboard tab -> first global row (System menu).
-    fireEvent.keyDown(window, { key: 'ArrowDown' })
-    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    // Walk down to the first locked global row (System menu / Start); the
+    // shared select / back rows sit between the device tabs and the groups.
+    for (let i = 0; i < 20; i += 1) {
+      if (screen.getByTestId('binding-global-menu.toggle').hasAttribute('data-focused')) break
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+    }
     const row = screen.getByTestId('binding-global-menu.toggle')
     expect(row.hasAttribute('data-focused')).toBe(true)
     expect(row.textContent).toContain('Locked')

@@ -4,12 +4,17 @@ import { resolveActionMap, emptyBindingLayer } from '../../src/shared/input'
 import {
   bindingTable,
   contextLabel,
+  contextsForAction,
   findKeyForAction,
   formatBindingKey,
+  HIDDEN_BINDING_ACTIONS,
   listBindings,
   listContexts,
   rebindConflict,
   rebindRows,
+  sharedBindings,
+  sharedConflict,
+  sharedRebindRows,
 } from '../../src/shared/bindings'
 
 const map = resolveActionMap(undefined, emptyBindingLayer())
@@ -20,11 +25,13 @@ describe('binding helpers', () => {
     expect(contextLabel('something.unknown')).toBe('something.unknown')
   })
 
-  it('lists contexts in display order, skipping empty ones', () => {
+  it('lists contexts in display order, skipping empty and hidden ones', () => {
     const contexts = listContexts(map, 'gamepad')
     expect(contexts[0]).toBe('global')
     expect(contexts).toContain('currentWork.input')
-    expect(contexts.indexOf('systemMenu')).toBeGreaterThan(contexts.indexOf('taskMap'))
+    // The system menu is fixed, so it never shows up in settings.
+    expect(contexts).not.toContain('systemMenu')
+    expect(contexts).not.toContain('systemMenu.picker')
 
     // Keyboard has a global layer too: Ctrl+D toggles dictation (spec 16).
     const keyboardContexts = listContexts(map, 'keyboard')
@@ -85,5 +92,42 @@ describe('binding helpers', () => {
     expect(formatBindingKey('LStickX+', 'gamepad')).toBe('LStickX →')
     expect(formatBindingKey('LStickX-', 'gamepad')).toBe('LStickX ←')
     expect(formatBindingKey('Ctrl+K', 'keyboard')).toBe('Ctrl+K')
+  })
+
+  it('marks select / back / scroll as hidden from the per-context lists', () => {
+    for (const action of ['nav.activate', 'nav.deactivate', 'scroll'] as const) {
+      expect(HIDDEN_BINDING_ACTIONS.has(action)).toBe(true)
+    }
+    // currentWork keeps only its own actions once the hidden ones are dropped.
+    const visible = listBindings(map, 'gamepad', 'currentWork')
+      .map((row) => row.action)
+      .filter((action) => !HIDDEN_BINDING_ACTIONS.has(action))
+    expect(visible).toEqual(['agent.abort'])
+  })
+
+  it('describes select / back as one shared binding', () => {
+    const shared = sharedBindings(map, 'gamepad')
+    const activate = shared.find((binding) => binding.action === 'nav.activate')
+    const deactivate = shared.find((binding) => binding.action === 'nav.deactivate')
+    expect(activate?.key).toBe('A')
+    expect(deactivate?.key).toBe('B')
+    for (const context of ['currentWork', 'dialog', 'systemMenu']) {
+      expect(activate?.contexts).toContain(context)
+    }
+    expect(contextsForAction(map, 'keyboard', 'nav.activate')).toContain('dialog')
+  })
+
+  it('fans a shared rebind out to every context', () => {
+    const rows = sharedRebindRows(map, 'gamepad', 'nav.activate', 'A', 'LB:hold')
+    expect(Object.keys(rows).length).toBeGreaterThan(1)
+    for (const contextRows of Object.values(rows)) {
+      expect(contextRows).toEqual({ 'LB:hold': 'nav.activate', A: null })
+    }
+  })
+
+  it('reports a shared conflict from any context', () => {
+    expect(sharedConflict(map, 'gamepad', 'nav.activate', 'B')).toBe('nav.deactivate')
+    expect(sharedConflict(map, 'gamepad', 'nav.activate', 'LB:hold')).toBe('agent.abort')
+    expect(sharedConflict(map, 'gamepad', 'nav.activate', 'Z')).toBeNull()
   })
 })

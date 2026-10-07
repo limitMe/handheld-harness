@@ -16,7 +16,7 @@ function defaults(): Settings {
     ui: { ...DEFAULT_SETTINGS.ui },
     hints: { ...DEFAULT_SETTINGS.hints },
     tasks: { open: [], unread: [] },
-    model: {},
+    model: { recent: [] },
     input: { contexts: {}, keyboard: {} },
     speech: {
       ...DEFAULT_SETTINGS.speech,

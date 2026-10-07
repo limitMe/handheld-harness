@@ -153,11 +153,30 @@ describe('settings store', () => {
     const model = { providerId: 'opencode', modelId: 'gpt-5' }
 
     store.update({ model: { default: model } })
-    expect(store.get().model).toEqual({ default: model })
-    expect(createSettingsStore(target).get().model).toEqual({ default: model })
+    expect(store.get().model).toEqual({ default: model, recent: [] })
+    expect(createSettingsStore(target).get().model).toEqual({ default: model, recent: [] })
 
     store.update({ model: { default: null } })
-    expect(store.get().model).toEqual({ default: null })
+    expect(store.get().model).toEqual({ default: null, recent: [] })
+  })
+
+  it('persists the recent-model ring and replaces it wholesale', () => {
+    const target = makeDir()
+    const store = createSettingsStore(target)
+    const a = { providerId: 'opencode', modelId: 'gpt-5' }
+    const b = { providerId: 'opencode', modelId: 'claude' }
+
+    store.update({ model: { default: a, recent: [{ model: a, slot: 0, name: 'GPT-5' }] } })
+    expect(store.get().model.recent).toEqual([{ model: a, slot: 0, name: 'GPT-5' }])
+
+    store.update({
+      model: { recent: [{ model: b, slot: 1 }, { model: a, slot: 0 }] },
+    })
+    expect(store.get().model.default).toEqual(a)
+    expect(createSettingsStore(target).get().model.recent).toEqual([
+      { model: b, slot: 1 },
+      { model: a, slot: 0 },
+    ])
   })
 
   it('drops user overrides of locked system shortcuts', () => {

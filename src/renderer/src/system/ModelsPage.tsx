@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ModelGroup, ModelRef } from '@shared/engine'
 import type { Settings, SettingsPatch } from '@shared/ipc'
+import { touchRecentModel } from '@shared/model-recents'
 import { useFocusTree } from '../focus'
 import { useTranslation } from '../i18n'
 import { MenuCancelProvider, MenuRow } from './MenuRow'
@@ -80,6 +81,14 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
     ? t('models.engineDefaultAutomatic')
     : (selectedName ?? `${selected.providerId} / ${selected.modelId}`)
 
+  // Choosing a default also feeds the recent-model ring (spec 14). "Engine
+  // default" is not a model, so it leaves the recent list untouched.
+  const chooseModel = (ref: ModelRef, name?: string): void => {
+    void update({
+      model: { default: ref, recent: touchRecentModel(settings.model.recent, ref, name) },
+    })
+  }
+
   return (
     <div data-testid="models-page">
       <p className="px-3 pt-3 pb-1 text-code text-text-muted" data-testid="models-current">
@@ -148,8 +157,8 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
                         selected={isSelected}
                         testId={`model-${group.providerId}-${model.id}`}
                         className="pl-6"
-                        onActivate={() => void update({ model: { default: ref } })}
-                        onClick={() => void update({ model: { default: ref } })}
+                        onActivate={() => chooseModel(ref, model.name)}
+                        onClick={() => chooseModel(ref, model.name)}
                       >
                         <span className="truncate">{model.name}</span>
                         {isSelected ? (
