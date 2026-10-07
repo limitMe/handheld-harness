@@ -37,7 +37,9 @@ describe('StatusBar', () => {
 
     expect(screen.getByTestId('status-title').textContent).toBe('HANDHELD.AI')
     expect(screen.getByTestId('status-time').textContent).toMatch(/^\d{2}:\d{2}$/)
-    expect(screen.getByTestId('status-network').textContent).toMatch(/^(online|offline)$/)
+    const network = screen.getByTestId('status-network')
+    expect(network.getAttribute('data-status')).toMatch(/^(offline|wifi|cellular|ethernet)$/)
+    expect(network.querySelector('svg')).not.toBeNull()
   })
 
   it('omits the title when the screen has none (text edit)', () => {

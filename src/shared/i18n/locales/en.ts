@@ -16,11 +16,15 @@ export const en = {
   },
   status: {
     tasks: 'Tasks',
-    online: 'online',
-    offline: 'offline',
     listening: 'Listening',
     starting: 'Starting…',
     engineTooltip: 'engine: {{state}}',
+    network: {
+      offline: 'Offline',
+      wifi: 'Wi-Fi · signal {{level}}/3',
+      cellular: 'Cellular · signal {{level}}/3',
+      ethernet: 'Wired connection',
+    },
   },
   composer: {
     placeholder: 'Message the agent…',

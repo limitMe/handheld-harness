@@ -4,6 +4,7 @@ import { useEngineStatus } from '../engine/useEngineStatus'
 import { useFocusable, FOCUS_ORDER } from '../focus'
 import { useTranslation } from '../i18n'
 import { Button } from '../ui'
+import { NetworkIcon, useNetworkStatus } from './network'
 
 interface BatteryState {
   level: number
@@ -41,20 +42,6 @@ function useClock(): string {
     return () => window.clearTimeout(timer)
   }, [])
   return time
-}
-
-function useOnline(): boolean {
-  const [online, setOnline] = useState(() => navigator.onLine)
-  useEffect(() => {
-    const update = (): void => setOnline(navigator.onLine)
-    window.addEventListener('online', update)
-    window.addEventListener('offline', update)
-    return () => {
-      window.removeEventListener('online', update)
-      window.removeEventListener('offline', update)
-    }
-  }, [])
-  return online
 }
 
 function useBattery(): BatteryState | null {
@@ -131,7 +118,7 @@ export function engineDotClass(state: string | undefined): string | null {
 export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
   const { t } = useTranslation()
   const time = useClock()
-  const online = useOnline()
+  const network = useNetworkStatus()
   const battery = useBattery()
   const engineStatus = useEngineStatus()
   const badge = profileBadge(useProfile())
@@ -146,6 +133,15 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
   })
 
   const dotClass = engineDotClass(engineStatus?.state)
+
+  const networkLabel =
+    network.kind === 'offline'
+      ? t('status.network.offline')
+      : network.kind === 'cellular'
+        ? t('status.network.cellular', { level: network.level })
+        : network.kind === 'ethernet'
+          ? t('status.network.ethernet')
+          : t('status.network.wifi', { level: network.level })
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-surface-raised bg-surface px-4">
@@ -202,8 +198,15 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
             </span>
           </span>
         ) : null}
-        <span data-testid="status-network">
-          {online ? t('status.online') : t('status.offline')}
+        <span
+          data-testid="status-network"
+          data-status={network.kind}
+          data-level={network.level}
+          role="img"
+          aria-label={networkLabel}
+          title={networkLabel}
+        >
+          <NetworkIcon status={network} />
         </span>
         {battery ? (
           <span data-testid="status-battery" className="tabular-nums">

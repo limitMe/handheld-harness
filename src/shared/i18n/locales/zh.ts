@@ -16,11 +16,15 @@ export const zh = {
   },
   status: {
     tasks: '任务',
-    online: '在线',
-    offline: '离线',
     listening: '正在聆听',
     starting: '正在启动…',
     engineTooltip: '引擎：{{state}}',
+    network: {
+      offline: '离线',
+      wifi: 'Wi-Fi · 信号 {{level}}/3',
+      cellular: '蜂窝网络 · 信号 {{level}}/3',
+      ethernet: '有线连接',
+    },
   },
   composer: {
     placeholder: '向 Agent 发送消息…',
