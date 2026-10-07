@@ -56,6 +56,15 @@ describe('IPC contract', () => {
     await api.engine.list()
     await api.engine.restart()
 
+    await api.speech.providers()
+    await api.speech.keyStatus('doubao')
+    await api.speech.setKey('doubao', 'key')
+    await api.speech.clearKey('doubao')
+    await api.speech.start()
+    await api.speech.pushAudio('ses', new Uint8Array([0, 0]))
+    await api.speech.stop('ses')
+    await api.speech.cancel('ses')
+
     expect(new Set(invoked)).toEqual(new Set(INVOKE_CHANNELS))
     expect(invoked).toHaveLength(INVOKE_CHANNELS.length)
   })
@@ -68,6 +77,7 @@ describe('IPC contract', () => {
       api.events.on(channel, () => undefined)
     }
     api.engine.onEvent(() => undefined)
+    api.speech.onEvent(() => undefined)
 
     expect(new Set(subscribed)).toEqual(new Set(EVENT_CHANNELS))
   })

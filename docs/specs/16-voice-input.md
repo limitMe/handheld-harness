@@ -1,6 +1,8 @@
 # 16 · 语音输入协议与实现
 
-> 阶段 B · 方向性 spec。产品文档规定："具体方案还没有定下来，但是要为它留下协议接口"。P-06 已决定：**本 spec 先只做协议和管线，不选服务商**；MVP 阶段语音输入直接用 Windows 自带的 Win+H，等用户自己试用过几种服务商之后，再挑一个接进来。
+> 阶段 B · 方向性 spec。产品文档规定："具体方案还没有定下来，但是要为它留下协议接口"。P-06 原先决定：**本 spec 先只做协议和管线，不选服务商**；MVP 阶段语音输入直接用 Windows 自带的 Win+H。
+>
+> **更新（2026-10-07）**：用户已选定**火山引擎豆包（Seed-ASR 流式）**作为第一个真实服务商，并决定先交付协议层 + 主进程服务 + 豆包适配器 + 一个调试入口，长按 Y 与设置页随后接入。见文末"实现记录"。
 
 ## 目标
 
@@ -115,3 +117,48 @@ export interface SpeechProvider {
 ## 待定输入
 
 P-06 的服务商选择留到 MVP 之后；P-21 里的 LLM 润色是可选增强；凭据在哪里配置见 P-20。P-05 已决定。
+
+## 实现记录
+
+实现日期：2026-10-07（改动落在主仓库工作区，未提交）。
+
+### 本次范围（P-06 更新）
+
+按用户决定，**先交付协议层 + 主进程语音服务 + 豆包适配器 + 一个调试入口**；长按 Y、光标插入、状态栏听写指示、系统菜单语音页留待后续。真实服务商只做**豆包**一种。
+
+### 交付物
+
+- 协议 `src/shared/speech.ts`：沿用正文的 `SpeechProviderInfo` / `SpeechSessionOptions` / `SpeechEvent` / `SpeechProvider`，新增 `SpeechErrorCode`、`SPEECH_SAMPLE_RATE`、`rmsOf`、豆包默认常量。
+- 主进程 `src/main/speech/`：
+  - `service.ts`：`SpeechService`（单会话、provider 注册表、事件路由、level 计算）与 `SpeechNotConfiguredError`。
+  - `doubao.ts`：火山引擎豆包流式识别适配器（`ws` + 官方二进制协议）。`enable_nonstream` 两遍识别，用分句的 `definite` 区分 `partial` / `final`。
+  - `doubao-protocol.ts`：openspeech v3 二进制编解码（4 字节 header + 可选 sequence + 4 字节 payload size + gzip payload，大端）。
+  - `credentials.ts`：用 Electron `safeStorage` 加密 API Key，存 profile 私有的 `speech-credentials.json`；密钥不进 `settings.json`，也不经 `settings:get` 返回。
+  - `mock.ts`：仅供单测的脚本化 provider，**不**出现在用户可选列表里。
+  - `index.ts`：默认注册表（当前只有豆包）。
+- 设置（`settings.speech`）：`provider`（`none` | `doubao`，默认 `none`）、`language`（默认 `auto`）、`doubao.{ resourceId, endpoint }`（默认 `volc.seedasr.sauc.duration` / `wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async`）。
+- IPC：`speech:providers / keyStatus / setKey / clearKey / start / pushAudio / stop / cancel` + `speech:event`；preload 暴露 `window.handheld.speech`。
+- 渲染进程：`src/renderer/src/speech/capture.ts`（`getUserMedia` + AudioWorklet → 16 kHz 单声道 PCM，按 ~200 ms 合并后发送）与 `pcm.worklet.js`；调试页 `src/renderer/src/debug/SpeechDebug.tsx`（选 provider、存/清 API Key、改 resourceId/endpoint、开始/停止、实时显示 partial/final/level/error）。入口：`Ctrl+Shift+V` 或系统菜单 › About › Speech probe。
+
+### 关键决策
+
+- **新增依赖 `ws@8.22.0`**：豆包（以及 Fun-ASR）都要求在 WebSocket 握手时带自定义 Header，Node 内置 `WebSocket` 不支持。`ws` 为纯 JS，无需 node-gyp。
+- **凭据用 `safeStorage` 加密**存独立文件，而非明文写入 `settings.json`。
+- **音频传输**：先用 `speech:pushAudio` invoke（每 ~200 ms 一包）。正文建议的 MessagePort 留到接入正式听写 UI 时再评估。
+- **豆包请求参数**：`format=pcm`、`codec=raw`、`rate=16000`、`bits=16`、`channel=1`；`enable_nonstream=true`、`enable_itn=true`、`enable_punc=true`、`enable_ddc=true`、`show_utterances=true`。`language=auto` 时不传 `language`（中英混说自动识别）。帧头：首包 `fullClientRequest` + flags sequence(0b0001) + seq 1；音频包 flags 0；末包 flags lastPacket(0b0010) 并附 100 ms 静音。响应解析对「带 / 不带 sequence 前缀」都做了容错。
+
+### 与正文的出入
+
+- `SpeechProviderInfo` 增加 `requiresCredentials` 字段（正文标注为"建议"）。
+- 正文"本阶段的交付范围"里"不做任何真实服务商适配器"一条已按 P-06 更新被覆盖。
+
+### 已自动验证
+
+- `npm run check` 通过（typecheck、lint 零 warning、43 个测试文件 262 个用例）；`npm run build` 通过，AudioWorklet 产物以独立资源文件输出（受 `script-src 'self'` 约束，未内联为 `data:` URL）。
+- 新增单测：`doubao-protocol`（编解码往返、末包标志、带/不带 sequence、错误响应、分句拆分）、`speech-service`（provider 列表、未配置拒绝、partial/final/level 路由、会话释放、取消）；`ipc-contract` 覆盖新通道。
+
+### 未完成 / 需要人工验证
+
+- 真机联调：录入豆包 API Key 后，用调试页 Start 说一句中英混说的话，确认实时出字、松手后最终结果正确。
+- 长按 Y 接线、光标处插入（partial 临时文本 / final 固定）、B 取消回滚、状态栏听写指示、系统菜单语音页（provider 选择 + 凭据入口）——留给本 spec 的下一阶段与 17。
+- 断网时的手动/自动切换与离线兜底。

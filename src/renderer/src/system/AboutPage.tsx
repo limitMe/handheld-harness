@@ -4,7 +4,7 @@ import { useEngineStatus } from '../engine/useEngineStatus'
 import { MenuGroupLabel, MenuRow } from './MenuRow'
 
 export interface AboutPageProps {
-  onOpenDebug: (page: 'gamepad' | 'mic' | 'engine') => void
+  onOpenDebug: (page: 'gamepad' | 'mic' | 'engine' | 'speech') => void
 }
 
 /** About & diagnostics (spec 15): versions, engine state and debug entry points. */
@@ -66,6 +66,15 @@ export function AboutPage({ onOpenDebug }: AboutPageProps) {
         onClick={() => onOpenDebug('engine')}
       >
         <span>Engine probe</span>
+      </MenuRow>
+      <MenuRow
+        id="system-menu.about.speech"
+        order={4}
+        testId="about-debug-speech"
+        onActivate={() => onOpenDebug('speech')}
+        onClick={() => onOpenDebug('speech')}
+      >
+        <span>Speech probe</span>
       </MenuRow>
 
       <MenuGroupLabel>Build</MenuGroupLabel>

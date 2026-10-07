@@ -12,6 +12,12 @@ import { isDevMode } from './env'
 import { log, writeLog } from './log'
 import { resolveProfile } from './profile'
 import { getEngineManager, startEngineRuntime } from './engine-runtime'
+import {
+  createCredentialStore,
+  createSpeechService,
+  type CredentialStore,
+  type SpeechService,
+} from './speech'
 import { clampZoom } from './zoom'
 
 type Request<K extends InvokeChannel> = InvokeContract[K]['request']
@@ -22,6 +28,30 @@ let store: SettingsStore | undefined
 function settingsStore(): SettingsStore {
   store ??= createSettingsStore(app.getPath('userData'))
   return store
+}
+
+let credentials: CredentialStore | undefined
+
+function credentialStore(): CredentialStore {
+  credentials ??= createCredentialStore(app.getPath('userData'))
+  return credentials
+}
+
+let speech: SpeechService | undefined
+
+function speechService(): SpeechService {
+  speech ??= createSpeechService({
+    getSettings: () => settingsStore().get(),
+    credentials: credentialStore(),
+    emit: (event) => {
+      for (const win of BrowserWindow.getAllWindows()) win.webContents.send('speech:event', event)
+    },
+    log: (message, meta) => {
+      if (meta) log.info(message, meta)
+      else log.info(message)
+    },
+  })
+  return speech
 }
 
 /** Applies the persisted zoom factor to a freshly created window. */
@@ -89,8 +119,38 @@ export function registerIpc(): void {
   })
 
   registerEngineIpc()
+  registerSpeechIpc()
 
   startEngineRuntime(() => settingsStore().get())
+}
+
+function registerSpeechIpc(): void {
+  handle('speech:providers', () => speechService().listProviders())
+
+  handle('speech:keyStatus', ({ providerId }) => ({ configured: credentialStore().has(providerId) }))
+
+  handle('speech:setKey', ({ providerId, apiKey }) => {
+    credentialStore().set(providerId, apiKey)
+  })
+
+  handle('speech:clearKey', ({ providerId }) => {
+    credentialStore().clear(providerId)
+  })
+
+  handle('speech:start', async (request) => ({ sessionId: await speechService().start(request) }))
+
+  handle('speech:pushAudio', ({ sessionId, pcm }) => {
+    speechService().pushAudio(
+      sessionId,
+      new Int16Array(pcm.buffer, pcm.byteOffset, pcm.byteLength >> 1),
+    )
+  })
+
+  handle('speech:stop', ({ sessionId }) => speechService().stop(sessionId))
+
+  handle('speech:cancel', ({ sessionId }) => {
+    speechService().cancel(sessionId)
+  })
 }
 
 function registerEngineIpc(): void {

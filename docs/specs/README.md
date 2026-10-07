@@ -22,7 +22,7 @@
 | 13 | [界面：当前工作](13-screen-current-work.md) | B | 已实现（与 16/17 相关的听写、文本编辑仍待接入；待掌机实测） |
 | 14 | [界面：任务地图](14-screen-task-map.md) | B | 已实现（自动化通过，待掌机实测；临时任务切换器已退役） |
 | 15 | [界面：系统菜单](15-screen-system-menu.md) | B | 已实现（自动化通过，待掌机实测） |
-| 16 | [语音输入协议与实现](16-voice-input.md) | B | 草案 |
+| 16 | [语音输入协议与实现](16-voice-input.md) | B | 进行中（协议层 + 豆包适配器 + 调试入口；长按 Y 与设置页待接入） |
 | 17 | [界面：文本编辑](17-screen-text-edit.md) | B | 草案 |
 | 18 | [动效与视觉系统](18-motion-and-visual.md) | B | 草案 |
 | 19 | [打包、原生辅助进程与设备集成](19-packaging-and-native.md) | B | 草案 |
@@ -38,7 +38,7 @@
 | 状态管理 | zustand |
 | 焦点与输入 | 自研焦点树（参照 Steam `Focusable`）+ ActionMap；手柄用 Gamepad API |
 | Agent 引擎 | OpenCode server 1.18.34（v1）；通过 `AgentEngine` 和能力声明预留其他底座 |
-| 语音 | 协议先行；自举阶段用 Win+H |
+| 语音 | 协议先行 + provider 可换；首个实现为火山引擎豆包（Seed-ASR 流式）；自举阶段仍可用 Win+H |
 | 测试 | Vitest、Playwright（`_electron`）、引擎契约测试 |
 
 ## 每个 spec 的结构
@@ -142,6 +142,7 @@
 | `F11` / `Ctrl+Shift+I` / `Ctrl+R` | 切换全屏 / DevTools / 重新加载 | 01 |
 | `Ctrl+Shift+G` / `Ctrl+Shift+M` | 手柄调试页 / 麦克风调试页 | 01 |
 | `Ctrl+Shift+E` | 引擎调试页 | 02 |
+| `Ctrl+Shift+V` | 语音调试页（provider 选择、API Key、实时转写） | 16 |
 | `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | 字号缩放 | 03 |
 | `Ctrl+Shift+F` | 叠加显示焦点树 | 11 |
 
@@ -158,6 +159,9 @@
 | `tasks.open`（`SessionRef[]`）、`tasks.unread`（`SessionRef[]`） | 任务地图里打开的任务（按创建时间）和显示红点的任务 | 14 |
 | `hints = { enabled, delayMs }` | 操作提示的开关和等待时间 | 12, 15 |
 | `model.default` | 新任务使用的默认模型 | 15 |
+| `speech`（`provider` / `language` / `doubao.{resourceId,endpoint}`） | 语音服务商、语言与豆包参数；默认 provider 为 `none` | 16 |
+
+语音服务的 API Key 不进 `settings.json`：用 Electron `safeStorage` 加密后存 profile 私有的 `speech-credentials.json`（spec 16）。
 
 设置文件是 profile 私有的（在各自的 `userData` 下）。跨 profile 共享的状态只有 02 的 server 登记文件和"会话 → 模型"表。
 
@@ -174,7 +178,7 @@
 | P-03 | 任务地图里怎么不选任务直接退出？ | 长按 B 关闭卡片，短按 B 退出地图。键盘可以把长按 B 和短按 B 绑定到不同的按键 | 10, 14 |
 | P-04 | 任务地图里的"删除"是否同时删除 OpenCode 会话？ | 只从地图关闭，会话保留为历史任务 | 14 |
 | P-05 | 没有激活的输入框时长按 Y 的行为 | 无效 | 16 |
-| P-06 | 语音服务商选择 | SDD 先留空，只把接口留好；MVP 之后用户自己试用再选。MVP 阶段直接用系统自带的语音输入 | 16, 15, 17 |
+| P-06 | 语音服务商选择 | SDD 先留空，只把接口留好；MVP 之后用户自己试用再选。MVP 阶段直接用系统自带的语音输入。**2026-10-07 更新：先实现火山引擎豆包（Seed-ASR 流式），仅此一种；接口仍保持可换** | 16, 15, 17 |
 | P-07 | 文本编辑里听写插到哪里、怎么退出？ | 插入到聚焦句子之后，聚焦的句子末尾显示闪烁光标；退出即默认确认修改 | 17 |
 | P-08 | 视觉风格 | 参考 UI 库的默认风格，视觉主题做得独立一点，MVP 之后方便整体替换 | 01, 14, 18 |
 | P-09 | 操作提示的等待时间 | 所有组件一样，可以在设置里配置等待时间和是否开启 | 12, 15 |

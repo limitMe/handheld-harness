@@ -13,7 +13,7 @@ import { VoicePage } from './VoicePage'
 export interface SystemMenuProps {
   open: boolean
   onClose: () => void
-  onOpenDebug: (page: 'gamepad' | 'mic' | 'engine') => void
+  onOpenDebug: (page: 'gamepad' | 'mic' | 'engine' | 'speech') => void
 }
 
 /** Mounted only while open, so the selected category resets on every open. */

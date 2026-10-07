@@ -3,6 +3,7 @@ import StatusBar from './components/StatusBar'
 import GamepadDebug from './debug/GamepadDebug'
 import MicDebug from './debug/MicDebug'
 import EngineDebug from './engine/EngineDebug'
+import SpeechDebug from './debug/SpeechDebug'
 import { useEngineStatus } from './engine/useEngineStatus'
 import { FocusDebugOverlay } from './focus'
 import { CONTEXT_ORDER, onPress, useInputContext } from './input'
@@ -17,6 +18,7 @@ export default function App() {
   const [gamepadOpen, setGamepadOpen] = useState(false)
   const [micOpen, setMicOpen] = useState(false)
   const [engineOpen, setEngineOpen] = useState(false)
+  const [speechOpen, setSpeechOpen] = useState(false)
   const [focusDebugOpen, setFocusDebugOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -98,6 +100,9 @@ export default function App() {
         } else if (event.code === 'KeyE') {
           event.preventDefault()
           setEngineOpen((open) => !open)
+        } else if (event.code === 'KeyV') {
+          event.preventDefault()
+          setSpeechOpen((open) => !open)
         } else if (event.code === 'KeyF') {
           event.preventDefault()
           setFocusDebugOpen((open) => !open)
@@ -133,6 +138,7 @@ export default function App() {
             setMenuOpen(false)
             if (page === 'gamepad') setGamepadOpen(true)
             else if (page === 'mic') setMicOpen(true)
+            else if (page === 'speech') setSpeechOpen(true)
             else setEngineOpen(true)
           }}
         />
@@ -140,6 +146,7 @@ export default function App() {
       <GamepadDebug open={gamepadOpen} onOpenChange={setGamepadOpen} />
       <MicDebug open={micOpen} onOpenChange={setMicOpen} />
       <EngineDebug open={engineOpen} onOpenChange={setEngineOpen} />
+      <SpeechDebug open={speechOpen} onOpenChange={setSpeechOpen} />
       <FocusDebugOverlay open={focusDebugOpen} />
     </div>
   )

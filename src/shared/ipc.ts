@@ -2,6 +2,14 @@ import { z } from 'zod'
 import { ACTION_IDS, type ActionId } from './actions'
 import { DEFAULT_HINTS } from './hints'
 import type { BindingLayer, BindingValue } from './input'
+import {
+  DOUBAO_DEFAULT_ENDPOINT,
+  DOUBAO_DEFAULT_RESOURCE_ID,
+  SPEECH_DEFAULT_LANGUAGE,
+  SPEECH_PROVIDER_NONE,
+  type SpeechEvent,
+  type SpeechProviderInfo,
+} from './speech'
 import type {
   ChatMessage,
   CommandInfo,
@@ -67,6 +75,32 @@ export const ModelSettingsSchema = z.object({
 })
 export type ModelSettings = z.infer<typeof ModelSettingsSchema>
 
+/** The settings-selectable speech providers (spec 16). `none` disables dictation;
+ * the mock provider is test-only and must never appear here. */
+export const SPEECH_PROVIDER_IDS = [SPEECH_PROVIDER_NONE, 'doubao'] as const
+export type SpeechProviderId = (typeof SPEECH_PROVIDER_IDS)[number]
+
+/** Provider-specific options for the Doubao (Volcengine) streaming adapter. */
+export const DoubaoSpeechSettingsSchema = z.object({
+  resourceId: z.string().min(1).default(DOUBAO_DEFAULT_RESOURCE_ID),
+  endpoint: z.string().min(1).default(DOUBAO_DEFAULT_ENDPOINT),
+})
+export type DoubaoSpeechSettings = z.infer<typeof DoubaoSpeechSettingsSchema>
+
+/**
+ * Voice-input settings (spec 16). The API key is not here: it is encrypted with
+ * the OS credential store and kept in a separate profile file (P-20).
+ */
+export const SpeechSettingsSchema = z.object({
+  provider: z.enum(SPEECH_PROVIDER_IDS).default(SPEECH_PROVIDER_NONE),
+  language: z.string().min(1).default(SPEECH_DEFAULT_LANGUAGE),
+  doubao: DoubaoSpeechSettingsSchema.default({
+    resourceId: DOUBAO_DEFAULT_RESOURCE_ID,
+    endpoint: DOUBAO_DEFAULT_ENDPOINT,
+  }),
+})
+export type SpeechSettings = z.infer<typeof SpeechSettingsSchema>
+
 /** Action hints share one wait time everywhere and can be turned off entirely (spec 12, P-09). */
 export const HintsSettingsSchema = z.object({
   enabled: z.boolean().default(true),
@@ -116,6 +150,11 @@ export const SettingsSchema = z.object({
   tasks: TasksSettingsSchema.default({ open: [], unread: [] }),
   model: ModelSettingsSchema.default({}),
   input: BindingLayerSchema.default({ contexts: {}, keyboard: {} }),
+  speech: SpeechSettingsSchema.default({
+    provider: SPEECH_PROVIDER_NONE,
+    language: SPEECH_DEFAULT_LANGUAGE,
+    doubao: { resourceId: DOUBAO_DEFAULT_RESOURCE_ID, endpoint: DOUBAO_DEFAULT_ENDPOINT },
+  }),
 })
 export type Settings = z.infer<typeof SettingsSchema>
 
@@ -155,6 +194,18 @@ export const SettingsPatchSchema = z.object({
     })
     .optional(),
   input: BindingPatchSchema.optional(),
+  speech: z
+    .object({
+      provider: z.enum(SPEECH_PROVIDER_IDS).optional(),
+      language: z.string().min(1).optional(),
+      doubao: z
+        .object({
+          resourceId: z.string().min(1).optional(),
+          endpoint: z.string().min(1).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
 })
 export type SettingsPatch = z.infer<typeof SettingsPatchSchema>
 
@@ -167,6 +218,11 @@ export const DEFAULT_SETTINGS: Settings = {
   tasks: { open: [], unread: [] },
   model: {},
   input: { contexts: {}, keyboard: {} },
+  speech: {
+    provider: SPEECH_PROVIDER_NONE,
+    language: SPEECH_DEFAULT_LANGUAGE,
+    doubao: { resourceId: DOUBAO_DEFAULT_RESOURCE_ID, endpoint: DOUBAO_DEFAULT_ENDPOINT },
+  },
 }
 
 export const LogWriteRequestSchema = z.object({
@@ -259,11 +315,23 @@ export interface InvokeContract {
   }
   'engine:list': { request: undefined; response: EngineInfo[] }
   'engine:restart': { request: { engineId?: string } | undefined; response: void }
+  'speech:providers': { request: undefined; response: SpeechProviderInfo[] }
+  'speech:keyStatus': { request: { providerId: string }; response: { configured: boolean } }
+  'speech:setKey': { request: { providerId: string; apiKey: string }; response: void }
+  'speech:clearKey': { request: { providerId: string }; response: void }
+  'speech:start': {
+    request: { language?: string; hints?: string[] } | undefined
+    response: { sessionId: string }
+  }
+  'speech:pushAudio': { request: { sessionId: string; pcm: Uint8Array }; response: void }
+  'speech:stop': { request: { sessionId: string }; response: void }
+  'speech:cancel': { request: { sessionId: string }; response: void }
 }
 
 export interface EventContract {
   'settings:changed': { payload: Settings }
   'engine:event': { payload: EngineEventPayload }
+  'speech:event': { payload: SpeechEvent }
 }
 
 export type InvokeChannel = keyof InvokeContract
@@ -294,11 +362,20 @@ export const INVOKE_CHANNELS = [
   'engine:runCommand',
   'engine:list',
   'engine:restart',
+  'speech:providers',
+  'speech:keyStatus',
+  'speech:setKey',
+  'speech:clearKey',
+  'speech:start',
+  'speech:pushAudio',
+  'speech:stop',
+  'speech:cancel',
 ] as const satisfies readonly InvokeChannel[]
 
 export const EVENT_CHANNELS = [
   'settings:changed',
   'engine:event',
+  'speech:event',
 ] as const satisfies readonly EventChannel[]
 
 export const IPC_INVOKE_SCHEMAS = {
@@ -338,6 +415,19 @@ export const IPC_INVOKE_SCHEMAS = {
   }),
   'engine:list': z.undefined(),
   'engine:restart': EngineIdParamSchema,
+  'speech:providers': z.undefined(),
+  'speech:keyStatus': z.object({ providerId: z.string().min(1) }),
+  'speech:setKey': z.object({ providerId: z.string().min(1), apiKey: z.string().min(1) }),
+  'speech:clearKey': z.object({ providerId: z.string().min(1) }),
+  'speech:start': z
+    .object({ language: z.string().min(1).optional(), hints: z.array(z.string()).optional() })
+    .optional(),
+  'speech:pushAudio': z.object({
+    sessionId: z.string().min(1),
+    pcm: z.instanceof(Uint8Array),
+  }),
+  'speech:stop': z.object({ sessionId: z.string().min(1) }),
+  'speech:cancel': z.object({ sessionId: z.string().min(1) }),
 } satisfies Record<InvokeChannel, z.ZodType>
 
 /** Renderer-facing API exposed by the preload bridge on `window.handheld`. */
@@ -358,6 +448,17 @@ export interface HandheldApi {
     update(patch: SettingsPatch): Promise<Settings>
   }
   engine: EngineApi
+  speech: {
+    providers(): Promise<SpeechProviderInfo[]>
+    keyStatus(providerId: string): Promise<{ configured: boolean }>
+    setKey(providerId: string, apiKey: string): Promise<void>
+    clearKey(providerId: string): Promise<void>
+    start(opts?: { language?: string; hints?: string[] }): Promise<{ sessionId: string }>
+    pushAudio(sessionId: string, pcm: Uint8Array): Promise<void>
+    stop(sessionId: string): Promise<void>
+    cancel(sessionId: string): Promise<void>
+    onEvent(listener: (event: SpeechEvent) => void): () => void
+  }
   events: {
     on<K extends EventChannel>(
       channel: K,

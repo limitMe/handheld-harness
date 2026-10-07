@@ -18,6 +18,10 @@ function defaults(): Settings {
     tasks: { open: [], unread: [] },
     model: {},
     input: { contexts: {}, keyboard: {} },
+    speech: {
+      ...DEFAULT_SETTINGS.speech,
+      doubao: { ...DEFAULT_SETTINGS.speech.doubao },
+    },
   }
 }
 
@@ -106,6 +110,11 @@ export function createSettingsStore(userDataDir: string): SettingsStore {
         },
         model: { ...current.model, ...patch.model },
         input: sanitizeUserBindings(mergeBindingLayers(current.input, patch.input)),
+        speech: {
+          ...current.speech,
+          ...patch.speech,
+          doubao: { ...current.speech.doubao, ...patch.speech?.doubao },
+        },
       })
       persist(next)
       current = next

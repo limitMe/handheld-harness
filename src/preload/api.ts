@@ -6,6 +6,7 @@ import type {
   InvokeContract,
 } from '../shared/ipc'
 import type { EngineEventPayload } from '../shared/engine'
+import type { SpeechEvent } from '../shared/speech'
 
 /** Minimal surface of `ipcRenderer` used by the preload bridge, kept injectable for tests. */
 export interface IpcBridge {
@@ -61,6 +62,17 @@ export function createHandheldApi(bridge: IpcBridge): HandheldApi {
       restart: (engineId) => invoke('engine:restart', { engineId }),
       onEvent: (listener) =>
         bridge.on('engine:event', (payload) => listener(payload as EngineEventPayload)),
+    },
+    speech: {
+      providers: () => invoke('speech:providers'),
+      keyStatus: (providerId) => invoke('speech:keyStatus', { providerId }),
+      setKey: (providerId, apiKey) => invoke('speech:setKey', { providerId, apiKey }),
+      clearKey: (providerId) => invoke('speech:clearKey', { providerId }),
+      start: (opts) => invoke('speech:start', opts),
+      pushAudio: (sessionId, pcm) => invoke('speech:pushAudio', { sessionId, pcm }),
+      stop: (sessionId) => invoke('speech:stop', { sessionId }),
+      cancel: (sessionId) => invoke('speech:cancel', { sessionId }),
+      onEvent: (listener) => bridge.on('speech:event', (payload) => listener(payload as SpeechEvent)),
     },
     events: {
       on: <K extends EventChannel>(

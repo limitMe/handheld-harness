@@ -99,4 +99,16 @@ export default tseslint.config(
       'no-restricted-imports': 'off',
     },
   },
+  {
+    // AudioWorklet runs in a worklet global scope that TypeScript's DOM lib omits.
+    files: ['src/renderer/src/speech/*.worklet.js'],
+    languageOptions: {
+      globals: {
+        AudioWorkletProcessor: 'readonly',
+        registerProcessor: 'readonly',
+        sampleRate: 'readonly',
+        currentTime: 'readonly',
+      },
+    },
+  },
 )
