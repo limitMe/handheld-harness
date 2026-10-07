@@ -24,6 +24,52 @@ export function emptyBindingLayer(): BindingLayer {
 }
 
 /**
+ * Bindings that must keep their default keys: they are the only way back into
+ * the system menu / task map, so a remap can lock the user out (spec 15).
+ */
+export const LOCKED_BINDINGS = [
+  { context: 'global', action: 'menu.toggle', key: 'Start' },
+  { context: 'global', action: 'map.toggle', key: 'Back' },
+] as const satisfies ReadonlyArray<{ context: string; action: ActionId; key: string }>
+
+export function isLockedBinding(context: string, action: ActionId): boolean {
+  return LOCKED_BINDINGS.some((entry) => entry.context === context && entry.action === action)
+}
+
+/**
+ * Drops user overrides that touch a locked binding: no alternate key for a
+ * locked action, and no rebinding of its default key. Keeps the escape hatches
+ * working even when `settings.input` already contains a bad remap (spec 15).
+ */
+export function sanitizeUserBindings(user: BindingLayer): BindingLayer {
+  const lockedActions = new Set<string>(LOCKED_BINDINGS.map((entry) => entry.action))
+  const lockedKeys = new Map<string, Set<string>>()
+  for (const entry of LOCKED_BINDINGS) {
+    const keys = lockedKeys.get(entry.context) ?? new Set<string>()
+    keys.add(entry.key)
+    lockedKeys.set(entry.context, keys)
+  }
+  const cleanRows = (
+    rows: Record<string, BindingValue>,
+    context: string,
+  ): Record<string, BindingValue> => {
+    const out: Record<string, BindingValue> = {}
+    for (const [key, action] of Object.entries(rows)) {
+      if (action && lockedActions.has(action)) continue
+      if (lockedKeys.get(context)?.has(key)) continue
+      out[key] = action
+    }
+    return out
+  }
+  return {
+    contexts: Object.fromEntries(
+      Object.entries(user.contexts).map(([context, rows]) => [context, cleanRows(rows, context)]),
+    ),
+    keyboard: user.keyboard,
+  }
+}
+
+/**
  * Default bindings. Mirrors the key table in docs/specs/README.md.
  * `B`/`B:hold` on the task map follow P-03; permission/question keys follow P-13.
  */
@@ -207,7 +253,11 @@ export function resolveActionMap(
   presets: DevicePreset[] = DEVICE_PRESETS,
 ): ActionMap {
   const preset = presetForGamepadId(gamepadId, presets)
-  return mergeActionMaps([DEFAULT_BINDINGS, preset?.bindings ?? emptyBindingLayer(), user])
+  return mergeActionMaps([
+    DEFAULT_BINDINGS,
+    preset?.bindings ?? emptyBindingLayer(),
+    sanitizeUserBindings(user),
+  ])
 }
 
 export interface BindingConflict {

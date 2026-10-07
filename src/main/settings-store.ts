@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { DEFAULT_SETTINGS, SettingsSchema, type Settings, type SettingsPatch, type BindingPatch } from '../shared/ipc'
-import type { BindingLayer, BindingValue } from '../shared/input'
+import { sanitizeUserBindings, type BindingLayer, type BindingValue } from '../shared/input'
 
 export interface SettingsStore {
   get(): Settings
@@ -67,6 +67,13 @@ export function createSettingsStore(userDataDir: string): SettingsStore {
     try {
       const parsed = SettingsSchema.safeParse(JSON.parse(fs.readFileSync(file, 'utf8')))
       if (!parsed.success) throw new Error(parsed.error.message)
+      const input = sanitizeUserBindings(parsed.data.input)
+      if (JSON.stringify(input) !== JSON.stringify(parsed.data.input)) {
+        // Heal a corrupted remap of a locked system shortcut (spec 15).
+        const fixed: Settings = { ...parsed.data, input }
+        persist(fixed)
+        return fixed
+      }
       return parsed.data
     } catch {
       backupInvalid()
@@ -98,7 +105,7 @@ export function createSettingsStore(userDataDir: string): SettingsStore {
           unread: patch.tasks?.unread ?? current.tasks.unread,
         },
         model: { ...current.model, ...patch.model },
-        input: mergeBindingLayers(current.input, patch.input),
+        input: sanitizeUserBindings(mergeBindingLayers(current.input, patch.input)),
       })
       persist(next)
       current = next

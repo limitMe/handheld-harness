@@ -16,7 +16,7 @@ import {
   type ConflictResolution,
   type MenuDevice,
 } from '@shared/bindings'
-import type { ActionMap } from '@shared/input'
+import { isLockedBinding, type ActionMap } from '@shared/input'
 import type { Settings, SettingsPatch } from '@shared/ipc'
 import { useFocusTree } from '../focus'
 import { useInputApi, type CapturedControl } from '../input'
@@ -226,7 +226,7 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
       {capture ? (
         <div
           data-testid="capture-banner"
-          className="mt-4 rounded-md border border-accent bg-card px-3 py-2 text-base text-on-card"
+          className="sticky top-0 z-10 mt-4 rounded-md border border-accent bg-card px-3 py-2 text-base text-on-card shadow-card"
         >
           <p className="font-medium">
             Press a new {device === 'gamepad' ? 'button' : 'key'} for{' '}
@@ -238,30 +238,46 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
         </div>
       ) : null}
 
+      <p className="px-3 pt-3 text-code text-text-muted">
+        System menu (Start) and task map (Back) are locked so they always open.
+      </p>
+
       {contexts.length === 0 ? (
         <p className="px-3 py-4 text-text-muted">No bindings for this device.</p>
       ) : (
         contexts.map((context, groupIndex) => (
           <div key={context}>
             <MenuGroupLabel>{contextLabel(context)}</MenuGroupLabel>
-            {listBindings(map, device, context).map((row, rowIndex) => (
-              <MenuRow
-                key={`${context}:${row.action}:${row.key}`}
-                id={`${groupPrefix}.${context}.${row.action}`}
-                order={100 + groupIndex * GROUP_STRIDE + rowIndex}
-                testId={`binding-${context}-${row.action}`}
-                onActivate={() => void beginCapture(context, row.action, row.key)}
-                onClick={() => void beginCapture(context, row.action, row.key)}
-              >
-                <span>{actionLabel(row.action)}</span>
-                <span
-                  data-testid={`binding-key-${context}-${row.action}`}
-                  className="text-code text-text-muted"
+            {listBindings(map, device, context).map((row, rowIndex) => {
+              const locked = isLockedBinding(context, row.action)
+              return (
+                <MenuRow
+                  key={`${context}:${row.action}:${row.key}`}
+                  id={`${groupPrefix}.${context}.${row.action}`}
+                  order={100 + groupIndex * GROUP_STRIDE + rowIndex}
+                  testId={`binding-${context}-${row.action}`}
+                  {...(locked
+                    ? {}
+                    : {
+                        onActivate: () => void beginCapture(context, row.action, row.key),
+                        onClick: () => void beginCapture(context, row.action, row.key),
+                      })}
                 >
-                  {formatBindingKey(row.key, device)}
-                </span>
-              </MenuRow>
-            ))}
+                  <span>
+                    {actionLabel(row.action)}
+                    {locked ? (
+                      <span className="ml-2 text-code text-text-muted">Locked</span>
+                    ) : null}
+                  </span>
+                  <span
+                    data-testid={`binding-key-${context}-${row.action}`}
+                    className="text-code text-text-muted"
+                  >
+                    {formatBindingKey(row.key, device)}
+                  </span>
+                </MenuRow>
+              )
+            })}
             <MenuRow
               id={`${groupPrefix}.${context}.reset`}
               order={100 + groupIndex * GROUP_STRIDE + GROUP_STRIDE - 1}

@@ -3,6 +3,7 @@ import {
   DEFAULT_BINDINGS,
   detectConflicts,
   emptyBindingLayer,
+  isLockedBinding,
   mergeActionMaps,
   presetForGamepadId,
   resolveActionMap,
@@ -71,6 +72,26 @@ describe('action map layering', () => {
     )
 
     expect(map.contexts.taskMap?.Y).toBe('task.new')
+  })
+
+  it('restores locked system shortcuts from a corrupted user layer', () => {
+    const map = resolveActionMap(undefined, {
+      contexts: {
+        global: { Start: null, Back: 'nav.up', 'RStickY+': 'menu.toggle', X: 'map.toggle' },
+      },
+      keyboard: {},
+    })
+
+    expect(map.contexts.global?.Start).toBe('menu.toggle')
+    expect(map.contexts.global?.Back).toBe('map.toggle')
+    expect(map.contexts.global?.['RStickY+']).toBeUndefined()
+    expect(map.contexts.global?.X).toBeUndefined()
+  })
+
+  it('knows which bindings are locked', () => {
+    expect(isLockedBinding('global', 'menu.toggle')).toBe(true)
+    expect(isLockedBinding('global', 'map.toggle')).toBe(true)
+    expect(isLockedBinding('global', 'voice.dictate')).toBe(false)
   })
 })
 

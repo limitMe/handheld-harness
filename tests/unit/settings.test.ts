@@ -142,4 +142,33 @@ describe('settings store', () => {
     store.update({ model: { default: null } })
     expect(store.get().model).toEqual({ default: null })
   })
+
+  it('drops user overrides of locked system shortcuts', () => {
+    const target = makeDir()
+    const store = createSettingsStore(target)
+
+    store.update({
+      input: { contexts: { global: { Start: null, 'RStickY+': 'menu.toggle' } } },
+    })
+
+    expect(store.get().input.contexts.global).toEqual({})
+    expect(createSettingsStore(target).get().input.contexts.global).toEqual({})
+  })
+
+  it('heals a corrupted locked shortcut when loading settings.json', () => {
+    const target = makeDir()
+    writeFileSync(
+      path.join(target, 'settings.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        window: { mode: 'windowed' },
+        input: { contexts: { global: { Start: null, X: 'map.toggle' } }, keyboard: {} },
+      }),
+    )
+
+    const store = createSettingsStore(target)
+
+    expect(store.get().input.contexts.global).toEqual({})
+    expect(createSettingsStore(target).get().input.contexts.global).toEqual({})
+  })
 })
