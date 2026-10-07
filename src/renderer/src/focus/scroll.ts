@@ -1,20 +1,31 @@
 /**
- * Analog scroll for the sticks (spec 10/13). Unlike the D-pad, the stick scrolls
- * the focused scroll region continuously while held, at a configurable speed.
+ * Analog stick navigation (spec 10/13). While a stick is deflected it steps the
+ * focus one node at a time; when there is nowhere left to move (end of a list)
+ * it keeps scrolling the focused region. The speed setting scales both the
+ * focus step rate and the scroll rate.
  */
 
 import type { FocusTree } from './tree'
 
-/** Pixels per second at speed 1.0. */
+/** Pixels per second at speed 1.0 while scrolling past the end of a list. */
 export const SCROLL_PIXELS_PER_SECOND = 180
+/** Milliseconds between focus steps at speed 1.0. */
+export const BASE_FOCUS_INTERVAL_MS = 280
 export const MIN_SCROLL_SPEED = 0.25
 export const MAX_SCROLL_SPEED = 2
 /** Upper bound on a frame's delta, so a long stall does not jump the list. */
 const MAX_FRAME_SECONDS = 0.05
 
+export function clampSpeed(speed: number): number {
+  return Math.min(MAX_SCROLL_SPEED, Math.max(MIN_SCROLL_SPEED, speed))
+}
+
 export function scrollPixelsPerSecond(speed: number): number {
-  const clamped = Math.min(MAX_SCROLL_SPEED, Math.max(MIN_SCROLL_SPEED, speed))
-  return SCROLL_PIXELS_PER_SECOND * clamped
+  return SCROLL_PIXELS_PER_SECOND * clampSpeed(speed)
+}
+
+export function focusIntervalMs(speed: number): number {
+  return BASE_FOCUS_INTERVAL_MS / clampSpeed(speed)
 }
 
 /**
@@ -36,43 +47,55 @@ export function scrollRegionBy(region: HTMLElement, delta: number): void {
   region.scrollTop += delta
 }
 
-export interface ScrollController {
+export interface StickController {
   /** Current stick deflection, `-1`..`1`; `0` stops the loop. */
   setValue(value: number): void
   dispose(): void
 }
 
-export interface ScrollScheduler {
+export interface StickScheduler {
   request(callback: FrameRequestCallback): number
   cancel(handle: number): void
 }
 
-const defaultScheduler: ScrollScheduler = {
+const defaultScheduler: StickScheduler = {
   request: (callback) => requestAnimationFrame(callback),
   cancel: (handle) => cancelAnimationFrame(handle),
 }
 
 /**
- * Scrolls the focused region every frame while the stick is deflected. The
- * speed is read per frame, so a settings change applies without a restart.
+ * Steps focus (or scrolls at the ends) every frame while the stick is deflected.
+ * The speed is read per frame, so a settings change applies without a restart.
  */
-export function createScrollController(
+export function createStickController(
   tree: FocusTree,
   getSpeed: () => number,
   now: () => number = () => performance.now(),
-  scheduler: ScrollScheduler = defaultScheduler,
-): ScrollController {
+  scheduler: StickScheduler = defaultScheduler,
+): StickController {
   let value = 0
+  let sign = 0
   let frame: number | null = null
   let last = now()
+  let nextMoveAt = 0
+  let atBoundary = false
 
   const tick = (): void => {
     const current = now()
     const dt = Math.min(MAX_FRAME_SECONDS, Math.max(0, (current - last) / 1000))
     last = current
-    const focusedId = tree.getFocusedId()
-    const region = resolveScrollRegion(focusedId ? tree.getElement(focusedId) : null)
-    if (region) scrollRegionBy(region, value * scrollPixelsPerSecond(getSpeed()) * dt)
+    if (value !== 0) {
+      const direction = value > 0 ? 'down' : 'up'
+      if (current >= nextMoveAt) {
+        nextMoveAt = current + focusIntervalMs(getSpeed())
+        atBoundary = !tree.move(direction)
+      }
+      if (atBoundary) {
+        const focusedId = tree.getFocusedId()
+        const region = resolveScrollRegion(focusedId ? tree.getElement(focusedId) : null)
+        if (region) scrollRegionBy(region, value * scrollPixelsPerSecond(getSpeed()) * dt)
+      }
+    }
     frame = scheduler.request(tick)
   }
 
@@ -90,9 +113,22 @@ export function createScrollController(
 
   return {
     setValue(next) {
+      if (next === 0) {
+        value = 0
+        sign = 0
+        atBoundary = false
+        stop()
+        return
+      }
+      const nextSign = next > 0 ? 1 : -1
+      if (nextSign !== sign || frame === null) {
+        // Fresh deflection or reversed direction: step focus on the next frame.
+        nextMoveAt = 0
+        atBoundary = false
+        sign = nextSign
+      }
       value = next
-      if (next === 0) stop()
-      else start()
+      start()
     },
     dispose() {
       stop()

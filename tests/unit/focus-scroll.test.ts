@@ -2,7 +2,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { FocusTree } from '../../src/renderer/src/focus/tree'
 import {
-  createScrollController,
+  createStickController,
+  focusIntervalMs,
   MAX_SCROLL_SPEED,
   MIN_SCROLL_SPEED,
   resolveScrollRegion,
@@ -15,14 +16,14 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('scrollPixelsPerSecond', () => {
-  it('scales with the speed and clamps to the supported range', () => {
+describe('scrollPixelsPerSecond / focusIntervalMs', () => {
+  it('scale with the speed and clamp to the supported range', () => {
     expect(scrollPixelsPerSecond(1)).toBe(SCROLL_PIXELS_PER_SECOND)
-    expect(scrollPixelsPerSecond(MAX_SCROLL_SPEED)).toBe(
-      SCROLL_PIXELS_PER_SECOND * MAX_SCROLL_SPEED,
-    )
     expect(scrollPixelsPerSecond(5)).toBe(SCROLL_PIXELS_PER_SECOND * MAX_SCROLL_SPEED)
     expect(scrollPixelsPerSecond(0)).toBe(SCROLL_PIXELS_PER_SECOND * MIN_SCROLL_SPEED)
+
+    expect(focusIntervalMs(1)).toBeGreaterThan(focusIntervalMs(2))
+    expect(focusIntervalMs(0)).toBeGreaterThan(focusIntervalMs(1))
   })
 })
 
@@ -60,15 +61,19 @@ describe('scrollRegionBy', () => {
 
 function makeHarness(getSpeed: () => number) {
   document.body.innerHTML =
-    '<div data-scroll-region id="list"><div id="item" tabindex="0"></div></div>'
+    '<div data-scroll-region id="list">' +
+    '<div id="a" tabindex="0"></div><div id="b" tabindex="0"></div><div id="c" tabindex="0"></div>' +
+    '</div>'
   const region = document.getElementById('list')
-  const item = document.getElementById('item')
-  if (!region || !item) throw new Error('fixture missing')
+  if (!region) throw new Error('fixture missing')
+  const element = (id: string) => document.getElementById(id)
 
   const tree = new FocusTree()
   tree.register({ id: 'root', parentId: null, container: true, flow: 'column' })
-  tree.register({ id: 'item', parentId: 'root', getElement: () => item })
-  tree.setFocus('item')
+  for (const id of ['a', 'b', 'c']) {
+    tree.register({ id, parentId: 'root', getElement: () => element(id) })
+  }
+  tree.setFocus('a')
 
   let nowMs = 0
   let nextHandle = 0
@@ -83,7 +88,7 @@ function makeHarness(getSpeed: () => number) {
       pending.delete(handle)
     },
   }
-  const controller = createScrollController(tree, getSpeed, () => nowMs, scheduler)
+  const controller = createStickController(tree, getSpeed, () => nowMs, scheduler)
   const advance = (ms: number): void => {
     nowMs += ms
     const entry = pending.entries().next().value
@@ -91,30 +96,49 @@ function makeHarness(getSpeed: () => number) {
     pending.delete(entry[0])
     entry[1](nowMs)
   }
-  return { controller, region, advance, pending }
+  return { controller, region, tree, advance, pending }
 }
 
-describe('createScrollController', () => {
-  it('scrolls every frame while the stick is deflected', () => {
-    const { controller, region, advance } = makeHarness(() => 1)
+describe('createStickController', () => {
+  it('steps focus one node at a time while there is a neighbor', () => {
+    const { controller, tree, advance } = makeHarness(() => 1)
 
     controller.setValue(1)
-    advance(50)
-    // 50 ms at the base pixels-per-second.
-    expect(region.scrollTop).toBeCloseTo(SCROLL_PIXELS_PER_SECOND * 0.05)
+    advance(0)
+    expect(tree.getFocusedId()).toBe('b')
 
-    advance(50)
-    expect(region.scrollTop).toBeCloseTo(SCROLL_PIXELS_PER_SECOND * 0.1)
+    advance(focusIntervalMs(1))
+    expect(tree.getFocusedId()).toBe('c')
 
     controller.dispose()
   })
 
-  it('clamps a long frame so a stall does not jump the list', () => {
-    const { controller, region, advance } = makeHarness(() => 1)
+  it('scrolls the region once focus reaches the end', () => {
+    const { controller, region, tree, advance } = makeHarness(() => 1)
+    tree.setFocus('c')
 
     controller.setValue(1)
-    advance(2000)
+    advance(0)
+    expect(tree.getFocusedId()).toBe('c')
+    expect(region.scrollTop).toBe(0)
+
+    advance(50)
     expect(region.scrollTop).toBeCloseTo(SCROLL_PIXELS_PER_SECOND * 0.05)
+
+    controller.dispose()
+  })
+
+  it('returns to stepping focus when the stick is reversed', () => {
+    const { controller, tree, advance } = makeHarness(() => 1)
+    tree.setFocus('c')
+
+    controller.setValue(1)
+    advance(0)
+    advance(50)
+
+    controller.setValue(-1)
+    advance(0)
+    expect(tree.getFocusedId()).toBe('b')
 
     controller.dispose()
   })
@@ -127,21 +151,6 @@ describe('createScrollController', () => {
 
     controller.setValue(0)
     expect(pending.size).toBe(0)
-
-    controller.dispose()
-  })
-
-  it('reads the speed per frame so a settings change applies live', () => {
-    let speed = 1
-    const { controller, region, advance } = makeHarness(() => speed)
-
-    controller.setValue(1)
-    advance(50)
-    const first = region.scrollTop
-
-    speed = 2
-    advance(50)
-    expect(region.scrollTop - first).toBeCloseTo(first * 2)
 
     controller.dispose()
   })

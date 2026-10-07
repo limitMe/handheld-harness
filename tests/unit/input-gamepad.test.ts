@@ -44,16 +44,14 @@ describe('readGamepadStates', () => {
     expect(states.RStickY).toEqual({ pressed: true, value: -0.8 })
   })
 
-  it('needs a larger horizontal deflection before a stick acts like a D-pad', () => {
-    const half = readGamepadStates(makePad([], [0.4, 0, 0, 0]))
-    expect(half.LStickX).toEqual({ pressed: false, value: 0 })
+  it('requires a firm deflection before a stick drives navigation or scroll', () => {
+    const resting = readGamepadStates(makePad([], [0.4, 0.4, 0, 0]))
+    expect(resting.LStickX).toEqual({ pressed: false, value: 0 })
+    expect(resting.LStickY).toEqual({ pressed: false, value: 0 })
 
-    const pushed = readGamepadStates(makePad([], [0.7, 0, 0, 0]))
+    const pushed = readGamepadStates(makePad([], [0.7, -0.8, 0, 0]))
     expect(pushed.LStickX).toEqual({ pressed: true, value: 0.7 })
-
-    // Vertical keeps the normal deadzone so scrolling stays responsive.
-    const vertical = readGamepadStates(makePad([], [0, 0.4, 0, 0]))
-    expect(vertical.LStickY).toEqual({ pressed: true, value: 0.4 })
+    expect(pushed.LStickY).toEqual({ pressed: true, value: -0.8 })
   })
 })
 
@@ -71,11 +69,11 @@ describe('diffControlStates', () => {
   })
 
   it('emits an analog value change while the stick stays pressed', () => {
-    const start = readGamepadStates(makePad([], [0, 0, 0, 0.8]))
-    const moved = readGamepadStates(makePad([], [0, 0, 0, 0.4]))
+    const start = readGamepadStates(makePad([], [0, 0, 0, 0.9]))
+    const moved = readGamepadStates(makePad([], [0, 0, 0, 0.6]))
 
     expect(diffControlStates(start, moved)).toEqual([
-      { control: 'RStickY', pressed: true, value: 0.4, source: 'gamepad', valueChanged: true },
+      { control: 'RStickY', pressed: true, value: 0.6, source: 'gamepad', valueChanged: true },
     ])
   })
 })

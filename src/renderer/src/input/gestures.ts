@@ -1,4 +1,4 @@
-import { isRepeatable, repeatIntervalFor, type ActionId } from '@shared/actions'
+import { isRepeatable, type ActionId } from '@shared/actions'
 import { isAnalogControl } from './gamepad'
 import type { ControlChange, InputActionEvent } from './types'
 
@@ -160,7 +160,7 @@ export class GestureResolver {
   }
 
   private scheduleRepeat(gesture: ActiveGesture, action: ActionId, now: number): void {
-    gesture.repeatInterval = repeatIntervalFor(action, this.repeatIntervalMs)
+    gesture.repeatInterval = this.repeatIntervalMs
     gesture.nextRepeatAt = isRepeatable(action) ? now + this.repeatDelayMs : null
   }
 

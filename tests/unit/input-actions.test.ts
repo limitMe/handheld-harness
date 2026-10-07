@@ -5,7 +5,6 @@ import {
   actionLabel,
   isActionId,
   isRepeatable,
-  repeatIntervalFor,
   splitControlKey,
 } from '../../src/shared/actions'
 
@@ -24,12 +23,6 @@ describe('action registry', () => {
     }
     expect(isRepeatable('input.send')).toBe(false)
     expect(isRepeatable('task.close')).toBe(false)
-  })
-
-  it('gives scroll a slower repeat cadence, others the fallback', () => {
-    expect(repeatIntervalFor('scroll', 60)).toBe(120)
-    expect(repeatIntervalFor('nav.down', 60)).toBe(60)
-    expect(repeatIntervalFor('input.send', 60)).toBe(60)
   })
 
   it('validates action ids', () => {

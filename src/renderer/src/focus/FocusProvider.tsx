@@ -3,7 +3,7 @@ import type { Settings } from '@shared/ipc'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { FocusTreeContext } from './context'
 import { FocusContainer } from './FocusContainer'
-import { createScrollController, type ScrollController } from './scroll'
+import { createStickController, type StickController } from './scroll'
 import { FocusTree } from './tree'
 
 /** Keeps the analog scroll speed in sync with settings (spec 15). */
@@ -36,7 +36,7 @@ function useScrollSpeed(): RefObject<number> {
  * registered on a low-priority context so an activated component or a modal can
  * shadow it, and it never resolves bindings itself: the screen context does.
  */
-function FocusNavigation({ tree, scroll }: { tree: FocusTree; scroll: ScrollController }) {
+function FocusNavigation({ tree, scroll }: { tree: FocusTree; scroll: StickController }) {
   useInputContext(
     'focus',
     {
@@ -56,7 +56,7 @@ function FocusNavigation({ tree, scroll }: { tree: FocusTree; scroll: ScrollCont
 export function FocusProvider({ children }: { children: ReactNode }) {
   const [tree] = useState(() => new FocusTree())
   const scrollSpeed = useScrollSpeed()
-  const [scroll] = useState(() => createScrollController(tree, () => scrollSpeed.current))
+  const [scroll] = useState(() => createStickController(tree, () => scrollSpeed.current))
 
   useEffect(() => () => scroll.dispose(), [scroll])
 
