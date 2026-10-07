@@ -148,6 +148,8 @@ export const en = {
     providerNone: 'This provider reported no models.',
     count: '{{value}} models',
     default: 'Default',
+    searchPlaceholder: 'Search providers and models',
+    noMatches: 'No providers or models match your search.',
   },
   voice: {
     provider: 'Provider',

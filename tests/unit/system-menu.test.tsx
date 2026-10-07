@@ -79,7 +79,7 @@ describe('SystemMenu', () => {
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     fireEvent.keyDown(window, { key: 'Enter' })
     await waitFor(() =>
-      expect(screen.getByTestId('model-engine-default').hasAttribute('data-focused')).toBe(true),
+      expect(screen.getByTestId('models-search').hasAttribute('data-focused')).toBe(true),
     )
 
     // Back in the panel returns to the category list, it does not close the menu.
@@ -96,20 +96,54 @@ describe('SystemMenu', () => {
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     fireEvent.keyDown(window, { key: 'Enter' })
     await waitFor(() =>
-      expect(screen.getByTestId('model-engine-default').hasAttribute('data-focused')).toBe(true),
+      expect(screen.getByTestId('models-search').hasAttribute('data-focused')).toBe(true),
     )
     await waitFor(() => expect(screen.getByTestId('model-provider-fake')).not.toBeNull())
 
     // Models are not rendered until the provider row is activated.
     expect(screen.queryByTestId('model-fake-m1')).toBeNull()
 
-    // Focus moves from "Engine default" down to the provider, then expands it.
+    // Focus steps from the search field, past "Engine default", to the provider.
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    await waitFor(() =>
+      expect(screen.getByTestId('model-engine-default').hasAttribute('data-focused')).toBe(true),
+    )
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     await waitFor(() =>
       expect(screen.getByTestId('model-provider-fake').hasAttribute('data-focused')).toBe(true),
     )
     fireEvent.keyDown(window, { key: 'Enter' })
     await waitFor(() => expect(screen.getByTestId('model-fake-m1')).not.toBeNull())
+  })
+
+  it('filters providers and models from the search field', async () => {
+    installBridge([
+      { providerId: 'openai', name: 'OpenAI', models: [{ id: 'gpt', name: 'GPT' }] },
+      { providerId: 'anthropic', name: 'Anthropic', models: [{ id: 'claude', name: 'Claude' }] },
+    ])
+    renderMenu()
+    await waitFor(() => expect(screen.getByTestId('key-bindings')).not.toBeNull())
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTestId('model-provider-openai')).not.toBeNull())
+
+    // Matching a model keeps only its provider, and expands it automatically.
+    fireEvent.change(screen.getByTestId('models-search-input'), { target: { value: 'claude' } })
+    await waitFor(() => expect(screen.queryByTestId('model-provider-openai')).toBeNull())
+    expect(screen.getByTestId('model-provider-anthropic')).not.toBeNull()
+    expect(screen.getByTestId('model-anthropic-claude')).not.toBeNull()
+
+    // Matching a provider keeps all of its models.
+    fireEvent.change(screen.getByTestId('models-search-input'), { target: { value: 'openai' } })
+    await waitFor(() => expect(screen.getByTestId('model-provider-openai')).not.toBeNull())
+    expect(screen.getByTestId('model-openai-gpt')).not.toBeNull()
+    expect(screen.queryByTestId('model-provider-anthropic')).toBeNull()
+
+    // No matches: an empty-state message replaces the list.
+    fireEvent.change(screen.getByTestId('models-search-input'), { target: { value: 'zzz' } })
+    await waitFor(() => expect(screen.getByTestId('models-no-matches')).not.toBeNull())
+    expect(screen.queryByTestId('model-provider-openai')).toBeNull()
   })
 
   it('does not render a large catalog all at once', async () => {
@@ -152,11 +186,18 @@ describe('SystemMenu', () => {
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     fireEvent.keyDown(window, { key: 'Enter' })
     await waitFor(() =>
-      expect(screen.getByTestId('model-engine-default').hasAttribute('data-focused')).toBe(true),
+      expect(screen.getByTestId('models-search').hasAttribute('data-focused')).toBe(true),
     )
     await waitFor(() => expect(screen.getByTestId('model-provider-fake')).not.toBeNull())
 
     fireEvent.keyDown(window, { key: 'ArrowDown' })
+    await waitFor(() =>
+      expect(screen.getByTestId('model-engine-default').hasAttribute('data-focused')).toBe(true),
+    )
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    await waitFor(() =>
+      expect(screen.getByTestId('model-provider-fake').hasAttribute('data-focused')).toBe(true),
+    )
     fireEvent.keyDown(window, { key: 'Enter' })
     await waitFor(() => expect(screen.getByTestId('model-fake-m1')).not.toBeNull())
     fireEvent.keyDown(window, { key: 'ArrowDown' })

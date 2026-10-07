@@ -65,7 +65,12 @@ export const HIDDEN_BINDING_ACTIONS: ReadonlySet<ActionId> = new Set<ActionId>([
 ])
 
 /** Screens whose bindings are fixed and never surfaced in settings (spec 15). */
-export const HIDDEN_BINDING_CONTEXTS: ReadonlySet<string> = new Set(['systemMenu', 'systemMenu.picker'])
+export const HIDDEN_BINDING_CONTEXTS: ReadonlySet<string> = new Set([
+  'systemMenu',
+  'systemMenu.picker',
+  // The model search field is an ephemeral input, not a configurable screen.
+  'systemMenu.models',
+])
 
 /**
  * Bindings that every screen repeats for the same purpose. The settings page

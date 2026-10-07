@@ -1,19 +1,152 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ModelGroup, ModelRef } from '@shared/engine'
 import type { Settings, SettingsPatch } from '@shared/ipc'
+import { filterModelGroups } from '@shared/model-search'
 import { touchRecentModel } from '@shared/model-recents'
-import { useFocusTree } from '../focus'
+import { dictation, type DictationTarget } from '../dictation'
+import { useFocusTree, useFocusable } from '../focus'
 import { useTranslation } from '../i18n'
-import { MenuCancelProvider, MenuRow } from './MenuRow'
+import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
+import { deleteBackward } from '../workbench/textEditing'
+import { MenuCancelProvider, MenuRow, useMenuCancel } from './MenuRow'
 
 export interface ModelsPageProps {
   settings: Settings
   update: (patch: SettingsPatch) => Promise<void>
 }
 
+const SEARCH_ID = 'system-menu.first'
+/** Search sits at the top; the default row and providers follow well below. */
+const SEARCH_ORDER = 0
+const DEFAULT_ORDER = 100
+const PROVIDER_ORDER = 200
+
 function sameModel(a: ModelRef | null | undefined, b: ModelRef | null | undefined): boolean {
   if (!a || !b) return !a && !b
   return a.providerId === b.providerId && a.modelId === b.modelId
+}
+
+/** Gamepad X deletes one character while the search field is active (spec 15). */
+function ModelSearchInputContext({ onDelete }: { onDelete: () => void }) {
+  useInputContext(
+    'systemMenu.models',
+    { 'input.deleteBackward': onPress(onDelete) },
+    CONTEXT_ORDER.activated,
+  )
+  return null
+}
+
+/**
+ * The model search field. It is a focus-tree node (the wrapper) rather than the
+ * input itself, so arrow keys still navigate while it is merely focused; the
+ * input only takes the DOM focus once activated. Long-press Y dictates into it
+ * and X deletes, mirroring the composer (spec 16).
+ */
+function ModelSearchRow({
+  query,
+  onChange,
+}: {
+  query: string
+  onChange: (value: string) => void
+}) {
+  const { t } = useTranslation()
+  const tree = useFocusTree()
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const valueRef = useRef(query)
+  useEffect(() => {
+    valueRef.current = query
+  })
+  const cancel = useMenuCancel()
+
+  const focus = useFocusable({
+    id: SEARCH_ID,
+    elementRef: wrapperRef,
+    order: SEARCH_ORDER,
+    activatable: true,
+    onActivate: () => inputRef.current?.focus(),
+    onDeactivate: () => inputRef.current?.blur(),
+    ...(cancel ? { onCancel: cancel } : {}),
+  })
+
+  const dictationTarget = useMemo<DictationTarget>(
+    () => ({
+      getValue: () => valueRef.current,
+      getSelection: () => {
+        const element = inputRef.current
+        const length = valueRef.current.length
+        return element
+          ? { start: element.selectionStart ?? length, end: element.selectionEnd ?? length }
+          : { start: length, end: length }
+      },
+      apply: (result) => {
+        valueRef.current = result.value
+        onChange(result.value)
+        const element = inputRef.current
+        if (element) {
+          element.value = result.value
+          element.setSelectionRange(result.selectionStart, result.selectionEnd)
+        }
+      },
+      activate: () => tree?.activate(SEARCH_ID),
+      isActivated: () => focus.activated,
+      isAlive: () => inputRef.current !== null,
+    }),
+    [onChange, tree, focus.activated],
+  )
+
+  useEffect(() => {
+    if (!focus.focused && !focus.activated) {
+      dictation.registerTarget(null)
+      return undefined
+    }
+    dictation.registerTarget(dictationTarget)
+    return () => dictation.registerTarget(null)
+  }, [focus.focused, focus.activated, dictationTarget])
+
+  const deleteBackwardAtCaret = useCallback(() => {
+    const element = inputRef.current
+    if (!element) return
+    const length = element.value.length
+    const next = deleteBackward(
+      element.value,
+      element.selectionStart ?? length,
+      element.selectionEnd ?? length,
+    )
+    element.value = next.value
+    element.setSelectionRange(next.position, next.position)
+    onChange(next.value)
+  }, [onChange])
+
+  return (
+    <>
+      <div
+        ref={wrapperRef}
+        {...focus.props}
+        data-testid="models-search"
+        className="flex min-h-11 w-full items-center gap-2 rounded-md border border-surface-raised bg-surface px-3 py-2 text-base text-text"
+      >
+        <span aria-hidden="true" className="text-text-muted">
+          ⌕
+        </span>
+        <input
+          ref={inputRef}
+          data-testid="models-search-input"
+          type="text"
+          value={query}
+          placeholder={t('models.searchPlaceholder')}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== 'Escape') return
+            event.preventDefault()
+            tree?.deactivate()
+          }}
+          className="min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+        />
+      </div>
+      {focus.activated ? <ModelSearchInputContext onDelete={deleteBackwardAtCaret} /> : null}
+    </>
+  )
 }
 
 /**
@@ -21,13 +154,14 @@ function sameModel(a: ModelRef | null | undefined, b: ModelRef | null | undefine
  *
  * The engine can report thousands of models (`/provider` returns the whole
  * catalog), so only the expanded provider's models are rendered at a time —
- * one focus-node row per model would overwhelm the focus tree.
+ * one focus-node row per model would overwhelm the focus tree. The search field
+ * filters the providers and models by name and expands the matches.
  */
 export function ModelsPage({ settings, update }: ModelsPageProps) {
   const { t } = useTranslation()
-  const tree = useFocusTree()
   const [groups, setGroups] = useState<ModelGroup[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [query, setQuery] = useState('')
   const selected = settings.model.default ?? null
   const [expandedId, setExpandedId] = useState<string | null>(
     () => settings.model.default?.providerId ?? null,
@@ -52,10 +186,13 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
     }
   }, [])
 
+  const searching = query.trim().length > 0
+  const visibleGroups = useMemo(() => filterModelGroups(groups, query), [groups, query])
+
   // Leave room for the largest provider's models between two provider rows.
   const stride = useMemo(
-    () => groups.reduce((max, group) => Math.max(max, group.models.length), 0) + 1,
-    [groups],
+    () => visibleGroups.reduce((max, group) => Math.max(max, group.models.length), 0) + 1,
+    [visibleGroups],
   )
 
   const selectedName = useMemo(
@@ -67,15 +204,6 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
         : undefined,
     [groups, selected],
   )
-
-  // Once the catalog arrives, focus the saved model instead of leaving the
-  // highlight on "Engine default", so the page reads as the current selection.
-  useEffect(() => {
-    if (status !== 'ready' || !selected || !tree) return
-    if (tree.getFocusedId() !== 'system-menu.first') return
-    if (tree.setFocus(`system-menu.models.${selected.providerId}.${selected.modelId}`)) return
-    tree.setFocus(`system-menu.models.provider.${selected.providerId}`)
-  }, [status, selected, tree])
 
   const currentLabel = !selected
     ? t('models.engineDefaultAutomatic')
@@ -91,12 +219,14 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
 
   return (
     <div data-testid="models-page">
+      <ModelSearchRow query={query} onChange={setQuery} />
+
       <p className="px-3 pt-3 pb-1 text-code text-text-muted" data-testid="models-current">
         {t('models.current', { name: currentLabel })}
       </p>
       <MenuRow
-        id="system-menu.first"
-        order={0}
+        id="system-menu.models.default"
+        order={DEFAULT_ORDER}
         selected={!selected}
         testId="model-engine-default"
         onActivate={() => void update({ model: { default: null } })}
@@ -113,10 +243,15 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
       {status === 'ready' && groups.length === 0 ? (
         <p className="px-3 py-4 text-text-muted">{t('models.none')}</p>
       ) : null}
+      {status === 'ready' && searching && visibleGroups.length === 0 ? (
+        <p className="px-3 py-4 text-text-muted" data-testid="models-no-matches">
+          {t('models.noMatches')}
+        </p>
+      ) : null}
 
-      {groups.map((group, index) => {
-        const providerOrder = 100 + index * stride
-        const expanded = expandedId === group.providerId
+      {visibleGroups.map((group, index) => {
+        const providerOrder = PROVIDER_ORDER + index * stride
+        const expanded = searching || expandedId === group.providerId
         const currentName =
           selected?.providerId === group.providerId
             ? group.models.find((model) => model.id === selected.modelId)?.name

@@ -147,6 +147,8 @@ export const zh = {
     providerNone: '该服务商没有返回任何模型。',
     count: '{{value}} 个模型',
     default: '默认',
+    searchPlaceholder: '搜索服务商或模型',
+    noMatches: '没有匹配的服务商或模型。',
   },
   voice: {
     provider: '服务商',

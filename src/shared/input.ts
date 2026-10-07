@@ -173,6 +173,11 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       A: 'nav.activate',
       B: 'nav.deactivate',
     },
+    // Pushed while the model search field is active: X deletes one character.
+    // Long-press Y (dictation) comes from the global layer (spec 16).
+    'systemMenu.models': {
+      X: 'input.deleteBackward',
+    },
     // Modal dialogs own navigation so both the D-pad and the sticks work no
     // matter which screen or overlay is beneath them (spec 11).
     dialog: {

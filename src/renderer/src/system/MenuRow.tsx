@@ -15,6 +15,11 @@ export function MenuCancelProvider({
   return <MenuCancelContext.Provider value={onCancel}>{children}</MenuCancelContext.Provider>
 }
 
+/** The panel's Back handler, for custom focusable rows (spec 15). */
+export function useMenuCancel(): (() => void) | undefined {
+  return useContext(MenuCancelContext) ?? undefined
+}
+
 export interface MenuRowProps {
   id: string
   order?: number
