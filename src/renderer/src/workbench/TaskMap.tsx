@@ -391,6 +391,12 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
             if (selectedCard?.kind === 'empty') setHistoryOpen(true)
           }}
           onCloseTask={() => {
+            // Long-press B dismisses the empty card; on a task card it opens the
+            // close confirmation (spec 14).
+            if (selectedCard?.kind === 'empty') {
+              setEmpty(false)
+              return
+            }
             if (selectedCard?.kind === 'task') setConfirmRef(selectedCard.ref)
           }}
           onMove={(delta) => setSelectedId(stepCardId(cards, selectedId, delta))}

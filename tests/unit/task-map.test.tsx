@@ -139,4 +139,22 @@ describe('TaskMap empty card', () => {
     expect(screen.queryByTestId('task-card-empty-hints')).toBeNull()
     expect(screen.getByText('history')).not.toBeNull()
   })
+
+  it('dismisses the empty card on close and falls back to a task card', async () => {
+    installBridge()
+    seed([ref('s1')], ref('s1'))
+    renderMap()
+
+    await waitFor(() => expect(screen.getByTestId('task-card')).not.toBeNull())
+    fireEvent.keyDown(window, { key: 'n' })
+    await waitFor(() => expect(screen.getByTestId('task-card-empty')).not.toBeNull())
+    expect(screen.getByTestId('task-card-empty').hasAttribute('data-selected')).toBe(true)
+
+    // Close (hold B / Delete) removes the empty card and selects the neighbour.
+    fireEvent.keyDown(window, { key: 'Delete' })
+    await waitFor(() => expect(screen.queryByTestId('task-card-empty')).toBeNull())
+    const card = screen.getByTestId('task-card')
+    expect(card.hasAttribute('data-selected')).toBe(true)
+    expect(card.hasAttribute('data-focused')).toBe(true)
+  })
 })
