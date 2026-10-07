@@ -173,6 +173,5 @@ P-13、P-14，以及上面列出的临时任务切换器快捷键。本 spec 已
 
 掌机实测后按用户反馈调整默认键位与滚动：
 
-- **双摇杆垂直滚动**：`LStickY` 与 `RStickY` 都绑定 `scroll`（原来只有右摇杆）。
-- **摇杆左右聚焦**：新增按方向解析的绑定 `LStickX+ / LStickX- / RStickX+ / RStickX-` → `nav.left` / `nav.right`；`GestureResolver` 对模拟量先按带符号的控件名（`LStickX+`）查表，再回退到裸控件名。水平轴死区提高到 `STICK_NAV_DEADZONE = 0.55`，避免滚动时轻微横向漂移误触发导航。
-- **滚动速度**：改回连续滚动，不再用重复事件逐帧跳焦点。`scroll` 动作在持续偏转期间由 `createScrollController` 每帧按 `value × 速度 × 帧间隔` 滚动最近的 `data-scroll-region`，帧间隔上限 50 ms。速度由 `settings.ui.scrollSpeed`（0.25–2，默认 1）控制，基准 `SCROLL_PIXELS_PER_SECOND = 220`，在系统菜单「Display & hints › Stick scroll speed」里用可拖动条调整。与 spec 原文“优先移动焦点让高亮跟随”的差异：摇杆现在只滚动、不移动焦点，方向键仍负责焦点移动。
+- **双摇杆垂直导航 + 滚动**：`LStickY` 与 `RStickY` 都绑定 `scroll`（原来只有右摇杆）。`createStickController` 在持续偏转期间先按固定间隔 `tree.move` 移动焦点（与十字键一致，能在一级/二级菜单里换行），只有当该方向已无处可去（列表到头）时才改为连续滚动最近的 `data-scroll-region`；帧间隔上限 50 ms。速度由 `settings.ui.scrollSpeed`（0.25–2，默认 1）同时缩放焦点步进间隔（基准 `BASE_FOCUS_INTERVAL_MS = 280`）和滚动速度（基准 `SCROLL_PIXELS_PER_SECOND = 180`），在系统菜单「Display & hints › Stick scroll speed」里用可拖动条调整。
+- **摇杆左右聚焦**：新增按方向解析的绑定 `LStickX+ / LStickX- / RStickX+ / RStickX-` → `nav.left` / `nav.right`；`GestureResolver` 对模拟量先按带符号的控件名（`LStickX+`）查表，再回退到裸控件名。四个摇杆轴都使用 `STICK_NAV_DEADZONE = 0.55`，避免静止漂移误触发导航或滚动。
