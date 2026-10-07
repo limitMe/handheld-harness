@@ -168,3 +168,11 @@ P-13、P-14，以及上面列出的临时任务切换器快捷键。本 spec 已
 14 落地后已按计划移除 `taskSwitcher` 上下文与 `Ctrl+K` / `Ctrl+N` / `Ctrl+Shift+Backspace` 快捷键；任务地图用全局 `map.toggle`（Back）打开，绑定不变（见 spec 14 实现记录）。
 
 “不接键盘、只用手柄完成 03 全部操作”仍需掌机实测，步骤与限制见 11 的“未完成 / 需要人工验证”。
+
+### 交互优化（2026-10-07）
+
+掌机实测后按用户反馈调整默认键位与滚动：
+
+- **双摇杆垂直滚动**：`LStickY` 与 `RStickY` 都绑定 `scroll`（原来只有右摇杆）。
+- **摇杆左右聚焦**：新增按方向解析的绑定 `LStickX+ / LStickX- / RStickX+ / RStickX-` → `nav.left` / `nav.right`；`GestureResolver` 对模拟量先按带符号的控件名（`LStickX+`）查表，再回退到裸控件名。水平轴死区提高到 `STICK_NAV_DEADZONE = 0.55`，避免滚动时轻微横向漂移误触发导航。
+- **滚动速度**：`scroll` 的重复间隔改为 120 ms（`ActionDefinition.repeatMs`），`SCROLL_STEP` 由 36 降到 24。
