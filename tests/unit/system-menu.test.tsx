@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, act } from '@testing-library/react'
 import { DEFAULT_SETTINGS } from '../../src/shared/ipc'
 import { FocusProvider } from '../../src/renderer/src/focus'
 import { InputProvider } from '../../src/renderer/src/input'
+import { SEARCH_DEBOUNCE_MS } from '../../src/renderer/src/system/ModelsPage'
 import { SystemMenu } from '../../src/renderer/src/system/SystemMenu'
 import { clearModelsCache } from '../../src/renderer/src/system/modelsCache'
 
@@ -124,7 +125,7 @@ describe('SystemMenu', () => {
     await waitFor(() => expect(screen.getByTestId('model-fake-m1')).not.toBeNull())
   })
 
-  it('filters providers and models from the search field', async () => {
+  it('filters providers and models from the search field after a pause', async () => {
     installBridge([
       { providerId: 'openai', name: 'OpenAI', models: [{ id: 'gpt', name: 'GPT' }] },
       { providerId: 'anthropic', name: 'Anthropic', models: [{ id: 'claude', name: 'Claude' }] },
@@ -136,22 +137,37 @@ describe('SystemMenu', () => {
     fireEvent.keyDown(window, { key: 'Enter' })
     await waitFor(() => expect(screen.getByTestId('model-provider-openai')).not.toBeNull())
 
-    // Matching a model keeps only its provider, and expands it automatically.
-    fireEvent.change(screen.getByTestId('models-search-input'), { target: { value: 'claude' } })
-    await waitFor(() => expect(screen.queryByTestId('model-provider-openai')).toBeNull())
-    expect(screen.getByTestId('model-provider-anthropic')).not.toBeNull()
-    expect(screen.getByTestId('model-anthropic-claude')).not.toBeNull()
+    vi.useFakeTimers()
+    try {
+      const search = screen.getByTestId('models-search-input')
 
-    // Matching a provider keeps all of its models.
-    fireEvent.change(screen.getByTestId('models-search-input'), { target: { value: 'openai' } })
-    await waitFor(() => expect(screen.getByTestId('model-provider-openai')).not.toBeNull())
-    expect(screen.getByTestId('model-openai-gpt')).not.toBeNull()
-    expect(screen.queryByTestId('model-provider-anthropic')).toBeNull()
+      // A query shorter than the minimum never filters, even after the pause.
+      fireEvent.change(search, { target: { value: 'op' } })
+      act(() => vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS))
+      expect(screen.getByTestId('model-provider-anthropic')).not.toBeNull()
 
-    // No matches: an empty-state message replaces the list.
-    fireEvent.change(screen.getByTestId('models-search-input'), { target: { value: 'zzz' } })
-    await waitFor(() => expect(screen.getByTestId('models-no-matches')).not.toBeNull())
-    expect(screen.queryByTestId('model-provider-openai')).toBeNull()
+      // Matching a model keeps only its provider, and expands it automatically.
+      fireEvent.change(search, { target: { value: 'claude' } })
+      act(() => vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS))
+      expect(screen.queryByTestId('model-provider-openai')).toBeNull()
+      expect(screen.getByTestId('model-provider-anthropic')).not.toBeNull()
+      expect(screen.getByTestId('model-anthropic-claude')).not.toBeNull()
+
+      // Matching a provider keeps all of its models.
+      fireEvent.change(search, { target: { value: 'openai' } })
+      act(() => vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS))
+      expect(screen.getByTestId('model-provider-openai')).not.toBeNull()
+      expect(screen.getByTestId('model-openai-gpt')).not.toBeNull()
+      expect(screen.queryByTestId('model-provider-anthropic')).toBeNull()
+
+      // No matches: an empty-state message replaces the list.
+      fireEvent.change(search, { target: { value: 'zzz' } })
+      act(() => vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS))
+      expect(screen.getByTestId('models-no-matches')).not.toBeNull()
+      expect(screen.queryByTestId('model-provider-openai')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('only re-queries the engine when Refresh is pressed', async () => {

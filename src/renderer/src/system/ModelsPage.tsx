@@ -23,6 +23,11 @@ const REFRESH_ORDER = 50
 const DEFAULT_ORDER = 100
 const PROVIDER_ORDER = 200
 
+/** Filtering starts only after this many characters... */
+export const SEARCH_MIN_CHARS = 3
+/** ...and this long after the field stops changing, so typing stays responsive. */
+export const SEARCH_DEBOUNCE_MS = 2000
+
 function sameModel(a: ModelRef | null | undefined, b: ModelRef | null | undefined): boolean {
   if (!a || !b) return !a && !b
   return a.providerId === b.providerId && a.modelId === b.modelId
@@ -43,23 +48,31 @@ function ModelSearchInputContext({ onDelete }: { onDelete: () => void }) {
  * input itself, so arrow keys still navigate while it is merely focused; the
  * input only takes the DOM focus once activated. Long-press Y dictates into it
  * and X deletes, mirroring the composer (spec 16).
+ *
+ * The raw text lives here so typing never re-renders the catalog; the parent
+ * only hears the debounced, length-gated query it should filter by.
  */
-function ModelSearchRow({
-  query,
-  onChange,
-}: {
-  query: string
-  onChange: (value: string) => void
-}) {
+function ModelSearchRow({ onApply }: { onApply: (query: string) => void }) {
   const { t } = useTranslation()
   const tree = useFocusTree()
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const valueRef = useRef(query)
+  const [text, setText] = useState('')
+  const textRef = useRef(text)
   useEffect(() => {
-    valueRef.current = query
+    textRef.current = text
   })
   const cancel = useMenuCancel()
+
+  // Apply only after a pause, and only from the minimum length on. The clear is
+  // debounced too, which keeps every state update out of the effect body.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const trimmed = text.trim()
+      onApply(trimmed.length >= SEARCH_MIN_CHARS ? trimmed : '')
+    }, SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [text, onApply])
 
   const focus = useFocusable({
     id: SEARCH_ID,
@@ -73,17 +86,17 @@ function ModelSearchRow({
 
   const dictationTarget = useMemo<DictationTarget>(
     () => ({
-      getValue: () => valueRef.current,
+      getValue: () => textRef.current,
       getSelection: () => {
         const element = inputRef.current
-        const length = valueRef.current.length
+        const length = textRef.current.length
         return element
           ? { start: element.selectionStart ?? length, end: element.selectionEnd ?? length }
           : { start: length, end: length }
       },
       apply: (result) => {
-        valueRef.current = result.value
-        onChange(result.value)
+        textRef.current = result.value
+        setText(result.value)
         const element = inputRef.current
         if (element) {
           element.value = result.value
@@ -94,7 +107,7 @@ function ModelSearchRow({
       isActivated: () => focus.activated,
       isAlive: () => inputRef.current !== null,
     }),
-    [onChange, tree, focus.activated],
+    [tree, focus.activated],
   )
 
   useEffect(() => {
@@ -117,8 +130,8 @@ function ModelSearchRow({
     )
     element.value = next.value
     element.setSelectionRange(next.position, next.position)
-    onChange(next.value)
-  }, [onChange])
+    setText(next.value)
+  }, [])
 
   return (
     <>
@@ -135,9 +148,9 @@ function ModelSearchRow({
           ref={inputRef}
           data-testid="models-search-input"
           type="text"
-          value={query}
+          value={text}
           placeholder={t('models.searchPlaceholder')}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => setText(event.target.value)}
           onKeyDown={(event) => {
             if (event.key !== 'Escape') return
             event.preventDefault()
@@ -170,6 +183,8 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
   )
   const [refreshing, setRefreshing] = useState(false)
   const [query, setQuery] = useState('')
+  // Stable so the search row's debounce effect is not reset on every render.
+  const applyQuery = useCallback((next: string) => setQuery(next), [])
   const selected = settings.model.default ?? null
   const [expandedId, setExpandedId] = useState<string | null>(
     () => settings.model.default?.providerId ?? null,
@@ -238,7 +253,7 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
 
   return (
     <div data-testid="models-page">
-      <ModelSearchRow query={query} onChange={setQuery} />
+      <ModelSearchRow onApply={applyQuery} />
 
       <MenuRow
         id="system-menu.models.refresh"
