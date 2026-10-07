@@ -135,6 +135,11 @@ export function ModelRing({ slots, initialSlot, onConfirm, onCancel }: ModelRing
         else if (change.control === 'RStickX') values.rx = change.value
         else if (change.control === 'RStickY') values.ry = change.value
         else return
+        // The two axes of a stick report separately, so a release zeroes one axis
+        // a frame before the other. Recomputing then would read a half-updated
+        // pair and snap the ring to a cardinal sector (usually the top); only a
+        // still-deflected stick moves the cursor.
+        if (!change.pressed) return
         const useLeft =
           Math.hypot(values.lx, values.ly) >= Math.hypot(values.rx, values.ry)
         select(ringSlotFromStick(useLeft ? values.lx : values.rx, useLeft ? values.ly : values.ry))

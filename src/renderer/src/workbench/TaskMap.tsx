@@ -249,11 +249,26 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
   // Focus the selected card. The empty card is only focused: activation is a
   // separate concept (spec 11) and the map's own legend describes its actions, so
   // it is never force-activated when it is created or selected.
+  //
+  // The focus is re-asserted on the microtask queue: dev StrictMode replays a newly
+  // mounted card's registration effect, whose unregister step moves focus to a
+  // neighbour after this effect already ran, and the effect does not re-run.
+  const focusToken = useRef(0)
   useEffect(() => {
     if (!tree || !selectedId) return
-    tree.setFocus(selectedId)
-    if (selectedCard?.kind === 'empty') return
-    tree.activate(selectedId)
+    const token = ++focusToken.current
+    const activate = selectedCard?.kind !== 'empty'
+    const apply = (): void => {
+      tree.setFocus(selectedId)
+      if (activate) tree.activate(selectedId)
+    }
+    apply()
+    queueMicrotask(() => {
+      if (focusToken.current === token) apply()
+    })
+    return () => {
+      focusToken.current += 1
+    }
   }, [tree, selectedId, selectedCard?.kind])
 
   const history = useMemo(() => historyEntries(sessions, open), [sessions, open])

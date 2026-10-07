@@ -182,3 +182,10 @@ P-16：首次运行时是否自动打开最近的任务；关闭当前卡片后�
 
 （本轮之后：单测 337 用例、`npm run test:e2e` 25 用例通过。）
 
+### 两个 Bug 根因与修复（2026-10-07，用户掌机实测）
+
+- **新建卡片不聚焦（只在 dev 复现）**：`FocusTree` 是 React 之外的单例，节点注册写在 `useFocusable` 的 effect 里。dev 的 `StrictMode` 会把新挂载组件的 effect 重放一遍（register → unregister → register）；第一次 `setFocus` 由父组件的 effect 完成，但重放时 unregister 会把这个刚聚焦的节点移除、把焦点交给邻居，register 不会再聚焦，父组件的 effect 也不会再跑，于是焦点回到原来的卡片。生产构建（`npm run test:e2e` 跑的）没有 StrictMode，所以 e2e 一直没复现。
+  - 修复：任务地图的聚焦 effect 在同步 `setFocus` 之后，再在**微任务队列**上重新 `setFocus`/`activate` 一次。微任务在 React 本次提交（含 StrictMode 的 effect 重放）之后、浏览器绘制之前执行，所以能把被重放偷走的焦点抢回来，同时不影响关闭浮层时的作用域焦点恢复（重放时若用注册 effect 自行聚焦，会早于容器的 `pushScope` 执行、把“打开地图前的焦点”记成卡片本身，导致关闭后回不到 Tasks 按钮——这是第一版修复踩到的坑）。单测把 `TaskMap` 包进 `<StrictMode>`，专门盯这个回归。
+- **模型环松开摇杆跳回顶部**：一根摇杆的两个轴分开上报，松手时一个轴先清零、另一轴仍偏转；用这半更新的两个轴算角度会落到某个轴向扇环（多数情况是正上方 slot 0），于是“松开 RS 总是回到最顶上”。
+  - 修复：`ModelRing` 只在 `pressed === true` 的轴变化上重算角度，松手（值归零）只更新缓存、不改变光标。e2e 以「先清 RStickX、再清 RStickY」的顺序复现：光标保持在右上扇环，松开 LB 采用的也是它。
+

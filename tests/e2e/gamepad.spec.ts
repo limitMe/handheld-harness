@@ -504,7 +504,7 @@ test('picks a model from the recent-model ring on the empty task card', async ()
   }
 })
 
-test('rotates the model ring with the stick and adopts the pointed sector', async () => {
+test('rotates the model ring with the stick and keeps the pick when the stick is released', async () => {
   const { app, window } = await launch('e2e-pad-model-rotate')
   try {
     const recent = [
@@ -538,16 +538,22 @@ test('rotates the model ring with the stick and adopts the pointed sector', asyn
     // The ring opens on the current default (slot 3, the bottom sector).
     await expect(window.getByTestId('model-ring-slot-3')).toHaveAttribute('data-selected', '')
 
-    // Pointing the left stick up selects the top sector (slot 0); the angle is
-    // read directly, so the sector under the stick wins.
-    await setAxis(window, 1, -1)
-    await expect(window.getByTestId('model-ring-slot-0')).toHaveAttribute('data-selected', '')
-    await expect(window.getByTestId('model-ring-slot-3')).not.toHaveAttribute('data-selected', '')
+    // Point the right stick up-right: the angle selects the upper-right sector.
+    await setAxis(window, 2, 0.7)
+    await setAxis(window, 3, -0.7)
+    await expect(window.getByTestId('model-ring-slot-1')).toHaveAttribute('data-selected', '')
     await window.screenshot({
       path: path.join(root, 'tests', 'e2e', 'artifacts', 'model-ring-full.png'),
     })
 
-    // Releasing LB adopts the pointed model.
+    // Releasing the stick reports the two axes a frame apart; the cursor must not
+    // snap to a cardinal sector (which made it always land on the top one).
+    await setAxis(window, 2, 0)
+    await expect(window.getByTestId('model-ring-slot-1')).toHaveAttribute('data-selected', '')
+    await setAxis(window, 3, 0)
+    await expect(window.getByTestId('model-ring-slot-1')).toHaveAttribute('data-selected', '')
+
+    // Releasing LB adopts the picked sector.
     await releasePad(window, 'LB')
     await expect(window.getByTestId('model-ring')).toHaveCount(0)
     const after = await window.evaluate(() =>
@@ -557,7 +563,7 @@ test('rotates the model ring with the stick and adopts the pointed sector', asyn
         }
       ).handheld.settings.get(),
     )
-    expect(after.model.default).toEqual({ providerId: 'fake', modelId: 'm0' })
+    expect(after.model.default).toEqual({ providerId: 'fake', modelId: 'm1' })
   } finally {
     await app.close()
   }

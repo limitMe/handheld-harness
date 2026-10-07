@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { StrictMode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { SessionRef } from '../../src/shared/engine'
@@ -64,11 +65,13 @@ function seed(open: SessionRef[], current: SessionRef | null): void {
 
 function renderMap() {
   return render(
-    <InputProvider>
-      <FocusProvider>
-        <TaskMap open onClose={vi.fn()} />
-      </FocusProvider>
-    </InputProvider>,
+    <StrictMode>
+      <InputProvider>
+        <FocusProvider>
+          <TaskMap open onClose={vi.fn()} />
+        </FocusProvider>
+      </InputProvider>
+    </StrictMode>,
   )
 }
 
