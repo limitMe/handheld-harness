@@ -9,6 +9,7 @@ import { useTranslation } from '../i18n'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { deleteBackward } from '../workbench/textEditing'
 import { MenuCancelProvider, MenuRow, useMenuCancel } from './MenuRow'
+import { cachedModels, loadModels } from './modelsCache'
 
 export interface ModelsPageProps {
   settings: Settings
@@ -18,6 +19,7 @@ export interface ModelsPageProps {
 const SEARCH_ID = 'system-menu.first'
 /** Search sits at the top; the default row and providers follow well below. */
 const SEARCH_ORDER = 0
+const REFRESH_ORDER = 50
 const DEFAULT_ORDER = 100
 const PROVIDER_ORDER = 200
 
@@ -159,20 +161,22 @@ function ModelSearchRow({
  */
 export function ModelsPage({ settings, update }: ModelsPageProps) {
   const { t } = useTranslation()
-  const [groups, setGroups] = useState<ModelGroup[]>([])
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [groups, setGroups] = useState<ModelGroup[]>(() => cachedModels() ?? [])
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(() =>
+    cachedModels() ? 'ready' : 'loading',
+  )
+  const [refreshing, setRefreshing] = useState(false)
   const [query, setQuery] = useState('')
   const selected = settings.model.default ?? null
   const [expandedId, setExpandedId] = useState<string | null>(
     () => settings.model.default?.providerId ?? null,
   )
 
+  // Cold start only: a cached catalog is already in the initial state above.
   useEffect(() => {
-    const bridge = window.handheld?.engine
-    if (!bridge) return
+    if (cachedModels()) return undefined
     let cancelled = false
-    bridge
-      .listModels()
+    loadModels()
       .then((list) => {
         if (cancelled) return
         setGroups(list)
@@ -184,6 +188,18 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
     return () => {
       cancelled = true
     }
+  }, [])
+
+  // Refresh bypasses the cache and re-queries the engine (spec 15).
+  const refresh = useCallback(() => {
+    setRefreshing(true)
+    loadModels(undefined, true)
+      .then((list) => {
+        setGroups(list)
+        setStatus('ready')
+      })
+      .catch(() => setStatus('error'))
+      .finally(() => setRefreshing(false))
   }, [])
 
   const searching = query.trim().length > 0
@@ -220,6 +236,16 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
   return (
     <div data-testid="models-page">
       <ModelSearchRow query={query} onChange={setQuery} />
+
+      <MenuRow
+        id="system-menu.models.refresh"
+        order={REFRESH_ORDER}
+        testId="models-refresh"
+        onActivate={refresh}
+        onClick={refresh}
+      >
+        <span>{refreshing ? t('models.refreshing') : t('models.refresh')}</span>
+      </MenuRow>
 
       <p className="px-3 pt-3 pb-1 text-code text-text-muted" data-testid="models-current">
         {t('models.current', { name: currentLabel })}

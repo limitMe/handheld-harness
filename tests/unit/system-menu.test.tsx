@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS } from '../../src/shared/ipc'
 import { FocusProvider } from '../../src/renderer/src/focus'
 import { InputProvider } from '../../src/renderer/src/input'
 import { SystemMenu } from '../../src/renderer/src/system/SystemMenu'
+import { clearModelsCache } from '../../src/renderer/src/system/modelsCache'
 
 afterEach(() => {
   cleanup()
@@ -12,6 +13,8 @@ afterEach(() => {
 })
 
 function installBridge(groups?: unknown): void {
+  // The catalog is cached across mounts; each test starts from a cold cache.
+  clearModelsCache()
   const settings = structuredClone(DEFAULT_SETTINGS)
   const bridge = {
     settings: {
@@ -103,7 +106,12 @@ describe('SystemMenu', () => {
     // Models are not rendered until the provider row is activated.
     expect(screen.queryByTestId('model-fake-m1')).toBeNull()
 
-    // Focus steps from the search field, past "Engine default", to the provider.
+    // Focus steps from the search field, past Refresh and "Engine default", to
+    // the provider.
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    await waitFor(() =>
+      expect(screen.getByTestId('models-refresh').hasAttribute('data-focused')).toBe(true),
+    )
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     await waitFor(() =>
       expect(screen.getByTestId('model-engine-default').hasAttribute('data-focused')).toBe(true),
@@ -144,6 +152,27 @@ describe('SystemMenu', () => {
     fireEvent.change(screen.getByTestId('models-search-input'), { target: { value: 'zzz' } })
     await waitFor(() => expect(screen.getByTestId('models-no-matches')).not.toBeNull())
     expect(screen.queryByTestId('model-provider-openai')).toBeNull()
+  })
+
+  it('only re-queries the engine when Refresh is pressed', async () => {
+    installBridge()
+    const scope = window as unknown as {
+      handheld: { engine: { listModels: ReturnType<typeof vi.fn> } }
+    }
+    renderMenu()
+    await waitFor(() => expect(screen.getByTestId('key-bindings')).not.toBeNull())
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTestId('model-provider-fake')).not.toBeNull())
+    expect(scope.handheld.engine.listModels).toHaveBeenCalledTimes(1)
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    await waitFor(() =>
+      expect(screen.getByTestId('models-refresh').hasAttribute('data-focused')).toBe(true),
+    )
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(scope.handheld.engine.listModels).toHaveBeenCalledTimes(2))
   })
 
   it('does not render a large catalog all at once', async () => {
@@ -190,6 +219,10 @@ describe('SystemMenu', () => {
     )
     await waitFor(() => expect(screen.getByTestId('model-provider-fake')).not.toBeNull())
 
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    await waitFor(() =>
+      expect(screen.getByTestId('models-refresh').hasAttribute('data-focused')).toBe(true),
+    )
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     await waitFor(() =>
       expect(screen.getByTestId('model-engine-default').hasAttribute('data-focused')).toBe(true),

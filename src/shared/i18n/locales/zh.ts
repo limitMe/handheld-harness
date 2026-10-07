@@ -149,6 +149,8 @@ export const zh = {
     default: '默认',
     searchPlaceholder: '搜索服务商或模型',
     noMatches: '没有匹配的服务商或模型。',
+    refresh: '刷新',
+    refreshing: '正在刷新…',
   },
   voice: {
     provider: '服务商',

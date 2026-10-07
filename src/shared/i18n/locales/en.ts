@@ -150,6 +150,8 @@ export const en = {
     default: 'Default',
     searchPlaceholder: 'Search providers and models',
     noMatches: 'No providers or models match your search.',
+    refresh: 'Refresh',
+    refreshing: 'Refreshing…',
   },
   voice: {
     provider: 'Provider',
