@@ -72,13 +72,30 @@ describe('Display & hints', () => {
     expect(setZoom).toHaveBeenCalledWith(1.1)
   })
 
+  it('adjusts the stick scroll speed with left/right once focused', async () => {
+    const { update } = installBridge()
+    await openDisplayPanel()
+
+    // Text size -> stick scroll speed.
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    await waitFor(() =>
+      expect(screen.getByTestId('display-scroll-speed').hasAttribute('data-focused')).toBe(true),
+    )
+    expect(screen.getByTestId('display-scroll-speed').hasAttribute('data-activated')).toBe(true)
+
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    expect(update).toHaveBeenCalledWith({ ui: { scrollSpeed: 1.25 } })
+  })
+
   it('adjusts the hint delay with left/right once focused', async () => {
     const { update } = installBridge()
     await openDisplayPanel()
 
-    // Text size -> hints switch -> hint delay row.
-    fireEvent.keyDown(window, { key: 'ArrowDown' })
-    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    // Text size -> scroll speed -> hints switch -> hint delay row.
+    for (let i = 0; i < 5; i += 1) {
+      if (screen.getByTestId('display-hints-delay').hasAttribute('data-focused')) break
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+    }
     await waitFor(() =>
       expect(screen.getByTestId('display-hints-delay').hasAttribute('data-focused')).toBe(true),
     )
