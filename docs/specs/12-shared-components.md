@@ -144,3 +144,10 @@
   - **选择 / 返回收口成一处**：新增 `SHARED_BINDING_ACTIONS` 与 `sharedBindings` / `sharedConflict` / `sharedRebindRows`。设置页在设备页签下方显示一组「通用」，只列 Select / Back 两行；改键时把新键扇出写入所有绑定该动作的上下文（`dialog`、`listInput`、`taskMap.history` 等一并更新），运行时仍是各上下文各自绑定，因此「任务地图上弹出的确认框」这类模态隔离不受影响（用户已确认可接受选择 / 返回影响系统菜单）。冲突检测跨所有目标上下文。
   - 保留 `global` 里 locked 的 Start / Back（打开系统菜单 / 任务地图）两行作为说明——它们本来就不可改。
 - **已自动验证**：`npm run check` 通过（311 个用例）；`bindings` 新增共用绑定 / 扇出 / 冲突用例，`gamepad-glyph` 新增非面键长按文字用例，`system-menu` 的锁定用例改为循环导航到目标行。全量 e2e 23 个通过。
+
+### 网络图标与电量文本对齐（2026-10-08，用户反馈）
+
+- **现象**：状态栏右上角的网络图标比右侧「电量百分比 + 充电 ⚡」文本行低一截，两者不在同一条水平线上。
+- **根因**：网络 `svg` 的 `viewBox` 是 24×24，但 Wi-Fi 弧线与原点圆点画在盒子下半部分（`cy=21`），盒子上沿留了一块透明像素；外层靠 `items-center` 居中的是整个 24×24 盒子，可见图形自然偏低。
+- **修复**：Wi-Fi 弧线 / 圆点的圆心从 `cy=21` 移到 `cy=18`，让整组可见图形的垂直中点落到盒子中心（12），与文本行中心对齐；`status-network` 外层 span 加 `flex items-center`，消除行内 SVG 基线对齐带来的额外偏移。蜂窝 / 有线图形本来就基本居中，不动。
+- **已自动验证**：`npm run check` 通过；`npm run test:e2e` 的冒烟截图 `tests/e2e/artifacts/smoke.png` 里网络图标、充电 ⚡ 与时钟在同一水平线上。

@@ -85,6 +85,14 @@ const WIFI_ARCS = [
   { r: 5, width: 2.8 },
 ]
 
+/**
+ * Center of the Wi-Fi arcs and the origin dot. The block spans from
+ * `WIFI_CENTER_Y - 13.9` (outer arc, stroke included) to `WIFI_CENTER_Y + 1.9`
+ * (dot), so `18` puts its midpoint on the box center and in line with the
+ * charging bolt next to it.
+ */
+const WIFI_CENTER_Y = 18
+
 function polar(cx: number, cy: number, r: number, degrees: number): { x: number; y: number } {
   const radians = (degrees * Math.PI) / 180
   return { x: cx + r * Math.cos(radians), y: cy + r * Math.sin(radians) }
@@ -103,8 +111,11 @@ function WifiGlyph({ level, offline }: { level: NetworkLevel; offline: boolean }
         const lit = !offline && level >= 3 - index
         return (
           <path
+            // The arcs and the dot form one optical block; centering it in the
+            // 24 box keeps the glyph level with the charging bolt and the clock
+            // in the status bar (the arcs would otherwise sit low in the box).
             key={arc.r}
-            d={wifiArc(12, 21, arc.r)}
+            d={wifiArc(12, WIFI_CENTER_Y, arc.r)}
             strokeWidth={arc.width}
             strokeLinecap="round"
             className={cn('stroke-current', lit ? '' : 'opacity-30')}
@@ -113,7 +124,7 @@ function WifiGlyph({ level, offline }: { level: NetworkLevel; offline: boolean }
       })}
       <circle
         cx={12}
-        cy={21}
+        cy={WIFI_CENTER_Y}
         r={1.9}
         className={cn('fill-current', !offline && level >= 1 ? '' : 'opacity-30')}
       />

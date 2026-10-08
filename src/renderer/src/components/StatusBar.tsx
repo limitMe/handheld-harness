@@ -205,6 +205,7 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
           role="img"
           aria-label={networkLabel}
           title={networkLabel}
+          className="flex items-center"
         >
           <NetworkIcon status={network} />
         </span>
