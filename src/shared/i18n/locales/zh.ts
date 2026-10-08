@@ -194,6 +194,8 @@ export const zh = {
   voice: {
     provider: '服务商',
     none: '无',
+    providerDescription: '选择用于听写的语音服务商。',
+    requiresCredentials: '需要 API Key',
     apiKey: 'API Key',
     configured: '已配置',
     notSet: '未设置',

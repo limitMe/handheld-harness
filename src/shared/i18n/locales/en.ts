@@ -196,6 +196,8 @@ export const en = {
   voice: {
     provider: 'Provider',
     none: 'None',
+    providerDescription: 'Choose the speech service used for dictation.',
+    requiresCredentials: 'Requires an API key',
     apiKey: 'API key',
     configured: 'Configured',
     notSet: 'Not set',

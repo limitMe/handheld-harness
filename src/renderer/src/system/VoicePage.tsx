@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Settings, SettingsPatch, SpeechProviderId } from '@shared/ipc'
-import type { SpeechProviderInfo } from '@shared/speech'
+import { SPEECH_PROVIDER_NONE, type SpeechProviderInfo } from '@shared/speech'
 import { useTranslation } from '../i18n'
-import { Slider, cn } from '../ui'
+import { ChoiceDialog, Slider, cn, type ChoiceOption } from '../ui'
 import { MenuGroupLabel, MenuRow } from './MenuRow'
 
 interface InputDevice {
@@ -44,8 +44,8 @@ export interface VoicePageProps {
 /** Voice input (spec 15/16): provider + credentials plus the microphone probe. */
 export function VoicePage({ settings, update }: VoicePageProps) {
   const { t } = useTranslation()
-  const providersRef = useRef<SpeechProviderInfo[]>([])
   const [providers, setProviders] = useState<SpeechProviderInfo[]>([])
+  const [providerOpen, setProviderOpen] = useState(false)
   const [keyConfigured, setKeyConfigured] = useState(false)
   const [apiKey, setApiKey] = useState('')
   const [status, setStatus] = useState<string | null>(null)
@@ -92,7 +92,6 @@ export function VoicePage({ settings, update }: VoicePageProps) {
       .providers()
       .then((list) => {
         if (cancelled) return
-        providersRef.current = list
         setProviders(list)
       })
       .catch(() => undefined)
@@ -154,20 +153,6 @@ export function VoicePage({ settings, update }: VoicePageProps) {
     setSelected(devices[next]?.deviceId ?? '')
   }
 
-  const cycleProvider = useCallback(
-    (delta: number): void => {
-      const list = providersRef.current
-      if (list.length === 0) return
-      const index = Math.max(
-        0,
-        list.findIndex((provider) => provider.id === providerId),
-      )
-      const next = list[(index + delta + list.length) % list.length]
-      if (next) void update({ speech: { provider: next.id as SpeechProviderId } })
-    },
-    [providerId, update],
-  )
-
   const cycleResource = useCallback(
     (delta: number): void => {
       const index = Math.max(
@@ -203,6 +188,15 @@ export function VoicePage({ settings, update }: VoicePageProps) {
   const currentProvider = providers.find((provider) => provider.id === providerId)
   const currentResource = RESOURCE_OPTIONS.find((option) => option.id === resourceId)
 
+  const providerLabel = (id: string, displayName?: string): string =>
+    id === SPEECH_PROVIDER_NONE ? t('voice.none') : (displayName ?? id)
+
+  const providerOptions: ChoiceOption[] = providers.map((provider) => ({
+    id: provider.id,
+    label: providerLabel(provider.id, provider.displayName),
+    ...(provider.requiresCredentials ? { description: t('voice.requiresCredentials') } : {}),
+  }))
+
   return (
     <div data-testid="voice-page">
       <MenuGroupLabel>{t('menu.groups.speechProvider')}</MenuGroupLabel>
@@ -211,19 +205,12 @@ export function VoicePage({ settings, update }: VoicePageProps) {
         order={0}
         activatable
         testId="voice-provider"
-        onActivate={() => cycleProvider(1)}
-        onClick={() => cycleProvider(1)}
-        onNavigate={(direction) => {
-          if (direction === 'left' || direction === 'right') {
-            cycleProvider(direction === 'left' ? -1 : 1)
-            return 'handled'
-          }
-          return 'pass'
-        }}
+        onActivate={() => setProviderOpen(true)}
+        onClick={() => setProviderOpen(true)}
       >
         <span>{t('voice.provider')}</span>
         <span className="text-code text-text-muted">
-          {currentProvider?.displayName ?? t('voice.none')}
+          {providerLabel(providerId, currentProvider?.displayName)}
         </span>
       </MenuRow>
 
@@ -346,6 +333,18 @@ export function VoicePage({ settings, update }: VoicePageProps) {
         </p>
         {error ? <p className="pt-2 text-code text-danger">{error}</p> : null}
       </div>
+
+      <ChoiceDialog
+        open={providerOpen}
+        onOpenChange={setProviderOpen}
+        title={t('voice.provider')}
+        description={t('voice.providerDescription')}
+        options={providerOptions}
+        initialId={providerId}
+        onChoose={(id) => {
+          void update({ speech: { provider: id as SpeechProviderId } })
+        }}
+      />
     </div>
   )
 }
