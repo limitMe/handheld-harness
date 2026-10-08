@@ -146,4 +146,9 @@ P-20：是否在应用里配置模型服务商凭据。分类 4（显示与提�
 - 模型页选择某个模型时，除了写 `settings.model.default`，还把 `touchRecentModel(settings.model.recent, ref, name)` 一起写回，供任务地图的模型环使用（spec 14「最近使用的模型列表」）。选 **Engine default** 只清空默认，不动最近列表。
 - 模型名在写入最近列表时缓存（`name` 字段），模型环据此显示，避免为取名再拉一次 `/provider`（真实 OpenCode 有 8401 个模型）。
 
+### 状态栏「任务」按钮在菜单里可跳转（2026-10-08，试用反馈）
+
+- **问题**：系统菜单打开时，状态栏左上角的「任务」按钮仍可见，但点击没反应。原因是 `onOpenTasks` 只 `setMapOpen(true)`，而 `menuOpen` 仍为真，两个浮层同时存在、菜单盖在任务地图之上，标题也仍按 `menuOpen` 显示「System menu」，看起来什么都没发生。
+- **处理**：`App.tsx` 的「任务」按钮回调改为打开任务地图前先关闭系统菜单 / 信息页（`setMenuOpen(false)`、`setInfoOpen(false)`、`setMapOpen(true)`），与 `map.toggle` 已有的互斥逻辑一致。保留按钮（不隐藏），菜单里也能一键去任务地图。
+
 

@@ -160,7 +160,11 @@ export default function App() {
       <DictationLayer />
       <StatusBar
         title={title}
-        onOpenTasks={() => setMapOpen(true)}
+        onOpenTasks={() => {
+          setMenuOpen(false)
+          setInfoOpen(false)
+          setMapOpen(true)
+        }}
         {...(mapOpen || menuOpen || textEditOpen
           ? {}
           : { onOpenInfo: () => setInfoOpen((open) => !open) })}
