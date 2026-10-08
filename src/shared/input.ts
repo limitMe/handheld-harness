@@ -305,7 +305,6 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       ArrowRight: 'nav.right',
       Enter: 'nav.activate',
       Escape: 'nav.deactivate',
-      X: 'input.deleteBackward',
     },
     systemMenu: {
       ArrowUp: 'nav.up',

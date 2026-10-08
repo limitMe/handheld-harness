@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "electron-vite dev --watch",
+    "dev:shortcut": "tsx scripts/dev-shortcut.ts",
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "npm run typecheck:main && npm run typecheck:preload && npm run typecheck:renderer",

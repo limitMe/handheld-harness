@@ -1,7 +1,6 @@
-import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
+import { createWindowsShortcuts } from './lib/shortcut'
 import {
   APP_ICON_RELATIVE,
   SHORTCUT_NAME,
@@ -12,15 +11,6 @@ import {
   launcherDir,
   resolveStablePaths,
 } from './lib/stable'
-
-function psQuote(value: string): string {
-  return `'${value.replace(/'/g, "''")}'`
-}
-
-function resolvePowerShell(): string {
-  const pwsh = spawnSync('pwsh', ['-NoProfile', '-Command', '$true'], { stdio: 'ignore' })
-  return pwsh.status === 0 ? 'pwsh' : 'powershell.exe'
-}
 
 /** A launcher that sets the stable environment and runs the built app. */
 function writeLauncher(stableDir: string, repoRoot: string): string {
@@ -53,48 +43,6 @@ function resolveShortcutIcon(stableDir: string): string | null {
   return candidates.find((candidate) => fs.existsSync(candidate)) ?? null
 }
 
-function createShortcuts(stableDir: string, launcher: string): void {
-  const icon = resolveShortcutIcon(stableDir)
-  const iconLine = icon ? `  $link.IconLocation = ${psQuote(icon)} + ',0'` : null
-
-  const script = [
-    "$ErrorActionPreference = 'Stop'",
-    '$ws = New-Object -ComObject WScript.Shell',
-    `$launcher = ${psQuote(launcher)}`,
-    `$name = ${psQuote(`${SHORTCUT_NAME}.lnk`)}`,
-    `$workdir = ${psQuote(stableDir)}`,
-    '$targets = @(',
-    "  (Join-Path ([Environment]::GetFolderPath('Desktop')) $name),",
-    "  (Join-Path ([Environment]::GetFolderPath('Programs')) $name)",
-    ')',
-    'foreach ($target in $targets) {',
-    '  $link = $ws.CreateShortcut($target)',
-    '  $link.TargetPath = $env:ComSpec',
-    "  $link.Arguments = '/c \"' + $launcher + '\"'",
-    '  $link.WorkingDirectory = $workdir',
-    `  $link.Description = ${psQuote(SHORTCUT_NAME)}`,
-    ...(iconLine ? [iconLine] : []),
-    '  $link.Save()',
-    '  Write-Output ("created " + $target)',
-    '}',
-  ].join('\r\n')
-
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'handheld-stable-'))
-  const tmpScript = path.join(tmpDir, 'shortcut.ps1')
-  fs.writeFileSync(tmpScript, script + '\r\n', 'utf8')
-  try {
-    const result = spawnSync(
-      resolvePowerShell(),
-      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', tmpScript],
-      { stdio: 'inherit' },
-    )
-    if (result.error) throw result.error
-    if (result.status !== 0) throw new Error(`PowerShell exited with code ${result.status}`)
-  } finally {
-    fs.rmSync(tmpDir, { recursive: true, force: true })
-  }
-}
-
 /**
  * Creates "HANDHELD.AI (stable)" shortcuts on the desktop and start menu.
  *
@@ -117,7 +65,12 @@ function main(): void {
 
   const launcher = writeLauncher(stableDir, repoRoot)
   console.log(`launcher written to ${launcher}`)
-  createShortcuts(stableDir, launcher)
+  createWindowsShortcuts({
+    name: SHORTCUT_NAME,
+    launcher,
+    workdir: stableDir,
+    icon: resolveShortcutIcon(stableDir),
+  })
   console.log(`shortcuts "${SHORTCUT_NAME}" created on the desktop and in the start menu`)
 }
 

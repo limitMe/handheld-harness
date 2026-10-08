@@ -58,27 +58,26 @@ describe('TextEditOverlay', () => {
     })
   })
 
-  it('deletes one character behind the caret with X', async () => {
+  it('does not treat the printable X key as delete (no keyboard binding)', async () => {
     useTextEditStore.setState({ open: true, source: 'abc', caret: 3, revision: 0 })
     renderEditor()
     fireEvent.keyDown(window, { key: 'x' })
 
-    await waitFor(() =>
-      expect(screen.getAllByTestId('text-edit-sentence')[0]?.textContent).toContain('ab'),
-    )
+    expect(screen.getAllByTestId('text-edit-sentence')[0]?.textContent).toContain('abc')
     expect(screen.getAllByTestId('text-edit-sentence')).toHaveLength(1)
   })
 
   it('commits the edited text and closes on Escape', async () => {
     useTextEditStore.setState({ open: true, source: 'abc', caret: 3, revision: 0 })
     const { onCommit } = renderEditor()
-    fireEvent.keyDown(window, { key: 'x' })
     await waitFor(() =>
-      expect(screen.getAllByTestId('text-edit-sentence')[0]?.textContent).toContain('ab'),
+      expect(
+        document.querySelector('[data-testid="text-edit-sentence"][data-focused]'),
+      ).not.toBeNull(),
     )
 
     fireEvent.keyDown(window, { key: 'Escape' })
-    expect(onCommit).toHaveBeenCalledWith('ab')
+    expect(onCommit).toHaveBeenCalledWith('abc')
     expect(useTextEditStore.getState().open).toBe(false)
   })
 

@@ -135,7 +135,7 @@ P-13、P-14，以及上面列出的临时任务切换器快捷键。本 spec 已
 - **动作显示名用英文**（经用户确认），与 03 已确定的英文 UI 保持一致；spec 原文写的是"中文显示名"。
 - **P-13**：A 允许一次 / X 始终允许 / B 拒绝；提问卡片上下选择、A 确认、B 忽略（默认绑定，随卡片实现生效）。
 - **P-14**：滚动用右摇杆（`RStickY → scroll`）；中止 Agent 按 spec 正文的"输入框未激活时按住 LB"实现为 `currentWork` 的 `LB:hold → agent.abort`（README 汇总写的是 LT + B，以 spec 正文为准；若要改回请改这里）。
-- **键盘**：只对 spec 已决定的场景给默认绑定（taskMap 的 `Escape → map.exit`、`Delete → task.close`，各上下文的 `Arrow*` / `Enter` / `X`）。文本框聚焦时只认 `global` 组合键，其余按键交给文本框。临时任务切换器的 `Ctrl+K` 等快捷键仍由 `App.tsx` 直接处理，按 spec 等 14 完成后移除。
+- **键盘**：只对 spec 已决定的场景给默认绑定（taskMap 的 `Escape → map.exit`、`Delete → task.close`，各上下文的 `Arrow*` / `Enter`）。文本框聚焦时只认 `global` 组合键，其余按键交给文本框，删除靠文本框原生的 `Backspace`；键盘层不再给 `input.deleteBackward` 绑定（可打印字符 X 不能当删除键，见末节）。临时任务切换器的 `Ctrl+K` 等快捷键仍由 `App.tsx` 直接处理，按 spec 等 14 完成后移除。
 - **设备预设**：机制已实现（`DEVICE_PRESETS` 按 id 子串匹配 + 覆盖层）。Ally / Legion Go 的预设先留空，等在手柄上核实多出来的按键索引后再补。
 - **冲突检测**：合并后按"控件 + 按法"分组，同一组映射到多个动作时报告。由于 ActionMap 用 Record 表示，正常合并不会产生冲突；该函数主要作为告警与未来格式的防线，`X:press` 与 `X` 视为同一种按法。
 - **默认上下文**：`App.tsx` 用 `useInputContext('currentWork', {})` 声明当前界面上下文，具体处理函数留给 13。
@@ -175,3 +175,9 @@ P-13、P-14，以及上面列出的临时任务切换器快捷键。本 spec 已
 
 - **双摇杆垂直导航 + 滚动**：`LStickY` 与 `RStickY` 都绑定 `scroll`（原来只有右摇杆）。`createStickController` 在持续偏转期间先按固定间隔 `tree.move` 移动焦点（与十字键一致，能在一级/二级菜单里换行），只有当该方向已无处可去（列表到头）时才改为连续滚动最近的 `data-scroll-region`；帧间隔上限 50 ms。速度由 `settings.ui.scrollSpeed`（0.25–2，默认 1）同时缩放焦点步进间隔（基准 `BASE_FOCUS_INTERVAL_MS = 280`）和滚动速度（基准 `SCROLL_PIXELS_PER_SECOND = 180`），在系统菜单「Display & hints › Stick scroll speed」里用可拖动条调整。同一方向持续按住会加速：1 秒后 ×2、之后每秒 +1，封顶 ×3（`accelerationFor`）；方向反转或松手即重置。
 - **摇杆左右聚焦**：新增按方向解析的绑定 `LStickX+ / LStickX- / RStickX+ / RStickX-` → `nav.left` / `nav.right`；`GestureResolver` 对模拟量先按带符号的控件名（`LStickX+`）查表，再回退到裸控件名。四个摇杆轴都使用 `STICK_NAV_DEADZONE = 0.55`，避免静止漂移误触发导航或滚动。
+
+### 键盘层移除文本编辑的删除绑定（2026-10-08，用户反馈）
+
+- **问题**：键位设置里「键盘 → 文本编辑 → 删除字符」显示为 `X`（`DEFAULT_BINDINGS.keyboard.textEdit.X = 'input.deleteBackward'`，随 spec 17 的 `sentence.delete → input.deleteBackward` 改动从手柄层一起搬来）。键盘上 X 是可打印字符，用它删除与第 49 行「可打印字符交给文本框处理」矛盾；实际路由里文本框聚焦时只认 `global` 组合键（`resolveKeyboard`），该绑定只在没有输入框聚焦时生效，没有意义。
+- **决定**：键盘层不再绑定 `input.deleteBackward`，删除走文本框原生 `Backspace`（TextEdit 隐藏框、单句原生 textarea 均已处理）。键盘 `textEdit` 其余行都是 `nav.*`（设置页隐藏），因此「键盘 → 文本编辑」整组会从键位页消失。
+- 改动：`src/shared/input.ts` 的 `DEFAULT_BINDINGS.keyboard.textEdit` 去掉 `X`。手柄层的 `textEdit.X` 与 `currentWork.input.X` 不变。
