@@ -13,7 +13,7 @@ afterEach(() => {
   delete (window as unknown as { handheld?: unknown }).handheld
 })
 
-function installBridge(groups?: unknown): void {
+function installBridge(groups?: unknown) {
   // The catalog is cached across mounts; each test starts from a cold cache.
   clearModelsCache()
   const settings = structuredClone(DEFAULT_SETTINGS)
@@ -37,6 +37,7 @@ function installBridge(groups?: unknown): void {
       })),
       openExternal: vi.fn(async () => undefined),
       openLogDir: vi.fn(async () => undefined),
+      quit: vi.fn(async () => undefined),
     },
     engine: {
       listModels: vi.fn(
@@ -45,10 +46,13 @@ function installBridge(groups?: unknown): void {
             { providerId: 'fake', name: 'Fake provider', models: [{ id: 'm1', name: 'Model 1' }] },
           ],
       ),
+      snapshot: vi.fn(async () => ({ status: { state: 'ready' } })),
+      onEvent: vi.fn(() => () => undefined),
     },
     window: { setZoom: vi.fn(async () => ({ zoom: 1 })) },
   }
   ;(window as unknown as { handheld: unknown }).handheld = bridge
+  return bridge
 }
 
 function renderMenu() {
@@ -298,5 +302,31 @@ describe('SystemMenu', () => {
 
     fireEvent.keyDown(window, { key: 'Enter' })
     expect(screen.queryByTestId('capture-banner')).toBeNull()
+  })
+
+  it('quits only after the confirmation dialog is accepted', async () => {
+    const bridge = installBridge()
+    renderMenu()
+    await waitFor(() => expect(screen.getByTestId('key-bindings')).not.toBeNull())
+
+    // Walk down to the last category (Quit app) and activate it.
+    for (let i = 0; i < 5; i += 1) fireEvent.keyDown(window, { key: 'ArrowDown' })
+    expect(screen.getByTestId('menu-category-quit').hasAttribute('data-focused')).toBe(true)
+
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(await screen.findByText('Quit HANDHELD.AI?')).not.toBeNull()
+    expect(bridge.app.quit).not.toHaveBeenCalled()
+
+    // The dialog starts on Cancel, so a plain Enter there dismisses it.
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(screen.queryByText('Quit HANDHELD.AI?')).toBeNull())
+    expect(bridge.app.quit).not.toHaveBeenCalled()
+
+    // Reopen and accept: move right to the confirm button and activate it.
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await screen.findByText('Quit HANDHELD.AI?')
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(bridge.app.quit).toHaveBeenCalledTimes(1))
   })
 })

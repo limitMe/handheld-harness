@@ -50,6 +50,7 @@
    - 应用版本、OpenCode 版本、引擎状态、工作区；
    - "打开日志目录"；
    - 01 / 02 的调试页入口，这样不用键盘也能打开调试页。
+6. **退出应用**（2026-10-08 追加）：选中后按 A 弹确认对话框，确认后关闭整个窗口 / 退出应用；取消则留下。
 
 ## 验收方向
 
@@ -150,5 +151,12 @@ P-20：是否在应用里配置模型服务商凭据。分类 4（显示与提�
 
 - **问题**：系统菜单打开时，状态栏左上角的「任务」按钮仍可见，但点击没反应。原因是 `onOpenTasks` 只 `setMapOpen(true)`，而 `menuOpen` 仍为真，两个浮层同时存在、菜单盖在任务地图之上，标题也仍按 `menuOpen` 显示「System menu」，看起来什么都没发生。
 - **处理**：`App.tsx` 的「任务」按钮回调改为打开任务地图前先关闭系统菜单 / 信息页（`setMenuOpen(false)`、`setInfoOpen(false)`、`setMapOpen(true)`），与 `map.toggle` 已有的互斥逻辑一致。保留按钮（不隐藏），菜单里也能一键去任务地图。
+
+### 退出应用分类（2026-10-08，用户要求）
+
+- 左栏在「关于与诊断」之后新增一级分类 **退出应用**（`categories.ts` 的 `CategoryId` / `MENU_CATEGORIES` 加 `quit`；标签走 `menu.categories.quit`）。
+- 选中该分类按 A（或 `QuitPage` 里的行）弹出 `ConfirmDialog`（危险操作默认聚焦 Cancel，`destructive` 红色确认按钮）；确认后调用新增 IPC `app:quit`，主进程 `app.quit()` 关闭整个应用并触发 `before-quit` 停止引擎。取消则关闭对话框、焦点回到分类。
+- `app:quit` 走完整契约（`InvokeContract` / `INVOKE_CHANNELS` / `IPC_INVOKE_SCHEMAS` / `HandheldApi` / preload）。主进程用 `setImmediate` 延迟退出，让 IPC 回执先发出去再拆窗口。
+- 单测：`system-menu` 增加「只有确认对话框被接受才退出」；`ipc-contract` 覆盖新通道。
 
 

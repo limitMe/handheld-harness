@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { CONTEXT_ORDER, useInputApi, useInputContext } from '../input'
 import { FocusContainer, useFocusTree } from '../focus'
 import { useTranslation } from '../i18n'
+import { ConfirmDialog } from '../ui'
 import { MENU_CATEGORIES, type CategoryId } from './categories'
 import { AboutPage } from './AboutPage'
 import { DisplayPage } from './DisplayPage'
 import { KeyBindingsPage } from './KeyBindingsPage'
 import { MenuCancelProvider, MenuRow } from './MenuRow'
 import { ModelsPage } from './ModelsPage'
+import { QuitPage } from './QuitPage'
 import { useSettings } from './useSettings'
 import { VoicePage } from './VoicePage'
 
@@ -30,6 +32,7 @@ function SystemMenuBody({ onClose, onOpenDebug }: Omit<SystemMenuProps, 'open'>)
   const { settings, update } = useSettings()
   const [map, setMap] = useState(() => api.getMap())
   const [category, setCategory] = useState<CategoryId>('keys')
+  const [quitOpen, setQuitOpen] = useState(false)
 
   useEffect(() => api.subscribeMap(setMap), [api])
 
@@ -62,11 +65,12 @@ function SystemMenuBody({ onClose, onOpenDebug }: Omit<SystemMenuProps, 'open'>)
                     selected={category === id}
                     testId={`menu-category-${id}`}
                     onFocus={() => setCategory(id)}
-                    onActivate={focusPanel}
+                    onActivate={id === 'quit' ? () => setQuitOpen(true) : focusPanel}
                     onCancel={onClose}
                     onClick={() => {
                       setCategory(id)
-                      focusPanel()
+                      if (id === 'quit') setQuitOpen(true)
+                      else focusPanel()
                     }}
                   >
                     <span>{t(`menu.categories.${id}`)}</span>
@@ -96,6 +100,8 @@ function SystemMenuBody({ onClose, onOpenDebug }: Omit<SystemMenuProps, 'open'>)
                     <VoicePage settings={settings} update={update} />
                   ) : category === 'display' ? (
                     <DisplayPage settings={settings} update={update} />
+                  ) : category === 'quit' ? (
+                    <QuitPage onQuit={() => setQuitOpen(true)} />
                   ) : (
                     <AboutPage onOpenDebug={onOpenDebug} />
                   )}
@@ -105,6 +111,16 @@ function SystemMenuBody({ onClose, onOpenDebug }: Omit<SystemMenuProps, 'open'>)
           </div>
         </div>
       </FocusContainer>
+
+      <ConfirmDialog
+        open={quitOpen}
+        onOpenChange={setQuitOpen}
+        title={t('quit.title')}
+        description={t('quit.description')}
+        confirmLabel={t('quit.confirm')}
+        destructive
+        onConfirm={() => void window.handheld?.app.quit()}
+      />
     </div>
   )
 }

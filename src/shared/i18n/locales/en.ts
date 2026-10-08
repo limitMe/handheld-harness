@@ -139,6 +139,7 @@ export const en = {
       voice: 'Voice input',
       display: 'Display & hints',
       about: 'About & diagnostics',
+      quit: 'Quit app',
     },
     groups: {
       display: 'Display',
@@ -263,6 +264,11 @@ export const en = {
     engineVersion: 'Engine version',
     workspace: 'Workspace',
     unknown: 'unknown',
+  },
+  quit: {
+    title: 'Quit HANDHELD.AI?',
+    description: 'The app closes and the agent engine stops.',
+    confirm: 'Quit',
   },
   debug: {
     gamepad: {

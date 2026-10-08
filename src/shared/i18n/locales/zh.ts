@@ -138,6 +138,7 @@ export const zh = {
       voice: '语音输入',
       display: '显示与提示',
       about: '关于与诊断',
+      quit: '退出应用',
     },
     groups: {
       display: '显示',
@@ -261,6 +262,11 @@ export const zh = {
     engineVersion: '引擎版本',
     workspace: '工作区',
     unknown: '未知',
+  },
+  quit: {
+    title: '退出 HANDHELD.AI？',
+    description: '应用将关闭，并停止 Agent 引擎。',
+    confirm: '退出',
   },
   debug: {
     gamepad: {

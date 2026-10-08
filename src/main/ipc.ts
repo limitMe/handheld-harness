@@ -132,6 +132,12 @@ export function registerIpc(): void {
     return { path: result.filePaths[0] ?? null }
   })
 
+  // Quit the whole app from the system menu's "Quit app" category (spec 15).
+  // Deferred so the IPC reply is flushed before Electron tears the window down.
+  handle('app:quit', () => {
+    setImmediate(() => app.quit())
+  })
+
   handle('window:setZoom', ({ factor }, event) => {
     const zoom = clampZoom(factor)
     BrowserWindow.fromWebContents(event.sender)?.webContents.setZoomFactor(zoom)

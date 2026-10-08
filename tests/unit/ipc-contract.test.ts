@@ -35,6 +35,7 @@ describe('IPC contract', () => {
     await api.app.openLogDir()
     await api.app.showOnScreenKeyboard()
     await api.app.pickDirectory()
+    await api.app.quit()
     await api.window.setZoom(1)
     await api.settings.get()
     await api.settings.update({})

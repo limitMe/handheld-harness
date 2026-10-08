@@ -321,6 +321,8 @@ export interface InvokeContract {
   'app:showOnScreenKeyboard': { request: undefined; response: void }
   /** Native folder picker for a session's working directory (spec 21). */
   'app:pickDirectory': { request: undefined; response: { path: string | null } }
+  /** Quits the app after the user confirms from the system menu (spec 15). */
+  'app:quit': { request: undefined; response: void }
   'window:setZoom': { request: { factor: number }; response: { zoom: number } }
   'log:write': { request: LogWriteRequest; response: void }
   'settings:get': { request: undefined; response: Settings }
@@ -386,6 +388,7 @@ export const INVOKE_CHANNELS = [
   'app:openLogDir',
   'app:showOnScreenKeyboard',
   'app:pickDirectory',
+  'app:quit',
   'window:setZoom',
   'log:write',
   'settings:get',
@@ -430,6 +433,7 @@ export const IPC_INVOKE_SCHEMAS = {
   'app:openLogDir': z.undefined(),
   'app:showOnScreenKeyboard': z.undefined(),
   'app:pickDirectory': z.undefined(),
+  'app:quit': z.undefined(),
   'window:setZoom': z.object({ factor: z.number() }),
   'log:write': LogWriteRequestSchema,
   'settings:get': z.undefined(),
@@ -487,6 +491,7 @@ export interface HandheldApi {
     openLogDir(): Promise<void>
     showOnScreenKeyboard(): Promise<void>
     pickDirectory(): Promise<{ path: string | null }>
+    quit(): Promise<void>
   }
   window: {
     setZoom(factor: number): Promise<{ zoom: number }>
