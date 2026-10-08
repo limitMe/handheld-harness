@@ -5,7 +5,7 @@
  */
 
 export interface Sentence {
-  /** Sentence text, including its terminating punctuation but no separators. */
+  /** Sentence text, including its trailing punctuation but no separators. */
   text: string
   /** Index of the first character in the source string. */
   start: number
@@ -13,8 +13,12 @@ export interface Sentence {
   end: number
 }
 
-const CJK_TERMINATORS = '。！？；'
-const ASCII_TERMINATORS = '.!?;'
+// Chinese punctuation always breaks; the ASCII set only does so before
+// whitespace or at the end, so tokens like `1,000` and `1.2` stay intact.
+// Commas and the enumeration comma split too: navigating clause by clause is
+// easier on a handheld than walking whole sentences.
+const CJK_BREAKS = '。！？；，、'
+const ASCII_BREAKS = '.!?;,'
 const OPEN_BRACKETS = '（(【[「『《'
 const CLOSE_BRACKETS = '）)】]」』》'
 const DOUBLE_QUOTES = '“”"'
@@ -26,19 +30,19 @@ function isWhitespace(ch: string): boolean {
   return ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r'
 }
 
-function isTerminator(ch: string, next: string | undefined): boolean {
-  if (CJK_TERMINATORS.includes(ch)) return true
-  if (!ASCII_TERMINATORS.includes(ch)) return false
-  // English punctuation only ends a sentence before whitespace or the end.
+function isBreak(ch: string, next: string | undefined): boolean {
+  if (CJK_BREAKS.includes(ch)) return true
+  if (!ASCII_BREAKS.includes(ch)) return false
+  // English punctuation only breaks before whitespace or at the end.
   return next === undefined || isWhitespace(next)
 }
 
 /**
- * Splits mixed Chinese/English text into sentences. CJK punctuation always
- * terminates; English punctuation does so only before whitespace or at the end.
- * A line break always splits, and quotes, brackets and backtick code spans are
- * never split. Empty or whitespace-only input yields one empty sentence so the
- * editor always has a focusable line to dictate into.
+ * Splits mixed Chinese/English text into sentences (clauses). CJK punctuation
+ * always breaks; English punctuation does so only before whitespace or at the
+ * end. A line break always splits, and quotes, brackets and backtick code spans
+ * are never split. Empty or whitespace-only input yields one empty sentence so
+ * the editor always has a focusable line to dictate into.
  */
 export function splitSentences(input: string): Sentence[] {
   const sentences: Sentence[] = []
@@ -77,7 +81,7 @@ export function splitSentences(input: string): Sentence[] {
     else if (SINGLE_QUOTES.includes(ch)) singleQuote = !singleQuote
     else if (OPEN_BRACKETS.includes(ch)) brackets += 1
     else if (CLOSE_BRACKETS.includes(ch)) brackets = Math.max(0, brackets - 1)
-    if (!insideWrapper() && isTerminator(ch, input[i + 1])) flush()
+    if (!insideWrapper() && isBreak(ch, input[i + 1])) flush()
     i += 1
   }
   flush()

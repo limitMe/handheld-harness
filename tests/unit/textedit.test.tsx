@@ -101,6 +101,26 @@ describe('TextEditOverlay', () => {
     expect(screen.getAllByTestId('text-edit-sentence')[0]?.textContent).not.toContain('abcd')
   })
 
+  it('keeps the caret where the deletion happened when sentences merge', async () => {
+    useTextEditStore.setState({ open: true, source: '甲乙。丙丁。', caret: 3, revision: 0 })
+    renderEditor()
+    const field = screen.getByTestId('text-edit-keyboard') as HTMLTextAreaElement
+
+    fireEvent.keyDown(field, { key: 'Backspace' })
+
+    await waitFor(() =>
+      expect(screen.getAllByTestId('text-edit-sentence')[0]?.textContent).toContain('甲乙丙丁。'),
+    )
+    // After deleting the terminator the caret must sit between 乙 and 丙, not at
+    // the end of the merged sentence.
+    const caret = screen.getByTestId('text-edit-caret')
+    let before = ''
+    for (let node = caret.previousSibling; node; node = node.previousSibling) {
+      before = (node.textContent ?? '') + before
+    }
+    expect(before).toBe('甲乙')
+  })
+
   it('edits a single sentence through the native field with A and Enter', async () => {
     renderEditor()
     fireEvent.keyDown(window, { key: 'Enter' })

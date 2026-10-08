@@ -24,6 +24,16 @@ describe('splitSentences', () => {
     expect(splitSentences('version 1.2 ships.').map((s) => s.text)).toEqual(['version 1.2 ships.'])
   })
 
+  it('also splits on Chinese commas and enumeration commas', () => {
+    expect(splitSentences('你好，世界、再见').map((s) => s.text)).toEqual(['你好，', '世界、', '再见'])
+  })
+
+  it('splits English commas only before whitespace or at the end', () => {
+    expect(splitSentences('one, two, three').map((s) => s.text)).toEqual(['one,', 'two,', 'three'])
+    // A comma inside a number is not a separator.
+    expect(splitSentences('1,000 items.').map((s) => s.text)).toEqual(['1,000 items.'])
+  })
+
   it('always splits on a line break', () => {
     expect(splitSentences('line one\nline two').map((s) => s.text)).toEqual(['line one', 'line two'])
     expect(splitSentences('a。\r\nb。').map((s) => s.text)).toEqual(['a。', 'b。'])

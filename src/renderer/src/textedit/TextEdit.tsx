@@ -265,6 +265,14 @@ function TextEditBody({ source, caret, onCommit }: TextEditBodyProps) {
     }
   }, [tree, focusedIndex, sentences.length])
 
+  // The caret is drawn at the real selection offset inside the focused sentence,
+  // not pinned to its end: after a deletion merges sentences the selection can
+  // sit mid-sentence, and showing it elsewhere made X delete at a spot the user
+  // could not see.
+  const focusedStart = sentences[focusedIndex]?.start ?? 0
+  const focusedText = sentences[focusedIndex]?.text ?? ''
+  const caretOffset = Math.max(0, Math.min(focusedText.length, selection.start - focusedStart))
+
   // Render the original text with each sentence wrapped in place, so prose
   // flows line by line and only real newlines break (spec 17 feedback).
   const content: ReactNode[] = []
@@ -279,6 +287,7 @@ function TextEditBody({ source, caret, onCommit }: TextEditBodyProps) {
         text={sentence.text}
         placeholder={t('textEdit.empty')}
         focused={index === focusedIndex}
+        caretOffset={caretOffset}
         editing={editing && index === focusedIndex}
         editValue={editValue}
         onEditChange={setEditValue}
@@ -357,12 +366,24 @@ function TextEditBody({ source, caret, onCommit }: TextEditBodyProps) {
   )
 }
 
+/** Blinking caret used inside the focused sentence. */
+function Caret() {
+  return (
+    <span
+      data-testid="text-edit-caret"
+      className="ml-0.5 inline-block h-[1em] w-0.5 animate-pulse bg-accent align-[-0.15em]"
+    />
+  )
+}
+
 interface SentenceItemProps {
   id: string
   order: number
   text: string
   placeholder: string
   focused: boolean
+  /** Selection offset within `text`; the caret is drawn here while focused. */
+  caretOffset: number
   editing: boolean
   editValue: string
   onEditChange: (value: string) => void
@@ -377,6 +398,7 @@ function SentenceItem({
   text,
   placeholder,
   focused,
+  caretOffset,
   editing,
   editValue,
   onEditChange,
@@ -430,15 +452,20 @@ function SentenceItem({
           }}
           className="my-1 block w-full resize-none rounded-card border border-surface-raised bg-card px-3 py-2 text-2xl text-text outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
         />
+      ) : text.length > 0 ? (
+        focused ? (
+          <>
+            {text.slice(0, caretOffset)}
+            <Caret />
+            {text.slice(caretOffset)}
+          </>
+        ) : (
+          text
+        )
       ) : (
         <>
-          {text.length > 0 ? text : <span className="italic text-text-muted">{placeholder}</span>}
-          {focused ? (
-            <span
-              data-testid="text-edit-caret"
-              className="ml-0.5 inline-block h-[1em] w-0.5 animate-pulse bg-accent align-[-0.15em]"
-            />
-          ) : null}
+          <span className="italic text-text-muted">{placeholder}</span>
+          {focused ? <Caret /> : null}
         </>
       )}
     </span>
