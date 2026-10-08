@@ -33,6 +33,7 @@ const SETTLE_TIMEOUT_MS = 2500
  */
 export class DictationController {
   private target: DictationTarget | null = null
+  private targetOwner: string | null = null
   private editor: DictationEditor | null = null
   private sessionId: string | null = null
   private starting = false
@@ -48,8 +49,20 @@ export class DictationController {
     return speech.onEvent((event) => this.handleEvent(event))
   }
 
-  registerTarget(target: DictationTarget | null): void {
+  /**
+   * Claims the dictation target. Registrations are owned so a component that
+   * unmounts while another owns the target (the composer behind the text
+   * editor) cannot clear it: releasing only works for the current owner.
+   */
+  registerTarget(target: DictationTarget | null, owner = 'default'): void {
+    if (target === null) {
+      if (this.targetOwner !== owner) return
+      this.target = null
+      this.targetOwner = null
+      return
+    }
     this.target = target
+    this.targetOwner = owner
   }
 
   get active(): boolean {

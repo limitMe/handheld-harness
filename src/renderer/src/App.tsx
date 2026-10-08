@@ -11,6 +11,7 @@ import { useTranslation } from './i18n'
 import { CONTEXT_ORDER, onPress, useInputContext } from './input'
 import { useWorkbenchStore } from './state/store'
 import { sessionKey } from './state/types'
+import { TextEditOverlay, useTextEditStore } from './textedit'
 import { showToast } from './ui'
 import { CurrentWork } from './workbench/CurrentWork'
 import { TaskMap } from './workbench/TaskMap'
@@ -35,6 +36,7 @@ export default function App() {
   const sessions = useWorkbenchStore((state) => state.sessions)
   const current = useWorkbenchStore((state) => state.ui.current)
   const abortCurrent = useWorkbenchStore((state) => state.abortCurrent)
+  const textEditOpen = useTextEditStore((state) => state.open)
 
   // Screen context: bindings resolve here; navigation is handled by the focus tree.
   useInputContext(
@@ -90,9 +92,11 @@ export default function App() {
     ? t('app.systemMenu')
     : mapOpen
       ? t('app.taskMap')
-      : current
-        ? (sessions[sessionKey(current)]?.title ?? t('app.task'))
-        : t('app.newTask')
+      : textEditOpen
+        ? undefined
+        : current
+          ? (sessions[sessionKey(current)]?.title ?? t('app.task'))
+          : t('app.newTask')
 
   const adjustZoom = useCallback(async (direction: -1 | 0 | 1): Promise<void> => {
     const settings = await window.handheld.settings.get()
@@ -155,6 +159,7 @@ export default function App() {
             else setEngineOpen(true)
           }}
         />
+        <TextEditOverlay onCommit={(text) => useWorkbenchStore.getState().setDraft(text)} />
       </div>
       <GamepadDebug open={gamepadOpen} onOpenChange={setGamepadOpen} />
       <MicDebug open={micOpen} onOpenChange={setMicOpen} />

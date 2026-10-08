@@ -134,7 +134,7 @@ describe('settings store', () => {
     store.update({
       input: {
         contexts: { currentWork: { A: 'input.send' }, taskMap: { Y: 'task.new' } },
-        keyboard: { textEdit: { X: 'sentence.delete' } },
+        keyboard: { textEdit: { X: 'input.deleteBackward' } },
       },
     })
     store.update({ input: { resetContexts: ['currentWork'] } })

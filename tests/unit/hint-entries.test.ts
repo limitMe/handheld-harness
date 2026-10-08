@@ -47,6 +47,15 @@ describe('buildHintEntries', () => {
     expect(actions).not.toContain('voice.dictate')
   })
 
+  it('offers dictation from a screen that binds it, even without a native field', () => {
+    const map = mergeActionMaps([DEFAULT_BINDINGS])
+    const entries = buildHintEntries(map, ['textEdit', 'global'], { editable: false })
+    const byAction = new Map(entries.map((entry) => [entry.action, entry.control]))
+    // The text editor owns a text cursor even though its focus node is a div.
+    expect(byAction.get('voice.dictate')).toBe('Y')
+    expect(byAction.get('input.deleteBackward')).toBe('X')
+  })
+
   it('reflects a rebinding in the shown control', () => {
     const user: BindingLayer = {
       contexts: {

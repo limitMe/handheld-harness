@@ -10,6 +10,7 @@ import {
 } from '../focus'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { useTranslation } from '../i18n'
+import { useTextEditStore } from '../textedit'
 import { Button, cn } from '../ui'
 import { ListInput } from './ListInput'
 import {
@@ -43,11 +44,13 @@ function ComposerInputContext({
   onDeactivate,
   onDeleteBackward,
   onListInput,
+  onTextEdit,
 }: {
   onSend: () => void
   onDeactivate: () => void
   onDeleteBackward: () => void
   onListInput?: () => void
+  onTextEdit: () => void
 }) {
   useInputContext(
     'currentWork.input',
@@ -55,6 +58,7 @@ function ComposerInputContext({
       'input.send': onPress(() => onSend()),
       'input.deactivate': onPress(() => onDeactivate()),
       'input.deleteBackward': onPress(() => onDeleteBackward()),
+      'input.textEdit': onPress(() => onTextEdit()),
       ...(onListInput ? { 'input.listInput': onPress(() => onListInput()) } : {}),
     },
     CONTEXT_ORDER.activated,
@@ -112,6 +116,13 @@ export function Composer({
     setCaret(element, next.position)
     onChange(next.value)
   }, [onChange])
+
+  // RB opens the full-screen text editor with the draft and the caret (spec 17).
+  const openTextEdit = useCallback(() => {
+    const element = textarea.current
+    const caret = element ? element.selectionStart : valueRef.current.length
+    useTextEditStore.getState().openEditor(valueRef.current, caret)
+  }, [])
 
   const handleNavigate = useCallback((direction: FocusDirection): NavigateResult => {
     const element = textarea.current
@@ -175,12 +186,22 @@ export function Composer({
 
   useEffect(() => {
     if (!focus.focused && !focus.activated) {
-      dictation.registerTarget(null)
+      dictation.registerTarget(null, 'composer')
       return undefined
     }
-    dictation.registerTarget(dictationTarget)
-    return () => dictation.registerTarget(null)
+    dictation.registerTarget(dictationTarget, 'composer')
+    return () => dictation.registerTarget(null, 'composer')
   }, [focus.focused, focus.activated, dictationTarget])
+
+  const textEditRevision = useTextEditStore((state) => state.revision)
+
+  // The editor is a modal scope: closing it restores focus but not activation,
+  // so re-activate the field on the close revision (spec 17).
+  useEffect(() => {
+    if (textEditRevision === 0) return
+    tree?.setFocus(COMPOSER_ID)
+    tree?.activate(COMPOSER_ID)
+  }, [textEditRevision, tree])
 
   const expanded = !tree || focus.focused || focus.activated || value.trim().length > 0
   const dimmed = Boolean(tree) && !focus.focused && !focus.activated && value.trim().length > 0
@@ -332,6 +353,7 @@ export function Composer({
             onSend={send}
             onDeactivate={() => tree?.deactivate()}
             onDeleteBackward={deleteBackwardAtCaret}
+            onTextEdit={openTextEdit}
             {...(commandsAvailable ? { onListInput: () => setListOpen(true) } : {})}
           />
         ) : null}

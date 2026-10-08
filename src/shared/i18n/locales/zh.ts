@@ -32,6 +32,11 @@ export const zh = {
     stop: '停止',
     emptyHint: '描述你想让 Agent 做什么。Enter 发送，Shift+Enter 换行。',
   },
+  textEdit: {
+    empty: '还没有内容',
+    listening: '正在聆听…',
+    holdToSpeak: '长按 Y 说话',
+  },
   messageList: {
     agentWorking: 'Agent 正在工作…',
     scrollLatest: '↓ 最新',
@@ -355,7 +360,6 @@ export const zh = {
     'task.new': '新建任务',
     'task.history': '历史记录',
     'task.model': '选择模型',
-    'sentence.delete': '删除句子',
     'agent.abort': '停止 Agent',
   },
   contexts: {

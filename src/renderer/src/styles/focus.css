@@ -33,3 +33,11 @@
 [data-focus-id][data-task-card][data-focused] {
   outline-color: var(--theme-color-text);
 }
+
+/*
+ * Text editor (spec 17): sentences are inline and wrap across lines, so the
+ * rectangular outline would look wrong; selection is a text highlight instead.
+ */
+[data-focus-id][data-text-sentence][data-focused] {
+  outline: none;
+}

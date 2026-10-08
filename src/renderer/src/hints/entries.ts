@@ -61,9 +61,13 @@ export function buildHintEntries(
   for (const contextId of hintContextIds(contextIds)) {
     const bindings = map.contexts[contextId]
     if (!bindings) continue
+    // A screen that binds dictation itself (the text editor) offers a text
+    // target even though its focused element is not a native field; elsewhere
+    // dictation comes from the global layer and needs a real text cursor (P-05).
+    const specific = contextId !== 'global'
     for (const [key, action] of Object.entries(bindings)) {
       if (HIDDEN_ACTIONS.has(action)) continue
-      if (action === 'voice.dictate' && !options.editable) continue
+      if (action === 'voice.dictate' && !options.editable && !specific) continue
       if (seen.has(action)) continue
       seen.add(action)
       const { control, phase } = splitControlKey(key)

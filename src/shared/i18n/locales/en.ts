@@ -32,6 +32,11 @@ export const en = {
     stop: 'Stop',
     emptyHint: 'Describe what you want the agent to do. Enter sends, Shift+Enter adds a line.',
   },
+  textEdit: {
+    empty: 'Nothing here yet',
+    listening: 'Listening…',
+    holdToSpeak: 'Hold Y to speak',
+  },
   messageList: {
     agentWorking: 'Agent is working…',
     scrollLatest: '↓ Latest',
@@ -360,7 +365,6 @@ export const en = {
     'task.new': 'New task',
     'task.history': 'History',
     'task.model': 'Choose model',
-    'sentence.delete': 'Delete sentence',
     'agent.abort': 'Stop agent',
   },
   contexts: {

@@ -44,8 +44,6 @@ export const ACTIONS = {
   'task.history': { label: 'History' },
   'task.model': { label: 'Choose model' },
 
-  'sentence.delete': { label: 'Delete sentence' },
-
   'agent.abort': { label: 'Stop agent' },
 } as const satisfies Record<string, ActionDefinition>
 
