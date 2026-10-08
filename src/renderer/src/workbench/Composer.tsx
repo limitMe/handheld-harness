@@ -122,6 +122,9 @@ export function Composer({
     const element = textarea.current
     const caret = element ? element.selectionStart : valueRef.current.length
     useTextEditStore.getState().openEditor(valueRef.current, caret)
+    // Drop DOM focus so the OS keyboard targets the editor (via its hidden field)
+    // rather than staying on the composer behind the overlay.
+    element?.blur()
   }, [])
 
   const handleNavigate = useCallback((direction: FocusDirection): NavigateResult => {

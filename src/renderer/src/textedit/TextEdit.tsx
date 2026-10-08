@@ -21,8 +21,9 @@ function sentenceId(index: number): string {
 
 /**
  * Full-screen sentence editor over the current work (spec 17). Opens with the
- * composer text, lets the D-pad pick sentences, X delete one and long-press Y
- * dictate after the focused one; B exits and commits the result back.
+ * composer text, lets the D-pad pick sentences, X delete a character and
+ * long-press Y dictate after the focused one; RB opens the OS on-screen
+ * keyboard and B saves the result back into the composer and returns.
  */
 export function TextEditOverlay({ onCommit }: TextEditOverlayProps) {
   const open = useTextEditStore((state) => state.open)
@@ -44,6 +45,7 @@ interface TextEditBindingsProps {
   onDeleteBackward: () => void
   onActivate: () => void
   onDeactivate: () => void
+  onShowKeyboard: () => void
 }
 
 /** Sentence bindings live in a child so the ref-reading callbacks stay out of hooks. */
@@ -55,6 +57,7 @@ function TextEditBindings({
   onDeleteBackward,
   onActivate,
   onDeactivate,
+  onShowKeyboard,
 }: TextEditBindingsProps) {
   useInputContext(
     'textEdit',
@@ -65,7 +68,10 @@ function TextEditBindings({
       'nav.down': onPress(() => onDown()),
       'input.deleteBackward': onPress(() => onDeleteBackward()),
       'nav.activate': onPress(() => onActivate()),
+      // B saves and returns (Escape shares the handler in the keyboard layer).
+      'edit.commit': onPress(() => onDeactivate()),
       'nav.deactivate': onPress(() => onDeactivate()),
+      'keyboard.show': onPress(() => onShowKeyboard()),
     },
     CONTEXT_ORDER.overlay,
   )
@@ -100,6 +106,8 @@ function TextEditBody({ source, caret, onCommit }: TextEditBodyProps) {
   // no ref is captured by the input context.
   const textRef = useRef(text)
   const selectionRef = useRef(selection)
+  const keyboardInputRef = useRef<HTMLTextAreaElement>(null)
+  const keyboardComposingRef = useRef(false)
   useEffect(() => {
     textRef.current = text
   }, [text])
@@ -110,6 +118,7 @@ function TextEditBody({ source, caret, onCommit }: TextEditBodyProps) {
   const moveTo = (index: number): void => {
     const clamped = Math.max(0, Math.min(sentences.length - 1, index))
     const end = sentences[clamped]?.end ?? 0
+    selectionRef.current = { start: end, end }
     setFocusedIndex(clamped)
     setSelection({ start: end, end })
   }
@@ -123,22 +132,64 @@ function TextEditBody({ source, caret, onCommit }: TextEditBodyProps) {
     moveTo(geometricNeighbor(rects, focusedIndex, direction))
   }
 
+  // Writes through refs first so rapid on-screen-keyboard input never reads a
+  // stale caret, then mirrors into state (same trick as the dictation adapter).
+  const applyTextAt = (nextValue: string, position: number): void => {
+    const list = splitSentences(nextValue)
+    const index = sentenceIndexAt(list, nextValue.length, position)
+    textRef.current = nextValue
+    selectionRef.current = { start: position, end: position }
+    setText(nextValue)
+    setFocusedIndex(index)
+    setSelection({ start: position, end: position })
+  }
+
+  const insertAtCaret = (insert: string): void => {
+    const { start, end } = selectionRef.current
+    const value = textRef.current
+    applyTextAt(value.slice(0, start) + insert + value.slice(end), start + insert.length)
+  }
+
   const deleteBackwardAtCaret = (): void => {
     if (editing || dictation.active) return
-    const caret = selection.start
-    const next = deleteBackward(text, caret, caret)
-    if (next.value === text) return
-    const nextList = splitSentences(next.value)
-    const index = sentenceIndexAt(nextList, next.value.length, next.position)
-    setText(next.value)
-    setFocusedIndex(index)
-    setSelection({ start: next.position, end: next.position })
+    const { start, end } = selectionRef.current
+    const value = textRef.current
+    const next = deleteBackward(value, start, end)
+    if (next.value === value) return
+    applyTextAt(next.value, next.position)
   }
 
   const exit = (): void => {
     if (dictation.active) dictation.finish()
     onCommit(textRef.current)
     useTextEditStore.getState().close()
+  }
+
+  // Focusing an editable control is what makes Windows raise the modern touch
+  // keyboard (Chromium's input-pane integration), so we park a hidden field at
+  // the caret and focus it: the OS keyboard targets it and IME candidates appear
+  // where the user is looking. Only a touch-less device needs the classic osk.
+  const showKeyboard = (): void => {
+    const input = keyboardInputRef.current
+    if (input && !editing) {
+      const caret = document.querySelector<HTMLElement>('[data-testid="text-edit-caret"]')
+      const rect = caret?.getBoundingClientRect()
+      if (rect) {
+        input.style.left = `${rect.left}px`
+        input.style.top = `${rect.top}px`
+        input.style.height = `${rect.height}px`
+      }
+      input.focus()
+    }
+    if (navigator.maxTouchPoints === 0) {
+      void window.handheld.app.showOnScreenKeyboard()
+    }
+  }
+
+  const flushKeyboardInput = (element: HTMLTextAreaElement): void => {
+    const inserted = element.value
+    element.value = ''
+    if (inserted) insertAtCaret(inserted)
   }
 
   const beginEdit = (): void => {
@@ -155,6 +206,8 @@ function TextEditBody({ source, caret, onCommit }: TextEditBodyProps) {
     const nextList = splitSentences(nextText)
     const index = sentenceIndexAt(nextList, nextText.length, sentence.start + editValue.length)
     const end = nextList[index]?.end ?? 0
+    textRef.current = nextText
+    selectionRef.current = { start: end, end }
     setText(nextText)
     setFocusedIndex(index)
     setSelection({ start: end, end })
@@ -248,6 +301,39 @@ function TextEditBody({ source, caret, onCommit }: TextEditBodyProps) {
           {content}
         </p>
       </div>
+      <textarea
+        ref={keyboardInputRef}
+        data-testid="text-edit-keyboard"
+        aria-hidden="true"
+        tabIndex={-1}
+        defaultValue=""
+        onInput={(event) => {
+          if (keyboardComposingRef.current) return
+          flushKeyboardInput(event.currentTarget)
+        }}
+        onCompositionStart={() => {
+          keyboardComposingRef.current = true
+        }}
+        onCompositionEnd={(event) => {
+          keyboardComposingRef.current = false
+          flushKeyboardInput(event.currentTarget)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Backspace') {
+            event.preventDefault()
+            deleteBackwardAtCaret()
+          } else if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault()
+            insertAtCaret('\n')
+          } else if (event.key === 'Escape') {
+            // Editable fields only receive global keyboard combos, so the
+            // textEdit layer never sees this Escape; close here instead.
+            event.preventDefault()
+            exit()
+          }
+        }}
+        className="fixed h-6 w-px resize-none overflow-hidden border-0 bg-transparent p-0 text-transparent caret-transparent opacity-0 outline-none"
+      />
       <MicIndicator
         status={dictationStatus}
         level={dictationLevel}
@@ -265,6 +351,7 @@ function TextEditBody({ source, caret, onCommit }: TextEditBodyProps) {
           if (editing) setEditing(false)
           else exit()
         }}
+        onShowKeyboard={showKeyboard}
       />
     </div>
   )

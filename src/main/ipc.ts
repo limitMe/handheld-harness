@@ -11,6 +11,7 @@ import { isAllowedExternalUrl } from '../shared/url'
 import { createSettingsStore, type SettingsStore } from './settings-store'
 import { isDevMode } from './env'
 import { log, writeLog } from './log'
+import { showOnScreenKeyboard } from './on-screen-keyboard'
 import { resolveProfile } from './profile'
 import { getEngineManager, startEngineRuntime } from './engine-runtime'
 import {
@@ -109,6 +110,9 @@ export function registerIpc(): void {
     const dir = path.join(app.getPath('userData'), 'logs')
     await shell.openPath(dir)
   })
+
+  // Summons the OS on-screen keyboard (spec 17, touch fallback).
+  handle('app:showOnScreenKeyboard', () => showOnScreenKeyboard())
 
   handle('window:setZoom', ({ factor }, event) => {
     const zoom = clampZoom(factor)

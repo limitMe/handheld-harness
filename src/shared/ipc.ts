@@ -313,6 +313,7 @@ export interface InvokeContract {
   'app:getInfo': { request: undefined; response: AppInfo }
   'app:openExternal': { request: { url: string }; response: void }
   'app:openLogDir': { request: undefined; response: void }
+  'app:showOnScreenKeyboard': { request: undefined; response: void }
   'window:setZoom': { request: { factor: number }; response: { zoom: number } }
   'log:write': { request: LogWriteRequest; response: void }
   'settings:get': { request: undefined; response: Settings }
@@ -375,6 +376,7 @@ export const INVOKE_CHANNELS = [
   'app:getInfo',
   'app:openExternal',
   'app:openLogDir',
+  'app:showOnScreenKeyboard',
   'window:setZoom',
   'log:write',
   'settings:get',
@@ -416,6 +418,7 @@ export const IPC_INVOKE_SCHEMAS = {
   'app:getInfo': z.undefined(),
   'app:openExternal': z.object({ url: z.string().min(1) }),
   'app:openLogDir': z.undefined(),
+  'app:showOnScreenKeyboard': z.undefined(),
   'window:setZoom': z.object({ factor: z.number() }),
   'log:write': LogWriteRequestSchema,
   'settings:get': z.undefined(),
@@ -470,6 +473,7 @@ export interface HandheldApi {
     getInfo(): Promise<AppInfo>
     openExternal(url: string): Promise<void>
     openLogDir(): Promise<void>
+    showOnScreenKeyboard(): Promise<void>
   }
   window: {
     setZoom(factor: number): Promise<{ zoom: number }>

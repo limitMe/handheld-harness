@@ -82,6 +82,26 @@ describe('TextEditOverlay', () => {
     expect(useTextEditStore.getState().open).toBe(false)
   })
 
+  it('inserts hidden-keyboard input at the caret and deletes with Backspace', async () => {
+    useTextEditStore.setState({ open: true, source: 'abc', caret: 3, revision: 0 })
+    renderEditor()
+    const field = screen.getByTestId('text-edit-keyboard') as HTMLTextAreaElement
+
+    field.value = 'd'
+    fireEvent.input(field)
+    await waitFor(() =>
+      expect(screen.getAllByTestId('text-edit-sentence')[0]?.textContent).toContain('abcd'),
+    )
+    // The shim never keeps its own value.
+    expect(field.value).toBe('')
+
+    fireEvent.keyDown(field, { key: 'Backspace' })
+    await waitFor(() =>
+      expect(screen.getAllByTestId('text-edit-sentence')[0]?.textContent).toContain('abc'),
+    )
+    expect(screen.getAllByTestId('text-edit-sentence')[0]?.textContent).not.toContain('abcd')
+  })
+
   it('edits a single sentence through the native field with A and Enter', async () => {
     renderEditor()
     fireEvent.keyDown(window, { key: 'Enter' })

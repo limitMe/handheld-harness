@@ -349,6 +349,8 @@ export const zh = {
     'input.listInput': '列表输入',
     'input.textEdit': '文本编辑',
     'input.deleteBackward': '删除字符',
+    'edit.commit': '保存并返回',
+    'keyboard.show': '屏幕键盘',
     'permission.once': '允许一次',
     'permission.always': '始终允许',
     'permission.reject': '拒绝',

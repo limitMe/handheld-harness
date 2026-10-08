@@ -173,9 +173,10 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       'RStickY+': 'nav.down',
       'RStickY-': 'nav.up',
       A: 'nav.activate',
-      B: 'nav.deactivate',
+      B: 'edit.commit',
       X: 'input.deleteBackward',
       'Y:hold': 'voice.dictate',
+      RB: 'keyboard.show',
     },
     systemMenu: {
       DpadUp: 'nav.up',

@@ -54,6 +54,9 @@ describe('buildHintEntries', () => {
     // The text editor owns a text cursor even though its focus node is a div.
     expect(byAction.get('voice.dictate')).toBe('Y')
     expect(byAction.get('input.deleteBackward')).toBe('X')
+    // B commits and returns, RB summons the OS keyboard (spec 17).
+    expect(byAction.get('edit.commit')).toBe('B')
+    expect(byAction.get('keyboard.show')).toBe('RB')
   })
 
   it('reflects a rebinding in the shown control', () => {

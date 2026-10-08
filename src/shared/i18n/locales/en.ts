@@ -354,6 +354,8 @@ export const en = {
     'input.listInput': 'List input',
     'input.textEdit': 'Text edit',
     'input.deleteBackward': 'Delete character',
+    'edit.commit': 'Save & return',
+    'keyboard.show': 'On-screen keyboard',
     'permission.once': 'Allow once',
     'permission.always': 'Always allow',
     'permission.reject': 'Reject',

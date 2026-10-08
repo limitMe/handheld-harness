@@ -29,6 +29,8 @@ export const ACTIONS = {
   'input.listInput': { label: 'List input' },
   'input.textEdit': { label: 'Text edit' },
   'input.deleteBackward': { label: 'Delete character' },
+  'edit.commit': { label: 'Save & return' },
+  'keyboard.show': { label: 'On-screen keyboard' },
 
   'permission.once': { label: 'Allow once' },
   'permission.always': { label: 'Always allow' },
