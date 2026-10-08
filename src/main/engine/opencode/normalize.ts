@@ -298,6 +298,7 @@ export const IGNORED_EVENT_TYPES = new Set([
   'message.part.removed',
   'message.removed',
   'server.connected',
+  'server.heartbeat',
   'global.disposed',
   'installation.updated',
   'installation.update-available',

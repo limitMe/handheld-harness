@@ -287,13 +287,17 @@ export function KeyBindingsPage({ map, settings, update }: KeyBindingsPageProps)
           className="sticky top-0 z-10 mt-4 rounded-md border border-accent bg-card px-3 py-2 text-base text-on-card shadow-card"
         >
           <p className="font-medium">
-            {t('keys.capturePrompt', {
+            {t(capture.phase === 'hold' ? 'keys.capturePromptHold' : 'keys.capturePrompt', {
               device: device === 'gamepad' ? t('keys.deviceButton') : t('keys.deviceKey'),
               action: t(`actions.${capture.action}`, { defaultValue: actionLabel(capture.action) }),
             })}
           </p>
           <p className="text-code text-text-muted">
-            {holding ? t('keys.keepHolding') : t('keys.holdToCancel')}
+            {device === 'keyboard'
+              ? t('keys.cancelHintKeyboard')
+              : holding
+                ? t('keys.keepHolding')
+                : t('keys.holdToCancel')}
           </p>
         </div>
       ) : null}

@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { normalize } from '../../src/main/engine/opencode/normalize'
+import { IGNORED_EVENT_TYPES, normalize } from '../../src/main/engine/opencode/normalize'
 import type { ChatPart, EngineEvent } from '../../src/shared/engine'
 
 const FIXTURE = path.join(
@@ -86,6 +86,13 @@ describe('normalize (recorded fixture)', () => {
     expect(normalize({ id: 'evt_y', type: 'totally.unknown', properties: {} })).toEqual([])
     expect(normalize({})).toEqual([])
     expect(normalize(null)).toEqual([])
+  })
+
+  it('treats periodic traffic as known no-ops', () => {
+    // The server heartbeats on a timer; logging each one drowns the console.
+    expect(normalize({ type: 'server.heartbeat', properties: {} })).toEqual([])
+    expect(IGNORED_EVENT_TYPES.has('server.heartbeat')).toBe(true)
+    expect(IGNORED_EVENT_TYPES.has('server.connected')).toBe(true)
   })
 })
 

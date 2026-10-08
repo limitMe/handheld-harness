@@ -33,7 +33,13 @@ import {
   type ServerHandle,
 } from '../host'
 import { createRedactingLogger, type EngineLogger } from '../logger'
-import { normalize, toChatMessage, toChatPart, toSessionSummary } from './normalize'
+import {
+  IGNORED_EVENT_TYPES,
+  normalize,
+  toChatMessage,
+  toChatPart,
+  toSessionSummary,
+} from './normalize'
 import { resolveSessionModel as resolveModel } from './model-resolution'
 import {
   modelsPath,
@@ -400,6 +406,9 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     const events = normalize(raw)
     if (events.length === 0) {
       const type = (raw as { type?: unknown })?.type
+      // Known no-op traffic (heartbeat, file watcher, ...) is expected, so it is
+      // not worth a log line per event. Only genuinely unknown types are logged.
+      if (typeof type === 'string' && IGNORED_EVENT_TYPES.has(type)) return
       this.logger.debug(`ignored ${String(type)} event`)
       return
     }

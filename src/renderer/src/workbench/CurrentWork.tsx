@@ -1,9 +1,20 @@
+import type { ChatMessage, PermissionRequest, QuestionRequest } from '@shared/engine'
 import { useWorkbenchStore } from '../state/store'
-import { sessionKey } from '../state/types'
+import { sessionKey, type AnsweredChoice } from '../state/types'
 import { cn } from '../ui'
 import { Composer } from './Composer'
 import { ErrorBanner } from './ErrorBanner'
 import { MessageList } from './MessageList'
+
+/**
+ * Stable empty lists for the "not loaded / no items" cases. A fresh `[]` on
+ * every render would change the transcript's memo inputs and re-run its scroll
+ * effects after each render, which can cascade into an update-depth loop.
+ */
+const NO_MESSAGES: ChatMessage[] = []
+const NO_PERMISSIONS: PermissionRequest[] = []
+const NO_QUESTIONS: QuestionRequest[] = []
+const NO_CHOICES: AnsweredChoice[] = []
 
 export interface CurrentWorkProps {
   /** True while the task map is on top: the transcript recedes and stops taking focus. */
@@ -35,10 +46,11 @@ export function CurrentWork({ dimmed = false }: CurrentWorkProps) {
   const draft = drafts[key] ?? ''
   const summary = current ? sessions[key] : undefined
   const busy = summary?.runState === 'busy'
-  const sessionMessages = current && messagesLoaded[key] ? (messages[key] ?? []) : []
-  const permissions = current ? (pendingPermissions[key] ?? []) : []
-  const questions = current ? (pendingQuestions[key] ?? []) : []
-  const choices = current ? (answeredChoices[key] ?? []) : []
+  const sessionMessages =
+    current && messagesLoaded[key] ? (messages[key] ?? NO_MESSAGES) : NO_MESSAGES
+  const permissions = current ? (pendingPermissions[key] ?? NO_PERMISSIONS) : NO_PERMISSIONS
+  const questions = current ? (pendingQuestions[key] ?? NO_QUESTIONS) : NO_QUESTIONS
+  const choices = current ? (answeredChoices[key] ?? NO_CHOICES) : NO_CHOICES
 
   return (
     <div
