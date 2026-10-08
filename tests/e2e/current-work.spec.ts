@@ -51,6 +51,7 @@ async function launch(profile: string): Promise<{ app: ElectronApplication; wind
 type PadScope = {
   navigator: object
   __setPad: (name: string, pressed: boolean) => void
+  __setAxis: (index: number, value: number) => void
 }
 
 async function installFakePad(window: Page): Promise<void> {
@@ -75,7 +76,16 @@ async function installFakePad(window: Page): Promise<void> {
       if (index === undefined) return
       buttons[index] = { pressed, value: pressed ? 1 : 0 }
     }
+    scope.__setAxis = (index: number, value: number) => {
+      pad.axes[index] = value
+    }
   }, BUTTONS)
+}
+
+async function setAxis(window: Page, index: number, value: number): Promise<void> {
+  await window.evaluate((args) => {
+    ;(globalThis as unknown as PadScope).__setAxis(args.index, args.value)
+  }, { index, value })
 }
 
 async function pressPad(window: Page, name: string): Promise<void> {
@@ -166,6 +176,9 @@ test('auto-activates the question card and confirms with gamepad A', async () =>
   const { app, window } = await launch('e2e-cw-question')
   try {
     await installFakePad(window)
+    // Park the pointer away from the card: a physical cursor resting over an
+    // option would otherwise set the D-pad highlight before the gamepad press.
+    await window.mouse.move(4, 4)
     await send(window, '/fake question')
 
     const card = window.getByTestId('question-card')
@@ -252,6 +265,200 @@ test('collapses the sticky user message when scrolled past', async () => {
 
     mkdirSync(artifacts, { recursive: true })
     await window.screenshot({ path: path.join(artifacts, 'current-work-sticky.png') })
+  } finally {
+    await app.close()
+  }
+})
+
+test('opens an agent card full screen, scrolls it, and returns with B', async () => {
+  const { app, window } = await launch('e2e-cw-viewer')
+  try {
+    await installFakePad(window)
+    await window.mouse.move(4, 4)
+    // Two long rounds make the transcript scrollable well past the last card,
+    // so restoring the exact scroll position is observable.
+    await send(window, '/fake long')
+    await expect(window.getByTestId('agent-card')).toHaveCount(1, { timeout: 30_000 })
+    await expect(window.getByTestId('busy-indicator')).toHaveCount(0, { timeout: 30_000 })
+    await send(window, '/fake long')
+    await expect(window.getByTestId('agent-card')).toHaveCount(2, { timeout: 30_000 })
+    await expect(window.getByTestId('busy-indicator')).toHaveCount(0, { timeout: 30_000 })
+
+    // Move focus from the composer up onto the summary card, then open it.
+    const card = window.getByTestId('agent-card').last()
+    // The composer starts activated: the first D-pad up exits it, the next walks
+    // focus up onto the summary card.
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const focused = await window.evaluate(() => {
+        const scope = globalThis as unknown as {
+          document: {
+            querySelector(selector: string): { getAttribute(name: string): string | null } | null
+          }
+        }
+        return scope.document.querySelector('[data-focus-id][data-focused]')?.getAttribute('data-focus-id') ?? ''
+      })
+      if (focused.startsWith('card-agent')) break
+      await pressPad(window, 'DpadUp')
+      await releasePad(window, 'DpadUp')
+    }
+    await expect(card).toHaveAttribute('data-focused', '')
+
+    // Entering full screen remembers the transcript position to restore later.
+    const list = window.getByTestId('message-list')
+    await list.evaluate((element) => {
+      element.scrollTop = element.scrollHeight
+    })
+    await window.waitForTimeout(150)
+    const before = await list.evaluate((element) => element.scrollTop)
+    expect(before).toBeGreaterThan(0)
+
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+
+    const viewer = window.getByTestId('card-viewer')
+    await expect(viewer).toBeVisible()
+    expect(await viewer.evaluate((element) => element.scrollTop)).toBe(0)
+
+    // The D-pad scrolls the full-screen reader (spec 13).
+    await window.keyboard.press('ArrowDown')
+    expect(await viewer.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+
+    // Either stick scrolls it too.
+    const beforeStick = await viewer.evaluate((element) => element.scrollTop)
+    await setAxis(window, 3, 0.9)
+    await window.waitForTimeout(500)
+    await setAxis(window, 3, 0)
+    await window.waitForTimeout(100)
+    expect(await viewer.evaluate((element) => element.scrollTop)).toBeGreaterThan(beforeStick)
+
+    await pressPad(window, 'B')
+    await releasePad(window, 'B')
+    await expect(window.getByTestId('card-viewer')).toHaveCount(0)
+    await window.waitForTimeout(150)
+    expect(await list.evaluate((element) => element.scrollTop)).toBe(before)
+  } finally {
+    await app.close()
+  }
+})
+
+test('reopens a task scrolled to its newest content', async () => {
+  const { app, window } = await launch('e2e-cw-reopen')
+  try {
+    await installFakePad(window)
+    await window.mouse.move(4, 4)
+    await send(window, '/fake many')
+    await expect(window.getByTestId('message-list')).toContainText('Answer 200', {
+      timeout: 30_000,
+    })
+
+    // Leave the task scrolled to the very top.
+    const list = window.getByTestId('message-list')
+    await list.evaluate((element) => {
+      element.scrollTop = 0
+    })
+    await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0)
+
+    // Create and switch to a second task.
+    await pressPad(window, 'Back')
+    await releasePad(window, 'Back')
+    await expect(window.getByTestId('task-map')).toBeVisible()
+    await pressPad(window, 'Y')
+    await releasePad(window, 'Y')
+    await pressPad(window, 'Y')
+    await releasePad(window, 'Y')
+    await expect(window.getByTestId('task-map')).toHaveCount(0)
+
+    // Step back to the first task and open it again.
+    await pressPad(window, 'Back')
+    await releasePad(window, 'Back')
+    await pressPad(window, 'DpadLeft')
+    await releasePad(window, 'DpadLeft')
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await expect(window.getByTestId('message-list')).toContainText('Answer 200', {
+      timeout: 30_000,
+    })
+
+    await window.waitForTimeout(300)
+    const distanceFromBottom = await list.evaluate(
+      (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
+    )
+    expect(distanceFromBottom).toBeLessThanOrEqual(48)
+
+    // Reopening the *current* task also lands on the newest content.
+    await list.evaluate((element) => {
+      element.scrollTop = 0
+    })
+    await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0)
+    await pressPad(window, 'Back')
+    await releasePad(window, 'Back')
+    await expect(window.getByTestId('task-map')).toBeVisible()
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
+    await window.waitForTimeout(300)
+    const reopenedDistance = await list.evaluate(
+      (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
+    )
+    expect(reopenedDistance).toBeLessThanOrEqual(48)
+  } finally {
+    await app.close()
+  }
+})
+
+test('anchors the transcript and its cards after a restart', async () => {
+  const { app, window } = await launch('e2e-cw-restart')
+  try {
+    const composer = window.getByTestId('composer')
+    await composer.fill('/fake long')
+    await composer.press('Enter')
+    await expect(window.getByTestId('message-list')).toContainText('End of the long reply.', {
+      timeout: 30_000,
+    })
+    await window.waitForTimeout(500)
+
+    // Restart the renderer: the transcript is loaded asynchronously and the
+    // Markdown renders after the first paint.
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.webContents.reload()
+    })
+    await window.waitForLoadState('domcontentloaded')
+    await expect(window.getByTestId('message-list')).toContainText('End of the long reply.', {
+      timeout: 30_000,
+    })
+    await window.waitForTimeout(1000)
+
+    const distances = await window.evaluate(() => {
+      const scope = globalThis as unknown as {
+        document: {
+          querySelector(selector: string): {
+            scrollHeight: number
+            scrollTop: number
+            clientHeight: number
+          } | null
+          querySelectorAll(selector: string): ArrayLike<{
+            scrollHeight: number
+            scrollTop: number
+            clientHeight: number
+          }>
+        }
+      }
+      const list = scope.document.querySelector('[data-testid="message-list"]')
+      const cards = Array.from(
+        scope.document.querySelectorAll('[data-testid="agent-card-content"]'),
+      )
+      const distance = (element: {
+        scrollHeight: number
+        scrollTop: number
+        clientHeight: number
+      }): number => element.scrollHeight - element.scrollTop - element.clientHeight
+      return {
+        page: list ? distance(list) : Number.POSITIVE_INFINITY,
+        cards: cards.map(distance),
+      }
+    })
+    expect(distances.page).toBeLessThanOrEqual(48)
+    expect(distances.cards.length).toBeGreaterThan(0)
+    for (const card of distances.cards) expect(card).toBeLessThanOrEqual(48)
   } finally {
     await app.close()
   }

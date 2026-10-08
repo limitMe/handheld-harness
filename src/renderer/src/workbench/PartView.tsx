@@ -28,13 +28,15 @@ function TextPart({
   part,
   streaming,
   order,
+  focusable,
 }: {
   part: TextPartType
   streaming: boolean
   order: number
+  focusable: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const focus = useFocusable({ id: `part-${part.id}`, elementRef: ref, order })
+  const focus = useFocusable({ id: `part-${part.id}`, elementRef: ref, order, enabled: focusable })
   return (
     <div ref={ref} {...focus.props}>
       <MarkdownView text={part.text} streaming={streaming} />
@@ -42,7 +44,15 @@ function TextPart({
   )
 }
 
-function ToolPart({ part, order }: { part: ToolPartType; order: number }) {
+function ToolPart({
+  part,
+  order,
+  focusable,
+}: {
+  part: ToolPartType
+  order: number
+  focusable: boolean
+}) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const output = useRef<HTMLPreElement>(null)
@@ -53,6 +63,7 @@ function ToolPart({ part, order }: { part: ToolPartType; order: number }) {
     id: `tool-${part.id}`,
     elementRef: buttonRef,
     order,
+    enabled: focusable,
     activatable: true,
     onActivate: () => setExpanded(true),
     onNavigate: (direction) => {
@@ -92,13 +103,22 @@ function ToolPart({ part, order }: { part: ToolPartType; order: number }) {
   )
 }
 
-function ReasoningPart({ part, order }: { part: ReasoningPartType; order: number }) {
+function ReasoningPart({
+  part,
+  order,
+  focusable,
+}: {
+  part: ReasoningPartType
+  order: number
+  focusable: boolean
+}) {
   const { t } = useTranslation()
   const ref = useRef<HTMLDetailsElement>(null)
   const focus = useFocusable({
     id: `part-${part.id}`,
     elementRef: ref,
     order,
+    enabled: focusable,
     onActivate: () => {
       if (ref.current) ref.current.open = !ref.current.open
     },
@@ -118,14 +138,16 @@ function ReasoningPart({ part, order }: { part: ReasoningPartType; order: number
 function TagPart({
   part,
   order,
+  focusable,
   children,
 }: {
   part: ChatPart
   order: number
+  focusable: boolean
   children: ReactNode
 }) {
   const ref = useRef<HTMLSpanElement>(null)
-  const focus = useFocusable({ id: `part-${part.id}`, elementRef: ref, order })
+  const focus = useFocusable({ id: `part-${part.id}`, elementRef: ref, order, enabled: focusable })
   return (
     <span
       ref={ref}
@@ -141,25 +163,32 @@ export interface PartViewProps {
   part: ChatPart
   order: number
   streaming?: boolean
+  /** False inside grouped cards, where the card itself is the focus stop. */
+  focusable?: boolean
 }
 
-export function PartView({ part, order, streaming = false }: PartViewProps) {
+export function PartView({
+  part,
+  order,
+  streaming = false,
+  focusable = true,
+}: PartViewProps) {
   switch (part.type) {
     case 'text':
-      return <TextPart part={part} order={order} streaming={streaming} />
+      return <TextPart part={part} order={order} streaming={streaming} focusable={focusable} />
     case 'reasoning':
-      return <ReasoningPart part={part} order={order} />
+      return <ReasoningPart part={part} order={order} focusable={focusable} />
     case 'tool':
-      return <ToolPart part={part} order={order} />
+      return <ToolPart part={part} order={order} focusable={focusable} />
     case 'file':
       return (
-        <TagPart part={part} order={order}>
+        <TagPart part={part} order={order} focusable={focusable}>
           {part.filename ?? part.mime}
         </TagPart>
       )
     case 'other':
       return (
-        <TagPart part={part} order={order}>
+        <TagPart part={part} order={order} focusable={focusable}>
           {part.rawType}
         </TagPart>
       )

@@ -52,7 +52,7 @@ function seed(open: SessionRef[], current: SessionRef | null): void {
       ]),
     ),
     tasks: { open, unread: {}, watched: {} },
-    ui: { current, drafts: {} },
+    ui: { current, drafts: {}, openSeq: 0 },
     messages: {},
     messagesLoaded: {},
     pendingPermissions: {},

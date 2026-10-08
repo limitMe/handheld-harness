@@ -8,6 +8,8 @@ export interface UseFocusableOptions {
   elementRef: RefObject<HTMLElement | null>
   /** Sort key among siblings; see `FOCUS_ORDER`. */
   order?: number
+  /** When false the element is presentational: no focus node is registered. */
+  enabled?: boolean
   activatable?: boolean
   disabled?: boolean
   onActivate?: () => void
@@ -48,10 +50,10 @@ export function useFocusable(options: UseFocusableOptions): FocusableControls {
 
   const [state, setState] = useState<FocusableState>(IDLE)
 
-  const { id, elementRef, order, activatable, disabled } = options
+  const { id, elementRef, order, enabled = true, activatable, disabled } = options
 
   useEffect(() => {
-    if (!tree) return
+    if (!tree || !enabled) return
     const unregister = tree.register({
       id,
       parentId,
@@ -90,7 +92,7 @@ export function useFocusable(options: UseFocusableOptions): FocusableControls {
       off()
       unregister()
     }
-  }, [tree, parentId, id, elementRef, order, activatable, disabled])
+  }, [tree, parentId, id, elementRef, order, enabled, activatable, disabled])
 
   const handleFocus = useCallback(
     (event: React.FocusEvent<HTMLElement>) => {
@@ -102,14 +104,15 @@ export function useFocusable(options: UseFocusableOptions): FocusableControls {
     [tree, id],
   )
 
+  const effective = enabled ? state : IDLE
   const props: FocusableElementProps = {
     'data-focus-id': id,
     tabIndex: disabled ? -1 : 0,
     onFocus: handleFocus,
   }
-  if (state.focused) props['data-focused'] = ''
-  if (state.activated) props['data-activated'] = ''
-  if (state.focusWithin) props['data-focus-within'] = ''
+  if (effective.focused) props['data-focused'] = ''
+  if (effective.activated) props['data-activated'] = ''
+  if (effective.focusWithin) props['data-focus-within'] = ''
 
-  return { ...state, props }
+  return { ...effective, props }
 }

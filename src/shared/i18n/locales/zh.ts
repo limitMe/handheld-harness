@@ -36,6 +36,13 @@ export const zh = {
     agentWorking: 'Agent 正在工作…',
     scrollLatest: '↓ 最新',
   },
+  agentCard: {
+    intermediate: '思考与操作',
+    summary: '总结',
+  },
+  choice: {
+    youChose: '你选择了',
+  },
   part: {
     thinking: '思考',
     noOutput: '无输出',
@@ -50,6 +57,7 @@ export const zh = {
   question: {
     submit: '提交',
     ignore: '忽略',
+    ignored: '已忽略',
   },
   taskMap: {
     current: '当前',
@@ -357,6 +365,7 @@ export const zh = {
     'currentWork.listInput': '当前工作 · 列表输入',
     'currentWork.permission': '当前工作 · 授权',
     'currentWork.question': '当前工作 · 提问',
+    cardView: 'Agent 卡片',
     taskMap: '任务地图',
     'taskMap.history': '任务地图 · 历史',
     textEdit: '文本编辑',

@@ -127,6 +127,15 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       A: 'question.confirm',
       B: 'question.ignore',
     },
+    // Full-screen agent-card reader (spec 13): D-pad and either stick scroll it,
+    // B returns to the transcript.
+    cardView: {
+      DpadUp: 'nav.up',
+      DpadDown: 'nav.down',
+      LStickY: 'scroll',
+      RStickY: 'scroll',
+      B: 'nav.deactivate',
+    },
     taskMap: {
       DpadLeft: 'nav.left',
       DpadRight: 'nav.right',
@@ -241,6 +250,11 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       Escape: 'nav.deactivate',
     },
     'currentWork.question': {
+      Escape: 'nav.deactivate',
+    },
+    cardView: {
+      ArrowUp: 'nav.up',
+      ArrowDown: 'nav.down',
       Escape: 'nav.deactivate',
     },
     'taskMap.history': {

@@ -19,6 +19,7 @@ import {
   omitKey,
   sameSessionRef,
   sessionKey,
+  type AnsweredChoice,
   type TasksState,
   type WorkbenchState,
 } from './types'
@@ -66,6 +67,26 @@ export interface WorkbenchStore extends WorkbenchState {
   replyQuestion(requestId: string, answers: string[][]): Promise<void>
   rejectQuestion(requestId: string): Promise<void>
   loadMessages(ref: SessionRef, force?: boolean): Promise<void>
+}
+
+/**
+ * Records an answered confirmation so the transcript can keep showing what the
+ * user picked (spec 13). The anchor is the message count at answer time, which
+ * equals the count when the request was asked because the agent pauses on it.
+ */
+function withAnsweredChoice(
+  state: WorkbenchStore,
+  key: string,
+  sessionId: string,
+  choice: Omit<AnsweredChoice, 'anchor' | 'sessionId' | 'id'> & { id: string },
+): Partial<WorkbenchStore> {
+  const anchor = state.messages[key]?.length ?? 0
+  return {
+    answeredChoices: {
+      ...state.answeredChoices,
+      [key]: [...(state.answeredChoices[key] ?? []), { ...choice, sessionId, anchor }],
+    },
+  }
 }
 
 /** Persists the task-map slice; the red-dot key map is flattened back to refs (spec 14). */
@@ -223,7 +244,10 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     const state = get()
     const { watched, unread } = switchCurrent(state, ref)
     const open = insertByCreatedAt(state.tasks.open, ref, state.sessions)
-    set({ tasks: { ...state.tasks, open, watched, unread }, ui: { ...state.ui, current: ref } })
+    set({
+      tasks: { ...state.tasks, open, watched, unread },
+      ui: { ...state.ui, current: ref, openSeq: state.ui.openSeq + 1 },
+    })
     if (open !== state.tasks.open || unread !== state.tasks.unread) persistTasks(get().tasks)
     await get().loadMessages(ref)
     void window.handheld.settings.update({ ui: { lastSession: ref } })
@@ -318,18 +342,59 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
   },
 
   async replyPermission(requestId, reply) {
-    const current = get().ui.current
-    if (current) await window.handheld.engine.replyPermission(current, requestId, reply)
+    const state = get()
+    const current = state.ui.current
+    if (!current) return
+    const key = sessionKey(current)
+    const request = (state.pendingPermissions[key] ?? []).find((item) => item.id === requestId)
+    if (request) {
+      set(
+        withAnsweredChoice(state, key, current.sessionId, {
+          id: requestId,
+          request: { kind: 'permission', title: request.title, detail: request.kind },
+          answer: { type: 'permission', reply },
+        }),
+      )
+    }
+    await window.handheld.engine.replyPermission(current, requestId, reply)
   },
 
   async replyQuestion(requestId, answers) {
-    const current = get().ui.current
-    if (current) await window.handheld.engine.replyQuestion(current, requestId, answers)
+    const state = get()
+    const current = state.ui.current
+    if (!current) return
+    const key = sessionKey(current)
+    const request = (state.pendingQuestions[key] ?? []).find((item) => item.id === requestId)
+    if (request) {
+      const title = request.questions[0]?.question ?? ''
+      set(
+        withAnsweredChoice(state, key, current.sessionId, {
+          id: requestId,
+          request: { kind: 'question', title },
+          answer: { type: 'question', answers, ignored: false },
+        }),
+      )
+    }
+    await window.handheld.engine.replyQuestion(current, requestId, answers)
   },
 
   async rejectQuestion(requestId) {
-    const current = get().ui.current
-    if (current) await window.handheld.engine.rejectQuestion(current, requestId)
+    const state = get()
+    const current = state.ui.current
+    if (!current) return
+    const key = sessionKey(current)
+    const request = (state.pendingQuestions[key] ?? []).find((item) => item.id === requestId)
+    if (request) {
+      const title = request.questions[0]?.question ?? ''
+      set(
+        withAnsweredChoice(state, key, current.sessionId, {
+          id: requestId,
+          request: { kind: 'question', title },
+          answer: { type: 'question', answers: [], ignored: true },
+        }),
+      )
+    }
+    await window.handheld.engine.rejectQuestion(current, requestId)
   },
 
   async loadMessages(ref, force = false) {

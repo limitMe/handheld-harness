@@ -36,6 +36,13 @@ export const en = {
     agentWorking: 'Agent is working…',
     scrollLatest: '↓ Latest',
   },
+  agentCard: {
+    intermediate: 'Thinking & actions',
+    summary: 'Summary',
+  },
+  choice: {
+    youChose: 'You chose',
+  },
   part: {
     thinking: 'Thinking',
     noOutput: 'No output',
@@ -50,6 +57,7 @@ export const en = {
   question: {
     submit: 'Submit',
     ignore: 'Ignore',
+    ignored: 'Ignored',
   },
   taskMap: {
     current: 'Current',
@@ -362,6 +370,7 @@ export const en = {
     'currentWork.listInput': 'Current work · List input',
     'currentWork.permission': 'Current work · Permission',
     'currentWork.question': 'Current work · Question',
+    cardView: 'Agent card',
     taskMap: 'Task map',
     'taskMap.history': 'Task map · History',
     textEdit: 'Text edit',

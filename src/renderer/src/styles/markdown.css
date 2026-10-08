@@ -11,6 +11,13 @@
   overflow-wrap: anywhere;
 }
 
+/* The mid-round card is reference material, so it reads a size smaller than the
+   summary the user actually reads (spec 13). */
+.agent-card--intermediate .markdown {
+  font-size: var(--theme-font-size-sm);
+  line-height: 1.5;
+}
+
 .markdown > :first-child {
   margin-top: 0;
 }

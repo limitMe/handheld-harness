@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type {
   ChatMessage,
   EngineCapabilities,
@@ -8,20 +8,26 @@ import type {
 } from '@shared/engine'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { useTranslation } from '../i18n'
-import { FOCUS_ORDER, messageOrder, useFocusTree } from '../focus'
+import { FOCUS_ORDER, useFocusTree } from '../focus'
+import type { AnsweredChoice } from '../state/types'
+import { AgentCardView } from './AgentCard'
+import { CardViewer } from './CardViewer'
+import { ChoiceCardView } from './ChoiceCard'
 import { FocusableButton } from './FocusableButton'
-import { MessageItem } from './MessageItem'
 import { PermissionCard } from './PermissionCard'
 import { QuestionCard } from './QuestionCard'
 import { StickyUserMessage } from './StickyUserMessage'
-import { findStuckRound, groupRounds } from './rounds'
+import { findStuckRound, groupRounds, roundCards, type AgentCard } from './rounds'
 
 export interface MessageListProps {
   messages: ChatMessage[]
   permissions: PermissionRequest[]
   questions: QuestionRequest[]
+  choices: AnsweredChoice[]
   capabilities?: EngineCapabilities
   busy: boolean
+  /** Changes whenever a task is opened; the transcript jumps back to the latest. */
+  viewKey: string
   onReplyPermission: (requestId: string, reply: PermissionReply) => void
   onReplyQuestion: (requestId: string, answers: string[][]) => void
   onRejectQuestion: (requestId: string) => void
@@ -48,6 +54,8 @@ function PermissionInputContext({
 }
 
 const BOTTOM_THRESHOLD = 48
+/** Space kept clear at the bottom for the floating composer (spec 13). */
+const COMPOSER_RESERVE_PX = 112
 
 function isCardFocusId(id: string | null): boolean {
   return id !== null && (id.startsWith('permission-') || id.startsWith('question-'))
@@ -57,8 +65,10 @@ export function MessageList({
   messages,
   permissions,
   questions,
+  choices,
   capabilities,
   busy,
+  viewKey,
   onReplyPermission,
   onReplyQuestion,
   onRejectQuestion,
@@ -68,19 +78,65 @@ export function MessageList({
   const container = useRef<HTMLDivElement>(null)
   const roundElements = useRef(new Map<string, HTMLDivElement>())
   const [atBottom, setAtBottom] = useState(true)
+  const [scrolledView, setScrolledView] = useState(viewKey)
+  // Opening a task always lands on the newest content, even if the previous
+  // task was left scrolled up. Adjusting during render (not in an effect) avoids
+  // a cascading render.
+  if (scrolledView !== viewKey) {
+    setScrolledView(viewKey)
+    setAtBottom(true)
+  }
   const [stuckRound, setStuckRound] = useState<string | null>(null)
+  const lastScrollTop = useRef(0)
+  const [cardMax, setCardMax] = useState<number>()
+  const [viewerId, setViewerId] = useState<string | null>(null)
+  const viewerScroll = useRef(0)
+  const pendingRestore = useRef<number | null>(null)
   const roundRestore = useRef<string | null>(null)
 
-  const rounds = useMemo(() => groupRounds(messages), [messages])
-  const orderById = useMemo(
-    () => new Map(messages.map((message, index) => [message.id, messageOrder(index)])),
-    [messages],
+  const rounds = useMemo(() => groupRounds(messages, choices), [messages, choices])
+  const blocksByRound = useMemo(
+    () => rounds.map((round) => ({ round, blocks: roundCards(round) })),
+    [rounds],
   )
+
+  // Focus order and agent-card lookup, both derived from the card sequence.
+  const { orders, agentCards } = useMemo(() => {
+    const orders = new Map<string, number>()
+    const agentCards = new Map<string, AgentCard>()
+    let index = 0
+    const next = (): number => FOCUS_ORDER.messages + index++ * FOCUS_ORDER.messageStride
+    for (const { round, blocks } of blocksByRound) {
+      if (round.user) orders.set(`card-user-${round.user.id}`, next())
+      for (const block of blocks) {
+        if (block.type === 'agent') {
+          orders.set(`card-${block.card.id}`, next())
+          agentCards.set(block.card.id, block.card)
+        } else {
+          orders.set(`choice-${block.choice.id}`, next())
+        }
+      }
+    }
+    return { orders, agentCards }
+  }, [blocksByRound])
+
+  const lastMessageId = messages[messages.length - 1]?.id
+  const viewerCard = viewerId ? agentCards.get(viewerId) : undefined
 
   const scrollToBottom = useCallback(() => {
     const element = container.current
     if (element) element.scrollTop = element.scrollHeight
   }, [])
+
+  // Agent cards can grow after their first paint (Markdown, syntax highlight),
+  // so re-anchor the transcript while the user is at the bottom.
+  const atBottomRef = useRef(atBottom)
+  useEffect(() => {
+    atBottomRef.current = atBottom
+  })
+  const reanchorIfAtBottom = useCallback(() => {
+    if (atBottomRef.current) scrollToBottom()
+  }, [scrollToBottom])
 
   const updateStuck = useCallback(() => {
     const element = container.current
@@ -97,7 +153,44 @@ export function MessageList({
   useEffect(() => {
     if (atBottom) scrollToBottom()
     updateStuck()
-  }, [rounds, atBottom, scrollToBottom, updateStuck])
+    // `cardMax` is measured after the first paint and re-caps the cards, which
+    // changes the content height; re-anchor so the newest content stays visible.
+  }, [blocksByRound, atBottom, cardMax, scrollToBottom, updateStuck])
+
+  // One-screen cap for the agent cards: the transcript area above the composer.
+  useLayoutEffect(() => {
+    const element = container.current
+    if (!element) return
+    const update = (): void => {
+      setCardMax(Math.max(0, element.clientHeight - COMPOSER_RESERVE_PX))
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  const openViewer = useCallback((card: AgentCard) => {
+    viewerScroll.current = container.current?.scrollTop ?? 0
+    setViewerId(card.id)
+  }, [])
+
+  const closeViewer = useCallback(() => {
+    // Restore after the modal scope pops: returning focus to the card runs its
+    // own scrollIntoView, which would otherwise override the saved position.
+    pendingRestore.current = viewerScroll.current
+    setViewerId(null)
+  }, [])
+
+  // Passive (not layout) so it runs after the viewer scope's cleanup has popped
+  // and the card has run its own scrollIntoView.
+  useEffect(() => {
+    if (viewerId !== null || pendingRestore.current === null) return
+    const top = pendingRestore.current
+    pendingRestore.current = null
+    const element = container.current
+    if (element) element.scrollTop = top
+  }, [viewerId])
 
   // A new request takes focus and activates the card so its action hints show
   // (spec 13, P-02). When the queue drains, focus returns where it was.
@@ -111,7 +204,7 @@ export function MessageList({
   const pendingRef = useRef(false)
 
   useEffect(() => {
-    if (!tree) return
+    if (!tree || viewerId) return
     if (pendingCardFocusId) {
       if (!pendingRef.current) {
         pendingRef.current = true
@@ -128,7 +221,7 @@ export function MessageList({
       roundRestore.current = null
       if (restore && tree.getElement(restore)) tree.setFocus(restore)
     }
-  }, [pendingCardFocusId, tree])
+  }, [pendingCardFocusId, tree, viewerId])
 
   return (
     <div className="relative flex-1 overflow-hidden">
@@ -139,9 +232,14 @@ export function MessageList({
         onScroll={() => {
           const element = container.current
           if (!element) return
-          setAtBottom(
-            element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_THRESHOLD,
-          )
+          const top = element.scrollTop
+          const nearBottom =
+            element.scrollHeight - top - element.clientHeight <= BOTTOM_THRESHOLD
+          // Only an upward move means the user scrolled away from the latest;
+          // content growing under a parked viewport must not unpin the view.
+          if (nearBottom) setAtBottom(true)
+          else if (top < lastScrollTop.current) setAtBottom(false)
+          lastScrollTop.current = top
           updateStuck()
         }}
         className="relative flex h-full flex-col gap-4 overflow-y-auto px-4 py-4 pb-28 scroll-pb-28"
@@ -152,7 +250,7 @@ export function MessageList({
           </p>
         ) : null}
 
-        {rounds.map((round) => (
+        {blocksByRound.map(({ round, blocks }) => (
           <div
             key={round.id}
             ref={(element) => {
@@ -165,7 +263,7 @@ export function MessageList({
             {round.user ? (
               <StickyUserMessage
                 message={round.user}
-                baseOrder={orderById.get(round.user.id) ?? FOCUS_ORDER.messages}
+                order={orders.get(`card-user-${round.user.id}`) ?? FOCUS_ORDER.messages}
                 collapsed={stuckRound === round.id}
                 onRestore={() => {
                   const element = roundElements.current.get(round.id)
@@ -173,14 +271,25 @@ export function MessageList({
                 }}
               />
             ) : null}
-            {round.replies.map((message) => (
-              <MessageItem
-                key={message.id}
-                message={message}
-                baseOrder={orderById.get(message.id) ?? FOCUS_ORDER.messages}
-                streaming={busy && message.id === messages[messages.length - 1]?.id}
-              />
-            ))}
+            {blocks.map((block) =>
+              block.type === 'agent' ? (
+                <AgentCardView
+                  key={block.card.id}
+                  card={block.card}
+                  order={orders.get(`card-${block.card.id}`) ?? FOCUS_ORDER.messages}
+                  streaming={busy && block.card.messages.some((message) => message.id === lastMessageId)}
+                  maxHeight={cardMax}
+                  onOpen={openViewer}
+                  onResize={reanchorIfAtBottom}
+                />
+              ) : (
+                <ChoiceCardView
+                  key={block.choice.id}
+                  choice={block.choice}
+                  order={orders.get(`choice-${block.choice.id}`) ?? FOCUS_ORDER.messages}
+                />
+              ),
+            )}
           </div>
         ))}
 
@@ -220,7 +329,7 @@ export function MessageList({
         ) : null}
       </div>
 
-      {!atBottom ? (
+      {!atBottom && !viewerCard ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-28 flex justify-center">
           <FocusableButton
             focusId="scroll-latest"
@@ -231,7 +340,7 @@ export function MessageList({
             }}
             type="button"
             data-testid="scroll-latest"
-            className="pointer-events-auto min-h-11"
+            className="pointer-events-auto min-h-11 shadow-card"
             onClick={() => {
               setAtBottom(true)
               scrollToBottom()
@@ -241,6 +350,8 @@ export function MessageList({
           </FocusableButton>
         </div>
       ) : null}
+
+      {viewerCard ? <CardViewer card={viewerCard} onClose={closeViewer} /> : null}
     </div>
   )
 }

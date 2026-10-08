@@ -2,6 +2,7 @@ import type {
   ChatMessage,
   EngineCapabilities,
   EngineStatus,
+  PermissionReply,
   PermissionRequest,
   QuestionRequest,
   SessionRef,
@@ -13,10 +14,32 @@ export interface EngineEntry {
   capabilities?: EngineCapabilities
 }
 
+/**
+ * A mid-round permission or question the user already answered. Kept so the
+ * transcript can show the choice as a right-aligned card that splits the agent
+ * output above and below it (spec 13).
+ */
+export interface AnsweredChoice {
+  id: string
+  sessionId: string
+  /** Message count when the request was asked; positions the card in the round. */
+  anchor: number
+  request: {
+    kind: 'permission' | 'question'
+    title: string
+    detail?: string
+  }
+  answer:
+    | { type: 'permission'; reply: PermissionReply }
+    | { type: 'question'; answers: string[][]; ignored: boolean }
+}
+
 export interface UiState {
   current: SessionRef | null
   /** Composer drafts live in memory only; they survive session switches but not restarts. */
   drafts: Record<string, string>
+  /** Bumped on every task open, so reopening the current task re-anchors the transcript. */
+  openSeq: number
 }
 
 export interface TasksState {
@@ -36,6 +59,8 @@ export interface WorkbenchState {
   messagesLoaded: Record<string, boolean>
   pendingPermissions: Record<string, PermissionRequest[]>
   pendingQuestions: Record<string, QuestionRequest[]>
+  /** Answered mid-round confirmations, keyed by `sessionKey` (spec 13). */
+  answeredChoices: Record<string, AnsweredChoice[]>
   tasks: TasksState
   ui: UiState
 }
@@ -58,8 +83,9 @@ export function initialWorkbenchState(): WorkbenchState {
     messagesLoaded: {},
     pendingPermissions: {},
     pendingQuestions: {},
+    answeredChoices: {},
     tasks: { open: [], unread: {}, watched: {} },
-    ui: { current: null, drafts: {} },
+    ui: { current: null, drafts: {}, openSeq: 0 },
   }
 }
 

@@ -111,3 +111,67 @@ P-13（卡片键位）、P-14（滚动与中止的按键）、P-18（粘滞折�
 - **输入框隐藏滚动条**：多行草稿超出高度时仍可滚动，但用 `scrollbar-hidden` 工具类隐藏原生滚动条。
 - **X 向前删除一个字符**：新增 `input.deleteBackward` 动作并绑定到 `currentWork.input` 的 X，光标在字符之间时删除前一个字符、有选区时删除选区（`textEditing.deleteBackward`，纯函数）。
 - **听写中立即发送不再残留草稿**：发送前调用新增的 `dictation.finish()`，把未确认的 partial 收进草稿后立即结束会话；此后的 `final` / `ended` 事件不再回写输入框（见 spec 16 实现记录）。
+
+### Agent 输出卡片重构（2026-10-08，分支 `feat/current-work-agent-cards`）
+
+用户试用后提出：Agent 消息只占屏宽一半多，右侧大量留白；且中途的思考/操作与最后的总结混在一起，难以快速定位总结。按用户确认的三点决策实现：
+
+1. **卡片高度：自动高度 + 最多一屏**，滚动时让某张卡片的顶部对齐可视区顶部（带一点粘滞感）。短卡片收缩，超长卡片封顶一屏。
+2. **两类 Agent 输出按 assistant 消息切分**：一轮里最后一条 assistant 消息是**总结卡片**，之前的所有 assistant 消息（reasoning / tool / 中途文本）合并为**中途卡片**。
+3. **中途确认改为“回答后保留一张右侧卡片”**：待处理时仍是原可交互卡片；回答后在原位置保留一张右对齐卡片记录用户的选择，把上下的 Agent 输出隔开，因此一轮最多四张卡片（用户 / 中途 / 确认 / 总结）。
+
+#### 交付物
+
+- **卡片分组**（`rounds.ts`）：`groupRounds(messages, choices)` 把回答过的确认按“回答消息数”插入到对应轮次；`roundCards(round)` 用确认切分成多个段，最后一段的末条 assistant 消息单独成总结卡片，其余成中途卡片。`findStuckRound`（粘滞折叠判定）不变。
+- **回答记录状态**（`state/types.ts`、`state/store.ts`、`state/applyEngineEvent.ts`）：新增 `answeredChoices`（按 `sessionKey`），在 `replyPermission` / `replyQuestion` / `rejectQuestion` 里于调用引擎前写入 `request` + `answer` + `anchor`；会话删除时清理。仅在内存中，不持久化。
+- **卡片渲染**：新增 `AgentCard.tsx`（全宽、`maxHeight` 一屏、内容底部对齐、顶部溢出显示“…”、A 打开全屏、聚焦时 `scrollIntoView({ block: 'start' })`）、`ChoiceCard.tsx`（右对齐的选择记录）、`CardViewer.tsx`（全屏阅读器）。
+- **聚焦粒度**：卡片本身是唯一的聚焦节点；`PartView` 新增 `focusable` 开关，卡片内不再逐 part 聚焦。`MessageItem` 改为纯展示，新增 `AgentCardFooter` 统一卡片脚注。
+- **全屏阅读**（A）：覆盖状态栏以下的当前工作区，从卡片顶部开始；十字键 / 左右摇杆滚动，B（或 Esc）返回。进入时记录 `message-list` 的 `scrollTop`，退出时还原。
+- **输入绑定**：新增 `cardView` 上下文（十字键上下、左右摇杆 `scroll`、B 返回；键盘方向键 + Esc），加入 `DEFAULT_BINDINGS`，并补上 `CONTEXT_LABELS`、`CONTEXT_ORDER` 与中英 `contexts.cardView`。
+- **文案**：新增 `agentCard.intermediate` / `agentCard.summary` / `choice.youChose` / `question.ignored`。
+
+#### 与 spec 的出入 / 决策
+
+- **“吸顶”实现方式**：spec 未指定；这里不用 CSS `scroll-snap`（会与“新内容自动滚到底”打架），改为卡片聚焦时 `scrollIntoView({ block: 'start' })`，并用 `scrollMarginTop = 40px` 让卡片顶部落在粘滞用户消息之下。自由滚动时不强制对齐。
+- **确认卡片左右样式**：用户原话里“这个额外确认……更改为右侧显示的用户输入卡片”落实为**回答后的记录卡片**右对齐；待处理时仍保留原来左侧可交互卡片（需要按钮和操作提示），交互与键位不变。
+- **“最多一屏”高度**：取 `message-list` 的 `clientHeight - 112px`（即在输入框之上），用 `ResizeObserver` 跟随窗口尺寸。
+- **卡片顶部“…”**：内容超出时在内容区顶部叠加一个省略号（位于滚动容器之外，不随内容滚走）。
+
+#### 已自动验证
+
+- `npm run check` 通过（58 个测试文件 360 个用例，lint 零 warning）。
+- 单测更新：`rounds`（新分组、确认按 anchor 插入、`roundCards` 的中途/确认/总结切分）。
+- `npm run test:e2e` 26 个用例通过，其中新增 `current-work.spec.ts` 的“打开 Agent 卡片全屏、滚动、B 返回并还原位置”；`focus.spec.ts` 的焦点断言由 `part-*` 改为 `card-*`；`current-work` 的提问卡片用例在按键前把鼠标指针移开，避免物理光标悬停选项影响 D-pad 高亮。
+
+#### 未完成 / 需要人工验证
+
+- **掌机实测**：卡片吸顶手感（尤其自由滚动与粘滞折叠叠加时）、超长卡片“…”与底部对齐的可读性、全屏阅读器摇杆滚动手感。
+- P-14（滚动手感）与 P-18（折叠截取量）仍沿用原默认；本轮未改键位。
+
+### 卡片重构修复（2026-10-08，试用反馈）
+
+- **重新打开对话落到最新内容**：`MessageList` 新增 `sessionKey`，会话切换时（render 期调整，避免 effect 里 setState）把 `atBottom` 复位为 `true`，并在 `cardMax` 测量后重新贴底，修掉“上不上下不下”。新增 e2e“reopens a task scrolled to its newest content”。
+- **“↓ 最新”加阴影**：`scroll-latest` 按钮加 `shadow-card`。浅色主题下 `card` 与 `surface-raised` 都是白色，原来和 Agent 卡片糊在一起。
+- **全屏阅读器背景 = 卡片背景**：`CardViewer` 覆盖层底色由 `surface` 改为 `surface-raised`。
+- **全屏阅读器左右摇杆可滚动**：根因是取焦点的滚动节点被注册到了 `focus-root`（`useFocusable` 写在 `FocusContainer` 的父组件里，读不到 scope 上下文），`tree.move` 会走到兄弟节点返回 `true`，摇杆控制器因此不滚动。改为把滚动节点放进 scope 内部的子组件，并给 `FocusContainer` 新增 `detached`：detached scope 注册为焦点根，`move` 在边界返回 `false`，摇杆回落到滚动该区域。e2e 增加摇杆滚动断言。
+- **“思考与操作”卡片字号更小**：新增语义 token `--theme-font-size-sm`（当前 16px），`.agent-card--intermediate .markdown` 用它覆盖字号。
+
+修复后 `npm run check` 与 `npm run test:e2e`（27 个用例）全部通过。
+
+### 重新打开对话仍然错位：真正根因（2026-10-08）
+
+上一节的 `sessionKey` 复位在假引擎（消息已缓存）下有效，但真实底座切换任务时 `getMessages` 是异步的：内容在视口停在 `scrollTop = 0` 时增长，浏览器随即发出一个 `scroll` 事件，旧逻辑 `scrollHeight - scrollTop - clientHeight > 阈值` 就把 `atBottom` 判成了 `false`，于是自动贴底那次 effect 被跳过，停在“上不上下不下”。
+
+修复：
+- **`onScroll` 只把“位置回退”当作用户向上滚**：`scrollTop` 变小才置 `atBottom=false`；内容长高导致的距底变大不再取消贴底。视口停在原位、内容增高时会重新滚到底。
+- **`openSeq`**：`ui.openSeq` 在每次 `openSession` 递增，`CurrentWork` 以 `${key}:${openSeq}` 作为 `MessageList` 的 `viewKey`，因此“重新打开当前任务”也会回到最新内容。
+- e2e `reopens a task scrolled to its newest content` 增加“重开当前任务”断言；并用主进程 `webContents.reload()` 验证了“重启后异步加载”这条路径确实贴底（此前的 `Ctrl+R` 在该用例里并未真正 reload，是测试假象）。
+
+### 重启后首屏卡片仍错位：卡片内部锚定（2026-10-08）
+
+继续排查发现，重启后的错位主要发生在**卡片内部**：`AgentCard` 只在 `[card.messages, maxHeight]` 变化时执行一次 `scrollTop = scrollHeight`，但 Markdown / 代码高亮等内容是在首帧之后才渲染完的；首帧量到的高度偏小，锚定到“当时的底部”，内容长高后就停在卡片上半部分（`data-overflowing` 一直为 false）。页面也会因为卡片随后变高而差出几十像素。
+
+修复：
+- `AgentCard` 用 `ResizeObserver` 观察内部内容块，内容尺寸一变就重新 `scrollTop = scrollHeight` 并更新省略号状态，不再只依赖首帧。
+- 同一次 resize 通过 `onResize` 回调通知 `MessageList`，在 `atBottom` 时同步把整页重新贴底。
+- e2e 新增 `anchors the transcript and its cards after a restart`：用主进程 `webContents.reload()` 模拟重启，断言页面与每张卡片的距底都 ≤ 48px（默认 fixture 的中途卡片 + 总结卡片都验证）。

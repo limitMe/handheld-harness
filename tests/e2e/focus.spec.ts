@@ -102,10 +102,10 @@ test('moves focus into the chat transcript', async () => {
     expect(scrolled).toBe(true)
 
     // Sending leaves the composer deactivated (focus stays on the form); step
-    // up into the transcript. Message parts are focus stops.
+    // up into the transcript. Agent and choice cards are the focus stops.
     await window.keyboard.press('ArrowUp')
     const first = await focusedFocusId(window)
-    expect(first).toMatch(/^(part|tool)-/)
+    expect(first).toMatch(/^(card|choice)-/)
 
     await window.keyboard.press('ArrowUp')
     const second = await focusedFocusId(window)

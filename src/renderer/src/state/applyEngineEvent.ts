@@ -39,6 +39,8 @@ export function applyEngineEvent(
       delete pendingPermissions[key]
       const pendingQuestions = { ...state.pendingQuestions }
       delete pendingQuestions[key]
+      const answeredChoices = { ...state.answeredChoices }
+      delete answeredChoices[key]
       const current =
         state.ui.current && sessionKey(state.ui.current) === key ? null : state.ui.current
       return {
@@ -48,6 +50,7 @@ export function applyEngineEvent(
         messagesLoaded,
         pendingPermissions,
         pendingQuestions,
+        answeredChoices,
         tasks: {
           ...state.tasks,
           open: state.tasks.open.filter((ref) => sessionKey(ref) !== key),

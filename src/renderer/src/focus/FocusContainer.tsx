@@ -9,6 +9,12 @@ export interface FocusContainerProps {
   memory?: boolean
   /** Modal scope: while mounted it becomes the only navigable region. */
   scope?: boolean
+  /**
+   * Register as a focus root instead of nesting under the nearest container.
+   * Moves inside a detached scope fail instead of walking out to siblings, so a
+   * stick at the scope edge falls back to scrolling the region (spec 13).
+   */
+  detached?: boolean
   children: ReactNode
 }
 
@@ -21,16 +27,18 @@ export function FocusContainer({
   flow = 'geometric',
   memory,
   scope,
+  detached,
   children,
 }: FocusContainerProps) {
   const tree = useFocusTree()
   const parentId = useParentContainer()
+  const effectiveParent = detached ? null : parentId
 
   useEffect(() => {
     if (!tree) return
     const unregister = tree.register({
       id,
-      parentId,
+      parentId: effectiveParent,
       container: true,
       flow,
       memory,
@@ -41,7 +49,7 @@ export function FocusContainer({
       if (scope) tree.popScope()
       unregister()
     }
-  }, [tree, id, parentId, flow, memory, scope])
+  }, [tree, id, effectiveParent, flow, memory, scope])
 
   return <FocusContainerContext.Provider value={id}>{children}</FocusContainerContext.Provider>
 }

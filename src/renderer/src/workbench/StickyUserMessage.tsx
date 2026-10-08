@@ -1,12 +1,14 @@
 import { useRef } from 'react'
 import type { ChatMessage } from '@shared/engine'
+import { useFocusable } from '../focus'
 import { cn } from '../ui'
-import { MessageItem } from './MessageItem'
+import { CARD_SCROLL_MARGIN_TOP } from './AgentCard'
+import { PartView } from './PartView'
 
 export interface StickyUserMessageProps {
   message: ChatMessage
-  /** Sibling order band for this message's parts; see `FOCUS_ORDER`. */
-  baseOrder: number
+  /** Sibling order band for this card; see `FOCUS_ORDER`. */
+  order: number
   /** True while the round is scrolled past its original position and pinned. */
   collapsed: boolean
   onRestore: () => void
@@ -28,33 +30,56 @@ export function userMessageText(message: ChatMessage): string {
  */
 export function StickyUserMessage({
   message,
-  baseOrder,
+  order,
   collapsed,
   onRestore,
 }: StickyUserMessageProps) {
-  const ref = useRef<HTMLDivElement>(null)
+  const elementRef = useRef<HTMLElement | null>(null)
+  const focus = useFocusable({
+    id: `card-user-${message.id}`,
+    elementRef,
+    order,
+    onFocus: () => elementRef.current?.scrollIntoView({ block: 'start' }),
+  })
 
   return (
     <div
-      ref={ref}
       data-testid="sticky-user"
       data-collapsed={collapsed ? '' : undefined}
       className="sticky top-0 z-10 flex justify-end"
     >
       {collapsed ? (
         <button
-          type="button"
+          ref={(element) => {
+            elementRef.current = element
+          }}
+          {...focus.props}
           data-testid={`user-collapsed-${message.id}`}
           onClick={onRestore}
           className={cn(
-            'max-w-[min(100%,46rem)] truncate rounded-card bg-card px-4 py-2 text-left text-on-card shadow-card',
+            'h-10 max-w-[min(100%,46rem)] truncate rounded-card bg-card px-4 text-left text-on-card shadow-card',
             'opacity-90 transition-opacity duration-ui ease-standard hover:opacity-100',
           )}
         >
           {userMessageText(message) || '…'}
         </button>
       ) : (
-        <MessageItem message={message} baseOrder={baseOrder} />
+        <div
+          ref={(element) => {
+            elementRef.current = element
+          }}
+          {...focus.props}
+          data-testid="user-card"
+          style={{ scrollMarginTop: CARD_SCROLL_MARGIN_TOP }}
+          className="flex max-w-[min(100%,46rem)] flex-col gap-2 rounded-card bg-card px-4 py-3 text-on-card"
+        >
+          {message.parts.length === 0 ? (
+            <p className="whitespace-pre-wrap break-words">{message.error ?? ''}</p>
+          ) : null}
+          {message.parts.map((part, index) => (
+            <PartView key={part.id} part={part} order={order + index} focusable={false} />
+          ))}
+        </div>
       )}
     </div>
   )

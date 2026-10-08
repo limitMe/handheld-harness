@@ -21,7 +21,9 @@ export function CurrentWork({ dimmed = false }: CurrentWorkProps) {
   const messagesLoaded = useWorkbenchStore((state) => state.messagesLoaded)
   const pendingPermissions = useWorkbenchStore((state) => state.pendingPermissions)
   const pendingQuestions = useWorkbenchStore((state) => state.pendingQuestions)
+  const answeredChoices = useWorkbenchStore((state) => state.answeredChoices)
   const drafts = useWorkbenchStore((state) => state.ui.drafts)
+  const openSeq = useWorkbenchStore((state) => state.ui.openSeq)
   const setDraft = useWorkbenchStore((state) => state.setDraft)
   const sendCurrent = useWorkbenchStore((state) => state.sendCurrent)
   const abortCurrent = useWorkbenchStore((state) => state.abortCurrent)
@@ -36,6 +38,7 @@ export function CurrentWork({ dimmed = false }: CurrentWorkProps) {
   const sessionMessages = current && messagesLoaded[key] ? (messages[key] ?? []) : []
   const permissions = current ? (pendingPermissions[key] ?? []) : []
   const questions = current ? (pendingQuestions[key] ?? []) : []
+  const choices = current ? (answeredChoices[key] ?? []) : []
 
   return (
     <div
@@ -49,8 +52,10 @@ export function CurrentWork({ dimmed = false }: CurrentWorkProps) {
         messages={sessionMessages}
         permissions={permissions}
         questions={questions}
+        choices={choices}
         capabilities={engineEntry?.capabilities}
         busy={busy}
+        viewKey={`${key}:${openSeq}`}
         onReplyPermission={(requestId, reply) => void replyPermission(requestId, reply)}
         onReplyQuestion={(requestId, answers) => void replyQuestion(requestId, answers)}
         onRejectQuestion={(requestId) => void rejectQuestion(requestId)}
