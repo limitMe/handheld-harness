@@ -107,3 +107,7 @@
 - 真实 OpenCode 上 `directory` / `variant` 的接受情况与 `variants` 元数据是否非空。
 - 1080p 7 英寸屏上信息页的排版（长路径换行、指标可读性）。
 - `listModels` 返回的 `limit.context` 是否正确填入（依赖 `provider.list` 的运行时返回）。
+
+### 后续补充（2026-10-08）：INFO 按钮改为开关
+
+- INFO 按钮原来是"只打开"（`onOpenInfo` 恒为 `setInfoOpen(true)`），信息页打开后再点它不会返回。改为开关（`App.tsx`：`setInfoOpen((open) => !open)`），信息页打开时再点一下即回退到原来的"当前工作"页；`e2e/focus.spec.ts` 增加断言覆盖。

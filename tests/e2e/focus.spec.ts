@@ -99,6 +99,12 @@ test('opens the session info page, picks an effort and closes with Escape', asyn
     await window.keyboard.press('Escape')
     await expect(window.getByTestId('session-info')).toHaveCount(0)
     await expect(window.getByTestId('system-menu')).toHaveCount(0)
+
+    // The status-bar info button toggles: pressing it again returns to the page.
+    await window.getByTestId('open-info').click()
+    await expect(window.getByTestId('session-info')).toBeVisible()
+    await window.getByTestId('open-info').click()
+    await expect(window.getByTestId('session-info')).toHaveCount(0)
   } finally {
     await app.close()
   }

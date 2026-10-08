@@ -161,7 +161,9 @@ export default function App() {
       <StatusBar
         title={title}
         onOpenTasks={() => setMapOpen(true)}
-        {...(mapOpen || menuOpen || textEditOpen ? {} : { onOpenInfo: () => setInfoOpen(true) })}
+        {...(mapOpen || menuOpen || textEditOpen
+          ? {}
+          : { onOpenInfo: () => setInfoOpen((open) => !open) })}
       />
       <div className="relative flex flex-1 overflow-hidden">
         <CurrentWork dimmed={mapOpen || menuOpen || infoOpen} />
