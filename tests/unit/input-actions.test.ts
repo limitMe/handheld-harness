@@ -17,10 +17,11 @@ describe('action registry', () => {
     }
   })
 
-  it('marks only navigation and scroll as repeatable', () => {
+  it('marks navigation, scroll and delete as repeatable', () => {
     for (const id of ['nav.up', 'nav.down', 'nav.left', 'nav.right', 'scroll'] as const) {
       expect(isRepeatable(id)).toBe(true)
     }
+    expect(isRepeatable('input.deleteBackward')).toBe(true)
     expect(isRepeatable('input.send')).toBe(false)
     expect(isRepeatable('task.close')).toBe(false)
   })

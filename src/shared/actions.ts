@@ -28,7 +28,7 @@ export const ACTIONS = {
   'input.deactivate': { label: 'Exit input' },
   'input.listInput': { label: 'List input' },
   'input.textEdit': { label: 'Text edit' },
-  'input.deleteBackward': { label: 'Delete character' },
+  'input.deleteBackward': { label: 'Delete character', repeatable: true },
   'edit.commit': { label: 'Save & return' },
   'keyboard.show': { label: 'On-screen keyboard' },
 

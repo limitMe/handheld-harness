@@ -110,3 +110,7 @@ P-17：删除句子的撤销键，以及除输入框外是否还有其他入口�
 - `npm run check`（typecheck、lint 零 warning、64 个测试文件 392 个用例）。
 - 待人工验证：在掌机上按 RB 是否弹出 osk 键盘、在键盘上敲入的字符是否按光标位置落入正文。
 
+### 后续补充（2026-10-08）：按住 X 连续删除
+
+- **X 支持按住重复**（用户 2026-10-08 决定）：文本输入框里按住 X 不再只删一个字符，而是按 input 系统既有的重复节拍（350 ms 后每 60 ms）持续向前删除，和物理键盘的自动重复一致。实现只需把 `input.deleteBackward` 标记为 `repeatable`（`src/shared/actions.ts`）；`GestureResolver` 已具备重复能力，各输入框的 `onPress` 处理器（`Composer`、`TextEdit`、`ModelsPage` 搜索框）也已经在 `repeat` 相位触发。键盘路径本就有 OS 自动重复，不受影响。
+

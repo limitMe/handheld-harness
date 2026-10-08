@@ -110,6 +110,16 @@ describe('GestureResolver repeat', () => {
 
     expect(resolver.tick(1000)).toEqual([])
   })
+
+  it('repeats a held delete so it keeps removing characters', () => {
+    const resolver = makeResolver({ X: { short: 'input.deleteBackward' } })
+
+    expect(phases(resolver.handle(press('X'), 0))).toEqual(['input.deleteBackward:start'])
+    expect(resolver.tick(349)).toEqual([])
+    expect(phases(resolver.tick(350))).toEqual(['input.deleteBackward:repeat'])
+    expect(phases(resolver.tick(410))).toEqual(['input.deleteBackward:repeat'])
+    expect(phases(resolver.handle(release('X'), 420))).toEqual(['input.deleteBackward:end'])
+  })
 })
 
 describe('GestureResolver simultaneous and analog controls', () => {
