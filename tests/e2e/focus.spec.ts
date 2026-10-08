@@ -1,5 +1,11 @@
 import path from 'node:path'
-import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
+import {
+  _electron as electron,
+  expect,
+  test,
+  type ElectronApplication,
+  type Page,
+} from '@playwright/test'
 import { forceEnglish } from './i18n'
 
 const root = path.resolve(__dirname, '..', '..')
@@ -52,24 +58,47 @@ test('deactivates then navigates to the status bar', async () => {
     await expect(composer).toHaveAttribute('data-focused', '')
     await expect(composer).not.toHaveAttribute('data-activated', '')
 
-    // The next up moves focus like a normal node (no messages, so it is the Tasks button).
+    // The next up moves focus into the status bar, entering on its first
+    // action: the Tasks button.
     await window.keyboard.press('ArrowUp')
-    await expect(window.locator('[data-focus-id="open-tasks"]')).toHaveAttribute(
-      'data-focused',
-      '',
-    )
+    await expect(window.locator('[data-focus-id="open-tasks"]')).toHaveAttribute('data-focused', '')
 
-    // A on the Tasks button opens the task map (spec 14).
+    // Enter on the Tasks button opens the task map (spec 14).
     await window.keyboard.press('Enter')
     await expect(window.getByTestId('task-map')).toBeVisible()
 
     // Escape closes it and restores focus.
     await window.keyboard.press('Escape')
     await expect(window.getByTestId('task-map')).toHaveCount(0)
-    await expect(window.locator('[data-focus-id="open-tasks"]')).toHaveAttribute(
-      'data-focused',
-      '',
-    )
+    await expect(window.locator('[data-focus-id="open-tasks"]')).toHaveAttribute('data-focused', '')
+  } finally {
+    await app.close()
+  }
+})
+
+test('opens the session info page, picks an effort and closes with Escape', async () => {
+  const { app, window } = await launch('e2e-session-info')
+  try {
+    await window.getByTestId('open-info').click()
+    await expect(window.getByTestId('session-info')).toBeVisible()
+    await expect(window.getByTestId('session-info-directory')).toBeVisible()
+    await expect(window.getByTestId('session-info-metrics')).toBeVisible()
+
+    // The effort row opens a choice dialog (spec 21); the fake model lists
+    // default / high / max as variants. Retry until the catalog has loaded.
+    const effort = window.getByTestId('session-info-effort')
+    await expect(async () => {
+      await effort.click()
+      await expect(window.getByTestId('choice-high')).toBeVisible({ timeout: 500 })
+    }).toPass({ timeout: 10_000 })
+    await window.getByTestId('choice-high').click()
+    await expect(window.getByTestId('choice-high')).toHaveCount(0)
+    await expect(effort).toContainText('high')
+
+    // Escape closes the page instead of falling through to the system menu.
+    await window.keyboard.press('Escape')
+    await expect(window.getByTestId('session-info')).toHaveCount(0)
+    await expect(window.getByTestId('system-menu')).toHaveCount(0)
   } finally {
     await app.close()
   }

@@ -28,6 +28,7 @@ export function createHandheldApi(bridge: IpcBridge): HandheldApi {
       openExternal: (url) => invoke('app:openExternal', { url }),
       openLogDir: () => invoke('app:openLogDir'),
       showOnScreenKeyboard: () => invoke('app:showOnScreenKeyboard'),
+      pickDirectory: () => invoke('app:pickDirectory'),
     },
     window: {
       setZoom: (factor) => invoke('window:setZoom', { factor }),
@@ -49,6 +50,7 @@ export function createHandheldApi(bridge: IpcBridge): HandheldApi {
       deleteSession: (ref) => invoke('engine:deleteSession', { ref }),
       getMessages: (ref) => invoke('engine:getMessages', { ref }),
       setSessionModel: (ref, model) => invoke('engine:setSessionModel', { ref, model }),
+      setSessionEffort: (ref, effort) => invoke('engine:setSessionEffort', { ref, effort }),
       prompt: (ref, input) => invoke('engine:prompt', { ref, input }),
       abort: (ref) => invoke('engine:abort', { ref }),
       replyPermission: (ref, requestId, reply) =>
@@ -73,7 +75,8 @@ export function createHandheldApi(bridge: IpcBridge): HandheldApi {
       pushAudio: (sessionId, pcm) => invoke('speech:pushAudio', { sessionId, pcm }),
       stop: (sessionId) => invoke('speech:stop', { sessionId }),
       cancel: (sessionId) => invoke('speech:cancel', { sessionId }),
-      onEvent: (listener) => bridge.on('speech:event', (payload) => listener(payload as SpeechEvent)),
+      onEvent: (listener) =>
+        bridge.on('speech:event', (payload) => listener(payload as SpeechEvent)),
     },
     events: {
       on: <K extends EventChannel>(

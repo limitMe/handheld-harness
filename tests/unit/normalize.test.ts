@@ -128,6 +128,47 @@ describe('normalize (fields)', () => {
     ])
   })
 
+  it('maps assistant token usage and effort', () => {
+    const events = normalize({
+      type: 'message.updated',
+      properties: {
+        sessionID: 'ses_1',
+        info: {
+          id: 'msg_1',
+          sessionID: 'ses_1',
+          role: 'assistant',
+          time: { created: 10, completed: 20 },
+          providerID: 'deepseek',
+          modelID: 'deepseek-v4-pro',
+          variant: 'high',
+          cost: 0.5,
+          tokens: {
+            total: 9643,
+            input: 126,
+            output: 45,
+            reasoning: 0,
+            cache: { read: 9472, write: 0 },
+          },
+        },
+      },
+    })
+    expect(events[0]).toMatchObject({
+      type: 'message.upserted',
+      message: {
+        effort: 'high',
+        usage: {
+          input: 126,
+          output: 45,
+          reasoning: 0,
+          cacheRead: 9472,
+          cacheWrite: 0,
+          total: 9643,
+          cost: 0.5,
+        },
+      },
+    })
+  })
+
   it('maps session.updated to a summary', () => {
     const events = normalize({
       type: 'session.updated',

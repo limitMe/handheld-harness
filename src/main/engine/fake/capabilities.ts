@@ -15,13 +15,14 @@ export const DEFAULT_FAKE_CAPABILITIES: EngineCapabilities = {
   transcriptReplay: true,
   multiClient: true,
   forkSession: false,
+  messageUsage: true,
+  modelEffort: true,
+  sessionDirectory: true,
 }
 
 export type EngineCapabilitiesInput = EngineCapabilities | string
 
-const CAPABILITY_KEYS = Object.keys(DEFAULT_FAKE_CAPABILITIES) as Array<
-  keyof EngineCapabilities
->
+const CAPABILITY_KEYS = Object.keys(DEFAULT_FAKE_CAPABILITIES) as Array<keyof EngineCapabilities>
 
 function parseBoolean(value: string): boolean | undefined {
   const normalized = value.trim().toLowerCase()

@@ -1,4 +1,12 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, shell, type IpcMainInvokeEvent } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  nativeTheme,
+  shell,
+  type IpcMainInvokeEvent,
+} from 'electron'
 import path from 'node:path'
 import {
   EVENT_CHANNELS,
@@ -114,6 +122,16 @@ export function registerIpc(): void {
   // Summons the OS on-screen keyboard (spec 17, touch fallback).
   handle('app:showOnScreenKeyboard', () => showOnScreenKeyboard())
 
+  // Native folder picker for a new session's working directory (spec 21).
+  handle('app:pickDirectory', async (_request, event) => {
+    const parent = BrowserWindow.fromWebContents(event.sender)
+    const result = parent
+      ? await dialog.showOpenDialog(parent, { properties: ['openDirectory'] })
+      : await dialog.showOpenDialog({ properties: ['openDirectory'] })
+    if (result.canceled || result.filePaths.length === 0) return { path: null }
+    return { path: result.filePaths[0] ?? null }
+  })
+
   handle('window:setZoom', ({ factor }, event) => {
     const zoom = clampZoom(factor)
     BrowserWindow.fromWebContents(event.sender)?.webContents.setZoomFactor(zoom)
@@ -147,7 +165,9 @@ export function registerIpc(): void {
 function registerSpeechIpc(): void {
   handle('speech:providers', () => speechService().listProviders())
 
-  handle('speech:keyStatus', ({ providerId }) => ({ configured: credentialStore().has(providerId) }))
+  handle('speech:keyStatus', ({ providerId }) => ({
+    configured: credentialStore().has(providerId),
+  }))
 
   handle('speech:setKey', ({ providerId, apiKey }) => {
     credentialStore().set(providerId, apiKey)
@@ -198,6 +218,10 @@ function registerEngineIpc(): void {
 
   handle('engine:setSessionModel', ({ ref, model }) =>
     getEngineManager().getByRef(ref).setSessionModel(ref.sessionId, model),
+  )
+
+  handle('engine:setSessionEffort', ({ ref, effort }) =>
+    getEngineManager().getByRef(ref).setSessionEffort(ref.sessionId, effort),
   )
 
   handle('engine:prompt', ({ ref, input }) =>

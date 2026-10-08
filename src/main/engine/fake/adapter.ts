@@ -3,11 +3,13 @@ import type {
   ChatMessage,
   ChatPart,
   CommandInfo,
+  CreateSessionOptions,
   EngineCapabilities,
   EngineEvent,
   EngineKind,
   EngineSnapshot,
   EngineStatus,
+  MessageUsage,
   ModelGroup,
   ModelRef,
   PermissionReply,
@@ -39,6 +41,22 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/** Deterministic synthetic usage so the info page has data offline (spec 21). */
+function fakeUsage(text: string): MessageUsage {
+  const output = Math.max(1, Math.ceil(text.length / 4))
+  const input = 128
+  const cacheRead = 1024
+  return {
+    input,
+    output,
+    reasoning: 0,
+    cacheRead,
+    cacheWrite: 0,
+    total: input + output + cacheRead,
+    cost: input * 0.000001 + output * 0.000002,
+  }
+}
+
 /**
  * Offline `AgentEngine` that replays recorded fixtures and scripted scenarios.
  * It performs no network or credential work, so it is safe for e2e runs and
@@ -62,8 +80,12 @@ export class FakeEngine implements AgentEngine {
   private readonly pendingPermissions = new Map<string, PermissionRequest>()
   private readonly pendingQuestions = new Map<string, QuestionRequest>()
   private readonly models = new Map<string, ModelRef>()
+  private readonly efforts = new Map<string, string>()
   private readonly aborted = new Set<string>()
-  private readonly waiters = new Map<string, { sessionId: string; resolve: (value: string) => void }>()
+  private readonly waiters = new Map<
+    string,
+    { sessionId: string; resolve: (value: string) => void }
+  >()
 
   private status: EngineStatus = { state: 'starting' }
   private counter = 0
@@ -121,7 +143,7 @@ export class FakeEngine implements AgentEngine {
     return this.sortedSessions()
   }
 
-  async createSession(opts?: { title?: string; model?: ModelRef }): Promise<SessionSummary> {
+  async createSession(opts?: CreateSessionOptions): Promise<SessionSummary> {
     const id = this.nextId('ses')
     const timestamp = this.now()
     const summary: SessionSummary = {
@@ -131,8 +153,11 @@ export class FakeEngine implements AgentEngine {
       updatedAt: timestamp,
       runState: 'idle',
       model: opts?.model ?? DEFAULT_MODEL,
+      ...(opts?.effort ? { effort: opts.effort } : {}),
+      ...(opts?.directory ? { directory: opts.directory } : {}),
     }
     if (opts?.model) this.models.set(id, opts.model)
+    if (opts?.effort) this.efforts.set(id, opts.effort)
     this.sessions.set(id, summary)
     this.messages.set(id, [])
     this.emitNormalized({ type: 'session.upserted', session: summary })
@@ -144,6 +169,7 @@ export class FakeEngine implements AgentEngine {
     this.messages.delete(sessionId)
     this.runStates.delete(sessionId)
     this.models.delete(sessionId)
+    this.efforts.delete(sessionId)
     this.emitNormalized({ type: 'session.deleted', sessionId })
   }
 
@@ -156,6 +182,15 @@ export class FakeEngine implements AgentEngine {
     const session = this.sessions.get(sessionId)
     if (!session) return
     const next = { ...session, model }
+    this.sessions.set(sessionId, next)
+    this.emitNormalized({ type: 'session.upserted', session: next })
+  }
+
+  async setSessionEffort(sessionId: string, effort: string): Promise<void> {
+    this.efforts.set(sessionId, effort)
+    const session = this.sessions.get(sessionId)
+    if (!session) return
+    const next = { ...session, effort }
     this.sessions.set(sessionId, next)
     this.emitNormalized({ type: 'session.upserted', session: next })
   }
@@ -195,7 +230,14 @@ export class FakeEngine implements AgentEngine {
       {
         providerId: 'fake',
         name: 'Fake provider',
-        models: [{ id: 'fake-model', name: 'Fake model' }],
+        models: [
+          {
+            id: 'fake-model',
+            name: 'Fake model',
+            contextLimit: 128_000,
+            variants: ['default', 'high', 'max'],
+          },
+        ],
       },
     ]
   }
@@ -298,7 +340,10 @@ export class FakeEngine implements AgentEngine {
     const reply = await this.waitFor(sessionId, `perm:${requestId}`)
     this.emitNormalized({ type: 'permission.replied', sessionId, requestId })
     if (reply === 'abort') return
-    this.pushAssistant(sessionId, reply === 'reject' ? 'Permission rejected.' : 'Permission granted.')
+    this.pushAssistant(
+      sessionId,
+      reply === 'reject' ? 'Permission rejected.' : 'Permission granted.',
+    )
   }
 
   private async runQuestion(sessionId: string): Promise<void> {
@@ -376,6 +421,8 @@ export class FakeEngine implements AgentEngine {
       createdAt: timestamp,
       completedAt: timestamp,
       model: this.models.get(sessionId) ?? DEFAULT_MODEL,
+      usage: fakeUsage(text),
+      ...(this.efforts.get(sessionId) ? { effort: this.efforts.get(sessionId) } : {}),
     }
     this.emitNormalized({ type: 'message.upserted', message })
     this.emitNormalized({
@@ -394,6 +441,8 @@ export class FakeEngine implements AgentEngine {
       role: 'assistant',
       createdAt: timestamp,
       model: this.models.get(sessionId) ?? DEFAULT_MODEL,
+      usage: fakeUsage(text),
+      ...(this.efforts.get(sessionId) ? { effort: this.efforts.get(sessionId) } : {}),
     }
     this.emitNormalized({ type: 'message.upserted', message })
     const partId = this.nextId('prt')

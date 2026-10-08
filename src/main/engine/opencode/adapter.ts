@@ -7,6 +7,7 @@ import type {
   AgentEngine,
   ChatMessage,
   CommandInfo,
+  CreateSessionOptions,
   EngineCapabilities,
   EngineEvent,
   EngineKind,
@@ -42,11 +43,15 @@ import {
 } from './normalize'
 import { resolveSessionModel as resolveModel } from './model-resolution'
 import {
+  effortsPath,
   modelsPath,
+  readEfforts,
   readModels,
   registryKey,
+  writeEfforts,
   writeModels,
   isServerHealthy,
+  type SessionEffortTable,
   type SessionModelTable,
 } from '../server-registry'
 
@@ -80,6 +85,9 @@ const CAPABILITIES: EngineCapabilities = {
   transcriptReplay: true,
   multiClient: true,
   forkSession: false,
+  messageUsage: true,
+  modelEffort: true,
+  sessionDirectory: true,
 }
 
 const DEFAULT_RECONNECT_DELAYS = [500, 1000, 2000, 4000, 8000]
@@ -148,7 +156,9 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
   private readonly pendingPermissions = new Map<string, PermissionRequest>()
   private readonly pendingQuestions = new Map<string, QuestionRequest>()
   private readonly lastAssistantModels = new Map<string, ModelRef>()
+  private readonly lastAssistantEfforts = new Map<string, string>()
   private models: SessionModelTable = {}
+  private efforts: SessionEffortTable = {}
   private defaultModel: ModelRef | undefined
 
   constructor(private readonly options: OpenCodeEngineOptions) {
@@ -426,6 +436,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
           ...event.session,
           runState,
           model: this.resolveSessionModel(event.session.id, event.session.model),
+          effort: this.resolveSessionEffort(event.session.id, event.session.effort),
         }
         this.sessions.set(enriched.id, enriched)
         event.session = enriched
@@ -435,6 +446,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
         this.sessions.delete(event.sessionId)
         this.runStates.delete(event.sessionId)
         this.lastAssistantModels.delete(event.sessionId)
+        this.lastAssistantEfforts.delete(event.sessionId)
         break
       case 'session.runState':
         this.runStates.set(event.sessionId, event.runState)
@@ -444,8 +456,13 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
         if (event.sessionId) this.patchSession(event.sessionId, { runState: 'error' })
         break
       case 'message.upserted':
-        if (event.message.role === 'assistant' && event.message.model) {
-          this.lastAssistantModels.set(event.message.sessionId, event.message.model)
+        if (event.message.role === 'assistant') {
+          if (event.message.model) {
+            this.lastAssistantModels.set(event.message.sessionId, event.message.model)
+          }
+          if (event.message.effort) {
+            this.lastAssistantEfforts.set(event.message.sessionId, event.message.effort)
+          }
         }
         break
       case 'part.upserted':
@@ -497,20 +514,31 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
 
   // ----- model table -----------------------------------------------------
 
-  private modelTableFile(): string {
+  private registryFile(kind: 'models' | 'efforts'): string {
     const key = registryKey(this.options.workspaceDir ?? '', this.options.sdkVersion)
-    return modelsPath(this.options.serversDir, 'opencode', key)
+    return kind === 'models'
+      ? modelsPath(this.options.serversDir, 'opencode', key)
+      : effortsPath(this.options.serversDir, 'opencode', key)
   }
 
   private loadModelTable(): void {
-    this.models = readModels(this.modelTableFile())
+    this.models = readModels(this.registryFile('models'))
+    this.efforts = readEfforts(this.registryFile('efforts'))
   }
 
   private persistModelTable(): void {
     try {
-      writeModels(this.modelTableFile(), this.models)
+      writeModels(this.registryFile('models'), this.models)
     } catch (error) {
       this.logger.warn('failed to persist session model table', String(error))
+    }
+  }
+
+  private persistEffortTable(): void {
+    try {
+      writeEfforts(this.registryFile('efforts'), this.efforts)
+    } catch (error) {
+      this.logger.warn('failed to persist session effort table', String(error))
     }
   }
 
@@ -521,6 +549,16 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
       serverModel,
       defaultModel: this.defaultModel,
     })
+  }
+
+  /** Chosen effort wins, then the last assistant turn, then the server session model. */
+  private resolveSessionEffort(sessionId: string, serverEffort?: string): string | undefined {
+    return this.efforts[sessionId] ?? this.lastAssistantEfforts.get(sessionId) ?? serverEffort
+  }
+
+  /** Working directory a session is pinned to; undefined means the engine default. */
+  private sessionDirectory(sessionId: string): string | undefined {
+    return this.sessions.get(sessionId)?.directory
   }
 
   // ----- reads -----------------------------------------------------------
@@ -550,7 +588,11 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
       this.sessions.clear()
       for (const [id, summary] of next) this.sessions.set(id, summary)
       for (const summary of this.sessions.values()) {
-        const enriched = { ...summary, model: this.resolveSessionModel(summary.id, summary.model) }
+        const enriched = {
+          ...summary,
+          model: this.resolveSessionModel(summary.id, summary.model),
+          effort: this.resolveSessionEffort(summary.id, summary.effort),
+        }
         this.sessions.set(summary.id, enriched)
         this.emit({ type: 'session.upserted', session: enriched })
       }
@@ -614,8 +656,12 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
 
   async getMessages(sessionId: string): Promise<ChatMessage[]> {
     const client = this.requireClient()
+    const directory = this.sessionDirectory(sessionId)
     const raw = unwrap<Array<{ info: unknown; parts: unknown[] }>>(
-      await client.session.messages({ sessionID: sessionId }),
+      await client.session.messages({
+        sessionID: sessionId,
+        ...(directory ? { directory } : {}),
+      }),
     )
     const messages: ChatMessage[] = []
     for (const entry of raw) {
@@ -625,8 +671,10 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
         .map(toChatPart)
         .filter((part): part is NonNullable<typeof part> => Boolean(part))
       messages.push({ ...info, parts })
-      if (info.role === 'assistant' && info.model)
-        this.lastAssistantModels.set(sessionId, info.model)
+      if (info.role === 'assistant') {
+        if (info.model) this.lastAssistantModels.set(sessionId, info.model)
+        if (info.effort) this.lastAssistantEfforts.set(sessionId, info.effort)
+      }
     }
     return messages
   }
@@ -637,7 +685,15 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
       all?: Array<{
         id: string
         name: string
-        models: Record<string, { id: string; name: string }>
+        models: Record<
+          string,
+          {
+            id: string
+            name: string
+            limit?: { context?: number }
+            variants?: Record<string, unknown>
+          }
+        >
       }>
     }>(await client.provider.list({}))
     const providers = data.all ?? []
@@ -647,6 +703,10 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
       models: Object.values(provider.models ?? {}).map((model) => ({
         id: model.id,
         name: model.name,
+        ...(typeof model.limit?.context === 'number' ? { contextLimit: model.limit.context } : {}),
+        ...(model.variants && Object.keys(model.variants).length > 0
+          ? { variants: Object.keys(model.variants) }
+          : {}),
       })),
     }))
   }
@@ -667,16 +727,23 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
   async runCommand(sessionId: string, command: string, args?: string): Promise<void> {
     const client = this.requireClient()
     const name = command.replace(/^\//, '')
+    const effort = this.resolveSessionEffort(sessionId)
+    const directory = this.sessionDirectory(sessionId)
     try {
       await client.session.command({
         sessionID: sessionId,
         command: name,
         ...(args ? { arguments: args } : {}),
+        ...(directory ? { directory } : {}),
+        ...(effort ? { variant: effort } : {}),
       })
     } catch (error) {
       // `compact` also has a dedicated endpoint the command registry may omit.
       if (name === 'compact') {
-        await client.session.summarize({ sessionID: sessionId })
+        await client.session.summarize({
+          sessionID: sessionId,
+          ...(directory ? { directory } : {}),
+        })
         return
       }
       throw error
@@ -685,13 +752,20 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
 
   // ----- writes ----------------------------------------------------------
 
-  async createSession(opts?: { title?: string; model?: ModelRef }): Promise<SessionSummary> {
+  async createSession(opts?: CreateSessionOptions): Promise<SessionSummary> {
     const client = this.requireClient()
     const info = unwrap<OcSession>(
       await client.session.create({
-        title: opts?.title,
+        ...(opts?.title ? { title: opts.title } : {}),
+        ...(opts?.directory ? { directory: opts.directory } : {}),
         ...(opts?.model
-          ? { model: { id: opts.model.modelId, providerID: opts.model.providerId } }
+          ? {
+              model: {
+                id: opts.model.modelId,
+                providerID: opts.model.providerId,
+                ...(opts.effort ? { variant: opts.effort } : {}),
+              },
+            }
           : {}),
       }),
     )
@@ -699,9 +773,17 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
       this.models[info.id] = opts.model
       this.persistModelTable()
     }
+    if (opts?.effort) {
+      this.efforts[info.id] = opts.effort
+      this.persistEffortTable()
+    }
     const summary = toSessionSummary(info, 'idle')
     if (!summary) throw new Error('OpenCode returned an invalid session')
-    const enriched = { ...summary, model: this.resolveSessionModel(summary.id, summary.model) }
+    const enriched = {
+      ...summary,
+      model: this.resolveSessionModel(summary.id, summary.model),
+      effort: this.resolveSessionEffort(summary.id, summary.effort),
+    }
     this.sessions.set(enriched.id, enriched)
     this.emit({ type: 'session.upserted', session: enriched })
     return enriched
@@ -709,10 +791,15 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
 
   async deleteSession(sessionId: string): Promise<void> {
     const client = this.requireClient()
-    await client.session.delete({ sessionID: sessionId })
+    const directory = this.sessionDirectory(sessionId)
+    await client.session.delete({
+      sessionID: sessionId,
+      ...(directory ? { directory } : {}),
+    })
     this.sessions.delete(sessionId)
     this.runStates.delete(sessionId)
     this.lastAssistantModels.delete(sessionId)
+    this.lastAssistantEfforts.delete(sessionId)
   }
 
   async setSessionModel(sessionId: string, model: ModelRef): Promise<void> {
@@ -726,19 +813,38 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     }
   }
 
+  async setSessionEffort(sessionId: string, effort: string): Promise<void> {
+    this.efforts[sessionId] = effort
+    this.persistEffortTable()
+    const session = this.sessions.get(sessionId)
+    if (session) {
+      const enriched = { ...session, effort }
+      this.sessions.set(sessionId, enriched)
+      this.emit({ type: 'session.upserted', session: enriched })
+    }
+  }
+
   async prompt(sessionId: string, input: { text: string }): Promise<void> {
     const client = this.requireClient()
     const model = this.resolveSessionModel(sessionId)
+    const effort = this.resolveSessionEffort(sessionId)
+    const directory = this.sessionDirectory(sessionId)
     await client.session.promptAsync({
       sessionID: sessionId,
       parts: [{ type: 'text', text: input.text }],
+      ...(directory ? { directory } : {}),
       ...(model ? { model: { providerID: model.providerId, modelID: model.modelId } } : {}),
+      ...(effort ? { variant: effort } : {}),
     })
   }
 
   async abort(sessionId: string): Promise<void> {
     const client = this.requireClient()
-    await client.session.abort({ sessionID: sessionId })
+    const directory = this.sessionDirectory(sessionId)
+    await client.session.abort({
+      sessionID: sessionId,
+      ...(directory ? { directory } : {}),
+    })
   }
 
   async replyPermission(

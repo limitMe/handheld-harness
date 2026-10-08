@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDictationStore } from '../dictation'
 import { useEngineStatus } from '../engine/useEngineStatus'
-import { useFocusable, FOCUS_ORDER } from '../focus'
+import { FocusContainer, useFocusable, FOCUS_ORDER } from '../focus'
 import { useTranslation } from '../i18n'
 import { Button } from '../ui'
 import { NetworkIcon, useNetworkStatus } from './network'
@@ -106,6 +106,29 @@ export interface StatusBarProps {
   title?: string
   /** Touch / keyboard entry point for the task map (spec 14). */
   onOpenTasks?: () => void
+  /** Opens the current session's info page (spec 21). Hidden when absent. */
+  onOpenInfo?: () => void
+}
+
+/** Hand-drawn status-bar icon, matching the inline-SVG pattern of `network.tsx`. */
+function InfoIcon() {
+  return (
+    <svg
+      width={22}
+      height={22}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <line x1="12" y1="11" x2="12" y2="16" />
+      <line x1="12" y1="8" x2="12" y2="8" />
+    </svg>
+  )
 }
 
 /** The ready state is the normal case, so its dot would only add noise (spec 12). */
@@ -115,7 +138,60 @@ export function engineDotClass(state: string | undefined): string | null {
   return 'bg-warning'
 }
 
-export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
+/**
+ * The bar's two actions register as children of the `status-bar` focus
+ * container. Their `useFocusable` hooks must live in a component rendered
+ * *inside* that container, not in `StatusBar` itself, or the hook would capture
+ * the outer container as its parent.
+ */
+function TasksButton({ onOpen }: { onOpen: () => void }) {
+  const { t } = useTranslation()
+  const ref = useRef<HTMLButtonElement>(null)
+  const focus = useFocusable({
+    id: 'open-tasks',
+    elementRef: ref,
+    order: FOCUS_ORDER.screen,
+    onActivate: onOpen,
+  })
+  return (
+    <Button
+      ref={ref}
+      {...focus.props}
+      data-testid="open-tasks"
+      className="min-h-11"
+      onClick={onOpen}
+    >
+      {t('status.tasks')}
+    </Button>
+  )
+}
+
+function InfoButton({ onOpen }: { onOpen: () => void }) {
+  const { t } = useTranslation()
+  const ref = useRef<HTMLButtonElement>(null)
+  const focus = useFocusable({
+    id: 'open-info',
+    elementRef: ref,
+    order: FOCUS_ORDER.screen,
+    onActivate: onOpen,
+  })
+  return (
+    <button
+      ref={ref}
+      {...focus.props}
+      type="button"
+      data-testid="open-info"
+      aria-label={t('status.sessionInfo')}
+      title={t('status.sessionInfo')}
+      onClick={onOpen}
+      className="flex h-11 w-11 items-center justify-center rounded-md text-text-muted transition-colors duration-fast ease-standard hover:text-text focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none"
+    >
+      <InfoIcon />
+    </button>
+  )
+}
+
+export default function StatusBar({ title, onOpenTasks, onOpenInfo }: StatusBarProps) {
   const { t } = useTranslation()
   const time = useClock()
   const network = useNetworkStatus()
@@ -124,13 +200,6 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
   const badge = profileBadge(useProfile())
   const dictationStatus = useDictationStore((state) => state.status)
   const dictationLevel = useDictationStore((state) => state.level)
-  const tasksRef = useRef<HTMLButtonElement>(null)
-  const tasksFocus = useFocusable({
-    id: 'open-tasks',
-    elementRef: tasksRef,
-    order: FOCUS_ORDER.screen,
-    onActivate: () => onOpenTasks?.(),
-  })
 
   const dotClass = engineDotClass(engineStatus?.state)
 
@@ -145,79 +214,73 @@ export default function StatusBar({ title, onOpenTasks }: StatusBarProps) {
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-surface-raised bg-surface px-4">
-      <div className="flex flex-1 items-center justify-start gap-3">
-        {onOpenTasks ? (
-          <Button
-            ref={tasksRef}
-            {...tasksFocus.props}
-            data-testid="open-tasks"
-            className="min-h-11"
-            onClick={onOpenTasks}
-          >
-            {t('status.tasks')}
-          </Button>
-        ) : null}
-        {badge ? (
-          <span
-            data-testid="profile-badge"
-            className="rounded border border-surface-raised px-2 py-0.5 text-sm uppercase tracking-wider text-text-muted"
-          >
-            {badge}
-          </span>
-        ) : null}
-      </div>
-      {title ? (
-        <h1
-          data-testid="status-title"
-          className="min-w-0 truncate text-center text-xl font-semibold tracking-wide text-text"
-        >
-          {title}
-        </h1>
-      ) : null}
-      <div className="flex flex-1 items-center justify-end gap-4 text-base text-text-muted">
-        {dotClass ? (
-          <span
-            data-testid="engine-status"
-            title={
-              engineStatus ? t('status.engineTooltip', { state: engineStatus.state }) : undefined
-            }
-            className={`h-3 w-3 rounded-full ${dotClass}`}
-          />
-        ) : null}
-        {dictationStatus !== 'idle' ? (
-          <span data-testid="dictation-indicator" className="flex items-center gap-2 text-accent">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent" />
-            <span>
-              {dictationStatus === 'starting' ? t('status.starting') : t('status.listening')}
+      {/* Row flow so up/down reaches the bar and left/right cycles its actions. */}
+      <FocusContainer id="status-bar" flow="row">
+        <div className="flex flex-1 items-center justify-start gap-3">
+          {onOpenTasks ? <TasksButton onOpen={onOpenTasks} /> : null}
+          {badge ? (
+            <span
+              data-testid="profile-badge"
+              className="rounded border border-surface-raised px-2 py-0.5 text-sm uppercase tracking-wider text-text-muted"
+            >
+              {badge}
             </span>
-            <span className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-raised">
-              <span
-                className="block h-full bg-accent transition-[width] duration-fast"
-                style={{ width: `${Math.round(dictationLevel * 100)}%` }}
-              />
+          ) : null}
+        </div>
+        {title ? (
+          <h1
+            data-testid="status-title"
+            className="min-w-0 truncate text-center text-xl font-semibold tracking-wide text-text"
+          >
+            {title}
+          </h1>
+        ) : null}
+        <div className="flex flex-1 items-center justify-end gap-4 text-base text-text-muted">
+          {dotClass ? (
+            <span
+              data-testid="engine-status"
+              title={
+                engineStatus ? t('status.engineTooltip', { state: engineStatus.state }) : undefined
+              }
+              className={`h-3 w-3 rounded-full ${dotClass}`}
+            />
+          ) : null}
+          {dictationStatus !== 'idle' ? (
+            <span data-testid="dictation-indicator" className="flex items-center gap-2 text-accent">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent" />
+              <span>
+                {dictationStatus === 'starting' ? t('status.starting') : t('status.listening')}
+              </span>
+              <span className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-raised">
+                <span
+                  className="block h-full bg-accent transition-[width] duration-fast"
+                  style={{ width: `${Math.round(dictationLevel * 100)}%` }}
+                />
+              </span>
             </span>
+          ) : null}
+          <span
+            data-testid="status-network"
+            data-status={network.kind}
+            data-level={network.level}
+            role="img"
+            aria-label={networkLabel}
+            title={networkLabel}
+            className="flex items-center"
+          >
+            <NetworkIcon status={network} />
           </span>
-        ) : null}
-        <span
-          data-testid="status-network"
-          data-status={network.kind}
-          data-level={network.level}
-          role="img"
-          aria-label={networkLabel}
-          title={networkLabel}
-          className="flex items-center"
-        >
-          <NetworkIcon status={network} />
-        </span>
-        {battery ? (
-          <span data-testid="status-battery" className="tabular-nums">
-            {Math.round(battery.level * 100)}%{battery.charging ? ' ⚡' : ''}
+          {battery ? (
+            <span data-testid="status-battery" className="tabular-nums">
+              {Math.round(battery.level * 100)}%{battery.charging ? ' ⚡' : ''}
+            </span>
+          ) : null}
+          <span data-testid="status-time" className="tabular-nums">
+            {time}
           </span>
-        ) : null}
-        <span data-testid="status-time" className="tabular-nums">
-          {time}
-        </span>
-      </div>
+          {onOpenInfo ? <InfoButton onOpen={onOpenInfo} /> : null}
+        </div>
+      </FocusContainer>
     </header>
   )
 }

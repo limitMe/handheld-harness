@@ -47,6 +47,11 @@ export function modelsPath(serversDir: string, engineKind: string, key: string):
   return path.join(engineRegistryDir(serversDir, engineKind), `${key}.models.json`)
 }
 
+/** Session -> reasoning effort table (spec 21), stored next to the model table. */
+export function effortsPath(serversDir: string, engineKind: string, key: string): string {
+  return path.join(engineRegistryDir(serversDir, engineKind), `${key}.efforts.json`)
+}
+
 function isEntry(value: unknown): value is ServerRegistryEntry {
   if (!value || typeof value !== 'object') return false
   const entry = value as Record<string, unknown>
@@ -109,7 +114,12 @@ export function listRegistries(
       continue
     }
     for (const name of files) {
-      if (!name.endsWith('.json') || name.endsWith('.models.json')) continue
+      if (
+        !name.endsWith('.json') ||
+        name.endsWith('.models.json') ||
+        name.endsWith('.efforts.json')
+      )
+        continue
       const file = path.join(dir, name)
       const entry = readRegistry(file)
       if (entry) results.push({ engineKind, key: name.slice(0, -'.json'.length), file, entry })
@@ -271,6 +281,28 @@ interface ModelRefLike {
 }
 
 export function writeModels(file: string, table: SessionModelTable): void {
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, `${JSON.stringify(table, null, 2)}\n`, 'utf8')
+}
+
+/** Session -> effort names (spec 21). */
+export type SessionEffortTable = Record<string, string>
+
+export function readEfforts(file: string): SessionEffortTable {
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf8'))
+    if (!parsed || typeof parsed !== 'object') return {}
+    const table: SessionEffortTable = {}
+    for (const [sessionId, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof value === 'string' && value.length > 0) table[sessionId] = value
+    }
+    return table
+  } catch {
+    return {}
+  }
+}
+
+export function writeEfforts(file: string, table: SessionEffortTable): void {
   fs.mkdirSync(path.dirname(file), { recursive: true })
   fs.writeFileSync(file, `${JSON.stringify(table, null, 2)}\n`, 'utf8')
 }

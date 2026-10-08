@@ -14,6 +14,7 @@ import { sessionKey } from './state/types'
 import { TextEditOverlay, useTextEditStore } from './textedit'
 import { showToast } from './ui'
 import { CurrentWork } from './workbench/CurrentWork'
+import { SessionInfoPage } from './workbench/SessionInfoPage'
 import { TaskMap } from './workbench/TaskMap'
 import { SystemMenu } from './system/SystemMenu'
 import { useLanguageSync } from './system/useLanguageSync'
@@ -28,6 +29,7 @@ export default function App() {
   const [focusDebugOpen, setFocusDebugOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
 
   useThemeSync()
   useLanguageSync()
@@ -53,13 +55,19 @@ export default function App() {
       () => ({
         'map.toggle': onPress(() =>
           setMapOpen((open) => {
-            if (!open) setMenuOpen(false)
+            if (!open) {
+              setMenuOpen(false)
+              setInfoOpen(false)
+            }
             return !open
           }),
         ),
         'menu.toggle': onPress(() =>
           setMenuOpen((open) => {
-            if (!open) setMapOpen(false)
+            if (!open) {
+              setMapOpen(false)
+              setInfoOpen(false)
+            }
             return !open
           }),
         ),
@@ -71,7 +79,11 @@ export default function App() {
 
   // Keyboard chrome (spec 10): Esc / Tab open the overlays from any screen. The
   // context is skipped while a text field is active, so typing never triggers it.
-  useInputContext('global.chrome', useMemo(() => ({}), []), CONTEXT_ORDER.chrome)
+  useInputContext(
+    'global.chrome',
+    useMemo(() => ({}), []),
+    CONTEXT_ORDER.chrome,
+  )
 
   useEffect(() => {
     void initialize()
@@ -88,15 +100,17 @@ export default function App() {
     previousEngineState.current = state
   }, [engineStatus, t])
 
-  const title = menuOpen
-    ? t('app.systemMenu')
-    : mapOpen
-      ? t('app.taskMap')
-      : textEditOpen
-        ? undefined
-        : current
-          ? (sessions[sessionKey(current)]?.title ?? t('app.task'))
-          : t('app.newTask')
+  const title = infoOpen
+    ? t('sessionInfo.title')
+    : menuOpen
+      ? t('app.systemMenu')
+      : mapOpen
+        ? t('app.taskMap')
+        : textEditOpen
+          ? undefined
+          : current
+            ? (sessions[sessionKey(current)]?.title ?? t('app.task'))
+            : t('app.newTask')
 
   const adjustZoom = useCallback(async (direction: -1 | 0 | 1): Promise<void> => {
     const settings = await window.handheld.settings.get()
@@ -144,10 +158,15 @@ export default function App() {
   return (
     <div className="flex h-full flex-col bg-surface text-text">
       <DictationLayer />
-      <StatusBar title={title} onOpenTasks={() => setMapOpen(true)} />
+      <StatusBar
+        title={title}
+        onOpenTasks={() => setMapOpen(true)}
+        {...(mapOpen || menuOpen || textEditOpen ? {} : { onOpenInfo: () => setInfoOpen(true) })}
+      />
       <div className="relative flex flex-1 overflow-hidden">
-        <CurrentWork dimmed={mapOpen || menuOpen} />
+        <CurrentWork dimmed={mapOpen || menuOpen || infoOpen} />
         <TaskMap open={mapOpen} onClose={() => setMapOpen(false)} />
+        <SessionInfoPage open={infoOpen} onClose={() => setInfoOpen(false)} />
         <SystemMenu
           open={menuOpen}
           onClose={() => setMenuOpen(false)}

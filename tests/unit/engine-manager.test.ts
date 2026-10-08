@@ -11,6 +11,9 @@ const capabilities: EngineCapabilities = {
   transcriptReplay: false,
   multiClient: false,
   forkSession: false,
+  messageUsage: false,
+  modelEffort: false,
+  sessionDirectory: false,
 }
 
 function stubEngine(id: string, kind: AgentEngine['kind'] = 'fake') {
@@ -39,6 +42,7 @@ function stubEngine(id: string, kind: AgentEngine['kind'] = 'fake') {
     deleteSession: async () => undefined,
     getMessages: async () => [],
     setSessionModel: async () => undefined,
+    setSessionEffort: async () => undefined,
     prompt: async () => undefined,
     abort: async () => undefined,
     replyPermission: async () => undefined,

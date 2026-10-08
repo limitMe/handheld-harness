@@ -15,6 +15,7 @@ import {
 import type {
   ChatMessage,
   CommandInfo,
+  CreateSessionOptions,
   EngineCapabilities,
   EngineEventPayload,
   EngineInfo,
@@ -84,7 +85,11 @@ export type UiSettings = z.infer<typeof UiSettingsSchema>
 /** One entry of the recent-model ring (spec 14): a model plus its remembered sector. */
 export const RecentModelSchema = z.object({
   model: ModelRefSchema,
-  slot: z.number().int().min(0).max(RING_SLOTS - 1),
+  slot: z
+    .number()
+    .int()
+    .min(0)
+    .max(RING_SLOTS - 1),
   name: z.string().optional(),
 })
 
@@ -279,6 +284,8 @@ export const CreateSessionParamSchema = z
       .object({
         title: z.string().optional(),
         model: ModelRefSchema.optional(),
+        effort: z.string().optional(),
+        directory: z.string().optional(),
       })
       .optional(),
     engineId: z.string().optional(),
@@ -289,13 +296,11 @@ export interface EngineApi {
   capabilities(engineId?: string): Promise<EngineCapabilities>
   snapshot(engineId?: string): Promise<EngineSnapshot>
   listSessions(engineId?: string): Promise<SessionSummary[]>
-  createSession(
-    opts?: { title?: string; model?: ModelRef },
-    engineId?: string,
-  ): Promise<SessionSummary>
+  createSession(opts?: CreateSessionOptions, engineId?: string): Promise<SessionSummary>
   deleteSession(ref: SessionRef): Promise<void>
   getMessages(ref: SessionRef): Promise<ChatMessage[]>
   setSessionModel(ref: SessionRef, model: ModelRef): Promise<void>
+  setSessionEffort(ref: SessionRef, effort: string): Promise<void>
   prompt(ref: SessionRef, input: { text: string }): Promise<void>
   abort(ref: SessionRef): Promise<void>
   replyPermission(ref: SessionRef, requestId: string, reply: PermissionReply): Promise<void>
@@ -314,6 +319,8 @@ export interface InvokeContract {
   'app:openExternal': { request: { url: string }; response: void }
   'app:openLogDir': { request: undefined; response: void }
   'app:showOnScreenKeyboard': { request: undefined; response: void }
+  /** Native folder picker for a session's working directory (spec 21). */
+  'app:pickDirectory': { request: undefined; response: { path: string | null } }
   'window:setZoom': { request: { factor: number }; response: { zoom: number } }
   'log:write': { request: LogWriteRequest; response: void }
   'settings:get': { request: undefined; response: Settings }
@@ -325,12 +332,13 @@ export interface InvokeContract {
   'engine:snapshot': { request: { engineId?: string } | undefined; response: EngineSnapshot }
   'engine:listSessions': { request: { engineId?: string } | undefined; response: SessionSummary[] }
   'engine:createSession': {
-    request: { opts?: { title?: string; model?: ModelRef }; engineId?: string } | undefined
+    request: { opts?: CreateSessionOptions; engineId?: string } | undefined
     response: SessionSummary
   }
   'engine:deleteSession': { request: { ref: SessionRef }; response: void }
   'engine:getMessages': { request: { ref: SessionRef }; response: ChatMessage[] }
   'engine:setSessionModel': { request: { ref: SessionRef; model: ModelRef }; response: void }
+  'engine:setSessionEffort': { request: { ref: SessionRef; effort: string }; response: void }
   'engine:prompt': { request: { ref: SessionRef; input: { text: string } }; response: void }
   'engine:abort': { request: { ref: SessionRef }; response: void }
   'engine:replyPermission': {
@@ -377,6 +385,7 @@ export const INVOKE_CHANNELS = [
   'app:openExternal',
   'app:openLogDir',
   'app:showOnScreenKeyboard',
+  'app:pickDirectory',
   'window:setZoom',
   'log:write',
   'settings:get',
@@ -388,6 +397,7 @@ export const INVOKE_CHANNELS = [
   'engine:deleteSession',
   'engine:getMessages',
   'engine:setSessionModel',
+  'engine:setSessionEffort',
   'engine:prompt',
   'engine:abort',
   'engine:replyPermission',
@@ -419,6 +429,7 @@ export const IPC_INVOKE_SCHEMAS = {
   'app:openExternal': z.object({ url: z.string().min(1) }),
   'app:openLogDir': z.undefined(),
   'app:showOnScreenKeyboard': z.undefined(),
+  'app:pickDirectory': z.undefined(),
   'window:setZoom': z.object({ factor: z.number() }),
   'log:write': LogWriteRequestSchema,
   'settings:get': z.undefined(),
@@ -430,6 +441,7 @@ export const IPC_INVOKE_SCHEMAS = {
   'engine:deleteSession': SessionRefParamSchema,
   'engine:getMessages': SessionRefParamSchema,
   'engine:setSessionModel': z.object({ ref: SessionRefSchema, model: ModelRefSchema }),
+  'engine:setSessionEffort': z.object({ ref: SessionRefSchema, effort: z.string().min(1) }),
   'engine:prompt': z.object({ ref: SessionRefSchema, input: z.object({ text: z.string() }) }),
   'engine:abort': SessionRefParamSchema,
   'engine:replyPermission': z.object({
@@ -474,6 +486,7 @@ export interface HandheldApi {
     openExternal(url: string): Promise<void>
     openLogDir(): Promise<void>
     showOnScreenKeyboard(): Promise<void>
+    pickDirectory(): Promise<{ path: string | null }>
   }
   window: {
     setZoom(factor: number): Promise<{ zoom: number }>

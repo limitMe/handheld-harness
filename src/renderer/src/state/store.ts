@@ -48,8 +48,14 @@ export interface WorkbenchStore extends WorkbenchState {
   defaultEngineId?: string
   /** Model new tasks are created with (spec 15, `settings.model.default`). */
   defaultModel?: ModelRef
+  /** Model the engine falls back to when no default is chosen (spec 21). */
+  engineDefaultModel?: ModelRef
   /** Recently used models backing the task map's model ring (spec 14). */
   recentModels: RecentModel[]
+  /** Working directory picked for the next new task (spec 21); engine default when unset. */
+  pendingDirectory?: string
+  /** Reasoning effort picked for the next new task (spec 21). */
+  pendingEffort?: string
   initialized: boolean
   initialize(): Promise<void>
   handleEngineEvent(payload: EngineEventPayload): void
@@ -59,6 +65,9 @@ export interface WorkbenchStore extends WorkbenchState {
   closeTask(ref: SessionRef): Promise<void>
   newTask(): void
   setDefaultModel(model: ModelRef, name?: string): Promise<void>
+  setPendingDirectory(directory: string | undefined): void
+  setPendingEffort(effort: string | undefined): void
+  setSessionEffort(ref: SessionRef, effort: string): Promise<void>
   draftKey(): string
   setDraft(value: string): void
   sendCurrent(): Promise<void>
@@ -215,7 +224,7 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     const bridge = window.handheld?.engine
     if (!bridge) return
     const snapshot = await bridge.snapshot(engineId)
-    set((state) => mergeSnapshot(state, snapshot))
+    set((state) => ({ ...mergeSnapshot(state, snapshot), engineDefaultModel: snapshot.defaultModel }))
     const current = get().ui.current
     if (current && current.engineId === engineId) await get().loadMessages(current, true)
   },
@@ -288,6 +297,23 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     await window.handheld.settings.update({ model: { default: model, recent } })
   },
 
+  setPendingDirectory(directory) {
+    set({ pendingDirectory: directory })
+  },
+
+  setPendingEffort(effort) {
+    set({ pendingEffort: effort })
+  },
+
+  async setSessionEffort(ref, effort) {
+    const key = sessionKey(ref)
+    const session = get().sessions[key]
+    if (session) {
+      set((state) => ({ sessions: { ...state.sessions, [key]: { ...session, effort } } }))
+    }
+    await window.handheld.engine.setSessionEffort(ref, effort)
+  },
+
   setDraft(value) {
     const key = get().draftKey()
     set((state) => ({ ui: { ...state.ui, drafts: { ...state.ui.drafts, [key]: value } } }))
@@ -313,12 +339,20 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     }
 
     if (!current && engineId) {
-      const model = get().defaultModel
-      const summary = await bridge.createSession(model ? { model } : undefined, engineId)
+      const model = state.defaultModel
+      const opts = {
+        ...(model ? { model } : {}),
+        ...(state.pendingEffort ? { effort: state.pendingEffort } : {}),
+        ...(state.pendingDirectory ? { directory: state.pendingDirectory } : {}),
+      }
+      const summary = await bridge.createSession(opts, engineId)
       const created: SessionRef = { engineId, sessionId: summary.id }
       current = created
       set((next) => ({
         sessions: { ...next.sessions, [sessionKey(created)]: summary },
+        // A session's directory and effort are fixed at creation (spec 21).
+        pendingDirectory: undefined,
+        pendingEffort: undefined,
         ui: { ...next.ui, drafts: { ...next.ui.drafts, [draftKey]: '' } },
       }))
       await get().openSession(created)

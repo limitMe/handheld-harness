@@ -3,6 +3,7 @@ import type {
   ChatMessage,
   ChatPart,
   EngineEvent,
+  MessageUsage,
   PermissionRequest,
   QuestionRequest,
   SessionRunState,
@@ -51,6 +52,28 @@ function modelFromMessage(value: unknown): ModelRef | undefined {
   return modelId && providerId ? { providerId, modelId } : undefined
 }
 
+/** Token/cost usage of an assistant message (spec 21); undefined when absent. */
+export function toMessageUsage(info: unknown): MessageUsage | undefined {
+  const message = asDict(info)
+  const tokens = asDict(message?.tokens)
+  if (!tokens) return undefined
+  const input = asNumber(tokens.input) ?? 0
+  const output = asNumber(tokens.output) ?? 0
+  const reasoning = asNumber(tokens.reasoning) ?? 0
+  const cache = asDict(tokens.cache)
+  const cacheRead = asNumber(cache?.read) ?? 0
+  const cacheWrite = asNumber(cache?.write) ?? 0
+  return {
+    input,
+    output,
+    reasoning,
+    cacheRead,
+    cacheWrite,
+    total: asNumber(tokens.total) ?? input + output + reasoning + cacheRead + cacheWrite,
+    cost: asNumber(message?.cost) ?? 0,
+  }
+}
+
 export function toSessionSummary(
   info: unknown,
   runState: SessionRunState = 'idle',
@@ -68,6 +91,8 @@ export function toSessionSummary(
     runState,
     parentId: asString(session.parentID),
     model: modelFromSession(session.model),
+    effort: asString(asDict(session.model)?.variant),
+    directory: asString(session.directory),
   }
 }
 
@@ -88,6 +113,8 @@ export function toChatMessage(info: unknown): Omit<ChatMessage, 'parts'> | undef
     createdAt: asNumber(time.created) ?? 0,
     completedAt: asNumber(time.completed),
     model: modelFromMessage(role === 'assistant' ? message : message.model),
+    effort: role === 'assistant' ? asString(message.variant) : undefined,
+    usage: role === 'assistant' ? toMessageUsage(message) : undefined,
     error: asString(errorData?.message),
   }
 }

@@ -198,6 +198,14 @@ export const DEFAULT_BINDINGS: BindingLayer = {
     'systemMenu.models': {
       X: 'input.deleteBackward',
     },
+    // Session info page (spec 21): up/down between the two rows, A acts on the
+    // focused row, B closes the page.
+    sessionInfo: {
+      DpadUp: 'nav.up',
+      DpadDown: 'nav.down',
+      A: 'nav.activate',
+      B: 'nav.deactivate',
+    },
     // Modal dialogs own navigation so both the D-pad and the sticks work no
     // matter which screen or overlay is beneath them (spec 11).
     dialog: {
@@ -269,6 +277,14 @@ export const DEFAULT_BINDINGS: BindingLayer = {
       Escape: 'nav.deactivate',
     },
     'taskMap.history': {
+      ArrowUp: 'nav.up',
+      ArrowDown: 'nav.down',
+      Enter: 'nav.activate',
+      Escape: 'nav.deactivate',
+    },
+    // Session info page (spec 21). Escape must resolve here, not fall through to
+    // the global chrome layer's menu shortcut.
+    sessionInfo: {
       ArrowUp: 'nav.up',
       ArrowDown: 'nav.down',
       Enter: 'nav.activate',
