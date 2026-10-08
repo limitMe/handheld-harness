@@ -100,6 +100,42 @@
   white-space: pre;
 }
 
+/* Tool calls and tool output are plain text, not Markdown; `CodeBlock` renders
+   them through the same highlight pipeline with its own frame. */
+.code-block pre {
+  margin: 0;
+  border: 1px solid var(--theme-color-surface-raised);
+  border-radius: var(--theme-radius-card);
+  background-color: var(--theme-color-surface);
+  padding: 0.6rem 0.85rem;
+}
+
+.code-block pre code {
+  display: block;
+  font-family: var(--theme-font-mono);
+  font-size: var(--theme-font-size-code);
+  white-space: pre;
+}
+
+.code-block--wrap pre code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.code-block--frameless pre {
+  border: 0;
+  border-radius: 0;
+}
+
+.code-block--inline code {
+  border-radius: 4px;
+  background-color: var(--theme-color-surface);
+  padding: 0.1em 0.35em;
+  font-family: var(--theme-font-mono);
+  font-size: var(--theme-font-size-code);
+  white-space: nowrap;
+}
+
 .markdown table {
   border-collapse: collapse;
 }
@@ -116,43 +152,83 @@
   border-top: 1px solid var(--theme-color-surface-raised);
 }
 
-/* Minimal highlight.js palette mapped onto semantic tokens. */
+/* Soft highlight.js palette (Catppuccin-inspired). Concrete colors live in
+   theme/default.css and theme/light.css behind the --theme-syntax-* variables,
+   so both light and dark modes pick their own pastels. */
 .hljs-comment,
 .hljs-quote {
-  color: var(--theme-color-text-muted);
+  color: var(--theme-syntax-comment);
   font-style: italic;
 }
 
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-literal,
-.hljs-type {
-  color: var(--theme-color-accent);
+.hljs-doctag,
+.hljs-template-tag,
+.hljs-template-variable {
+  color: var(--theme-syntax-keyword);
 }
 
 .hljs-string,
-.hljs-attr,
-.hljs-addition,
-.hljs-regexp {
-  color: var(--theme-color-success);
+.hljs-regexp,
+.hljs-char.escape_ {
+  color: var(--theme-syntax-string);
 }
 
 .hljs-number,
 .hljs-symbol,
-.hljs-meta {
-  color: var(--theme-color-warning);
+.hljs-bullet,
+.hljs-meta,
+.hljs-constant {
+  color: var(--theme-syntax-number);
 }
 
 .hljs-title,
-.hljs-function,
-.hljs-built_in,
-.hljs-name {
-  color: var(--theme-color-text);
+.hljs-section {
+  color: var(--theme-syntax-function);
   font-weight: 600;
 }
 
+.hljs-title.class_ {
+  color: var(--theme-syntax-type);
+}
+
+.hljs-type,
+.hljs-class,
+.hljs-built_in {
+  color: var(--theme-syntax-type);
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-property,
+.hljs-params,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-selector-pseudo {
+  color: var(--theme-syntax-attr);
+}
+
+.hljs-tag,
+.hljs-name {
+  color: var(--theme-syntax-tag);
+}
+
+.hljs-addition {
+  color: var(--theme-syntax-addition);
+}
+
 .hljs-deletion {
-  color: var(--theme-color-danger);
+  color: var(--theme-syntax-deletion);
+}
+
+.hljs-punctuation,
+.hljs-operator,
+.hljs-subst {
+  color: var(--theme-color-text-muted);
 }
 
 .hljs-emphasis {

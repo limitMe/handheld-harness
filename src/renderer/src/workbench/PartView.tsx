@@ -2,7 +2,15 @@ import { useRef, useState, type ReactNode } from 'react'
 import type { ChatPart } from '@shared/engine'
 import { useFocusable } from '../focus'
 import { useTranslation } from '../i18n'
+import { CodeBlock } from './CodeBlock'
 import { MarkdownView } from './Markdown'
+
+const SHELL_TOOLS = new Set(['bash', 'sh', 'shell', 'zsh', 'pwsh', 'powershell'])
+
+/** Shell tool titles are commands, so they highlight as `bash`. */
+function shellLanguage(tool: string): string | undefined {
+  return SHELL_TOOLS.has(tool.toLowerCase()) ? 'bash' : undefined
+}
 
 function ToolStateIcon({ state }: { state: Extract<ChatPart, { type: 'tool' }>['state'] }) {
   switch (state) {
@@ -55,10 +63,11 @@ function ToolPart({
 }) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
-  const output = useRef<HTMLPreElement>(null)
+  const output = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const label = part.title ?? part.inputSummary ?? part.tool
   const detail = part.error ?? part.output ?? part.inputSummary ?? t('part.noOutput')
+  const language = shellLanguage(part.tool)
   const focus = useFocusable({
     id: `tool-${part.id}`,
     elementRef: buttonRef,
@@ -88,16 +97,17 @@ function ToolPart({
       >
         <span className="text-text-muted">{expanded ? '▾' : '▸'}</span>
         <span className="font-mono">{part.tool}</span>
-        <span className="flex-1 truncate text-text-muted">{label}</span>
+        {language ? (
+          <CodeBlock code={label} language={language} inline className="min-w-0 flex-1 truncate" />
+        ) : (
+          <span className="flex-1 truncate text-text-muted">{label}</span>
+        )}
         <ToolStateIcon state={part.state} />
       </button>
       {expanded ? (
-        <pre
-          ref={output}
-          className="max-h-[40vh] overflow-auto border-t border-surface-raised px-3 py-2 text-code whitespace-pre-wrap text-text-muted"
-        >
-          {detail}
-        </pre>
+        <div ref={output} className="max-h-[40vh] overflow-auto border-t border-surface-raised">
+          <CodeBlock code={detail} wrap frameless />
+        </div>
       ) : null}
     </div>
   )
@@ -167,12 +177,7 @@ export interface PartViewProps {
   focusable?: boolean
 }
 
-export function PartView({
-  part,
-  order,
-  streaming = false,
-  focusable = true,
-}: PartViewProps) {
+export function PartView({ part, order, streaming = false, focusable = true }: PartViewProps) {
   switch (part.type) {
     case 'text':
       return <TextPart part={part} order={order} streaming={streaming} focusable={focusable} />

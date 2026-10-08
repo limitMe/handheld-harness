@@ -37,6 +37,19 @@
   --theme-color-pad-y: #fbbc05;
   --theme-color-pad-label: #ffffff;
 
+  /* Syntax colors for fenced code (Catppuccin Mocha), soft pastels tuned for
+   * the dark code surface. Only `markdown.css` reads these. */
+  --theme-syntax-comment: #7f849c;
+  --theme-syntax-keyword: #cba6f7;
+  --theme-syntax-string: #a6e3a1;
+  --theme-syntax-number: #fab387;
+  --theme-syntax-function: #89b4fa;
+  --theme-syntax-type: #f9e2af;
+  --theme-syntax-attr: #94e2d5;
+  --theme-syntax-tag: #f38ba8;
+  --theme-syntax-addition: #a6e3a1;
+  --theme-syntax-deletion: #f38ba8;
+
   --theme-radius-card: 12px;
   --theme-shadow-card: 0 12px 32px rgb(0 0 0 / 0.45);
   --theme-ease-standard: cubic-bezier(0.2, 0, 0, 1);

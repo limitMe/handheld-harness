@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import Markdown, { type Components } from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
@@ -23,13 +24,24 @@ export interface MarkdownViewProps {
   streaming?: boolean
 }
 
-export function MarkdownView({ text, streaming = false }: MarkdownViewProps) {
+/**
+ * Memoized so scrolling (which re-renders the transcript and its cards) does not
+ * re-run react-markdown, which re-parses and re-highlights on every render.
+ */
+export const MarkdownView = memo(function MarkdownView({
+  text,
+  streaming = false,
+}: MarkdownViewProps) {
   const throttled = useThrottledValue(text, 50)
   return (
     <div className="markdown">
-      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={components}>
+      <Markdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[[rehypeHighlight, { detect: true }]]}
+        components={components}
+      >
         {streaming ? throttled : text}
       </Markdown>
     </div>
   )
-}
+})

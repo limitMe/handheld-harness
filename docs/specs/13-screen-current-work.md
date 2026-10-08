@@ -175,3 +175,19 @@ P-13（卡片键位）、P-14（滚动与中止的按键）、P-18（粘滞折�
 - `AgentCard` 用 `ResizeObserver` 观察内部内容块，内容尺寸一变就重新 `scrollTop = scrollHeight` 并更新省略号状态，不再只依赖首帧。
 - 同一次 resize 通过 `onResize` 回调通知 `MessageList`，在 `atBottom` 时同步把整页重新贴底。
 - e2e 新增 `anchors the transcript and its cards after a restart`：用主进程 `webContents.reload()` 模拟重启，断言页面与每张卡片的距底都 ≤ 48px（默认 fixture 的中途卡片 + 总结卡片都验证）。
+
+### 代码高亮配色（2026-10-08）
+
+用户要求给当前工作页的 Agent 回复补上柔和的代码高亮，并覆盖浅色 / 深色与全屏阅读器。做法：
+
+- **渲染管线不变**：卡片和全屏阅读器都走 `MessageItem → PartView → MarkdownView`，`MarkdownView` 本就带 `rehype-highlight`；本轮只启用 `{ detect: true }`，让没写语言的 ``` 代码块也能自动识别并高亮（此前只有 `language-*` 的块会上色）。
+- **专用语法变量**：新增 `--theme-syntax-comment/keyword/string/number/function/type/attr/tag/addition/deletion`，深色值（Catppuccin Mocha）在 `theme/default.css`、浅色值（Catppuccin Latte）在 `theme/light.css`；`markdown.css` 的 `.hljs-*` 规则改为引用这些变量，覆盖 comment、keyword、string、number、title（含 `class_` / `function_`）、type/built_in、attr/variable/params、tag、diff、punctuation/operator。
+- **不再复用状态语义色**（原先把 keyword/string/number 映射到 accent/success/warning，对比度偏高、类别也少），改为低对比度的成套 pastel，深浅两套各自取值。
+- **工具调用与工具输出**：这两类不是 Markdown，走的是 `PartView` 里独立的 `<pre>`，原本完全不高亮。新增 `workbench/CodeBlock`（复用同一套 `rehype-highlight` 管线与 `.hljs-*` 配色），shell 工具（bash/sh/shell/zsh/pwsh/powershell）的命令行按 `bash` 高亮，展开后的输出按自动识别高亮；非 shell 工具的命令行保持纯文本。命令行还带一层低对比度的 `--theme-color-surface` 背景（和 Markdown 代码块同底色，因此语法配色天然适配）。
+- 新增单测 `tests/unit/markdown.test.tsx`（带语言 / 无语言 detect / 行内代码 / `CodeBlock`）与 `tests/unit/tool-part.test.tsx`（shell 命令行高亮、展开输出高亮、非 shell 不高亮）。
+
+#### 滚动卡顿修复（2026-10-08，试用反馈）
+
+试用发现滚动时「思考与操作」卡片会空白一阵、同一卡片反复出现。根因：`react-markdown@10` 的同步 `Markdown` 组件**内部没有 memo**，每次渲染都会重新跑一遍 `unified`（parse + `rehype-highlight`）；而滚动会触发 `MessageList` / `AgentCardView` 重渲染（粘滞轮次、`ResizeObserver`），于是这张工具密集的卡片每次重渲染都要把每个文本 part 和每个新增的 `CodeBlock`（每个工具行一个）全部重新高亮一遍。
+
+修复：把 `MarkdownView` 和 `CodeBlock` 用 `React.memo` 包起来。它们的 props 都是原始值（文本 / 代码 / 语言 / 布尔 / 类名），消息完成后不再变化，重渲染时直接命中缓存跳过，只有流式文本真正变化时才重新高亮。没有新增依赖。

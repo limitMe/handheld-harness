@@ -18,5 +18,18 @@
   --theme-color-success: #12874a;
   --theme-color-warning: #b45309;
 
+  /* Syntax colors for fenced code (Catppuccin Latte), the light counterpart of
+   * the palette in default.css. */
+  --theme-syntax-comment: #7c7f93;
+  --theme-syntax-keyword: #8839ef;
+  --theme-syntax-string: #40a02b;
+  --theme-syntax-number: #fe640b;
+  --theme-syntax-function: #1e66f5;
+  --theme-syntax-type: #df8e1d;
+  --theme-syntax-attr: #179299;
+  --theme-syntax-tag: #d20f39;
+  --theme-syntax-addition: #40a02b;
+  --theme-syntax-deletion: #d20f39;
+
   --theme-shadow-card: 0 12px 32px rgb(15 23 42 / 0.16);
 }
