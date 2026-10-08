@@ -384,6 +384,13 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
           onOpen={() => selectedCard && choose(selectedCard)}
           onExit={onClose}
           onNew={() => {
+            // On the empty card Y starts the task itself, matching the "New
+            // task" hint the card shows; from a task card it adds the empty
+            // card at the right (spec 14).
+            if (selectedCard?.kind === 'empty') {
+              choose(selectedCard)
+              return
+            }
             setEmpty(true)
             setSelectedId(EMPTY_CARD_ID)
           }}

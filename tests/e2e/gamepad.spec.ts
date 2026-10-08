@@ -363,9 +363,10 @@ test('creates, switches, closes and reopens tasks from the map', async () => {
       path: path.join(root, 'tests', 'e2e', 'artifacts', 'task-map-empty-card.png'),
     })
 
-    // A creates a new task and returns to the chat.
-    await pressPad(window, 'A')
-    await releasePad(window, 'A')
+    // Y on the empty card starts the task itself (same as A) and returns to the
+    // chat; the card's own hint reads "New task".
+    await pressPad(window, 'Y')
+    await releasePad(window, 'Y')
     await expect(window.getByTestId('task-map')).toHaveCount(0)
     await expect(window.getByTestId('status-title')).toHaveText('New task')
 
@@ -473,15 +474,14 @@ test('picks a model from the recent-model ring on the empty task card', async ()
       { model: { providerId: 'fake', modelId: 'fake-model' }, slot: 0, name: 'Fake model' },
     ])
 
-    // Close the menu, open the map and add the empty card.
+    // Close the menu and open the map; with no open tasks the empty card is
+    // shown automatically.
     await pressPad(window, 'Start')
     await releasePad(window, 'Start')
     await expect(window.getByTestId('system-menu')).toHaveCount(0)
     await pressPad(window, 'Back')
     await releasePad(window, 'Back')
     await expect(window.getByTestId('task-map')).toBeVisible()
-    await pressPad(window, 'Y')
-    await releasePad(window, 'Y')
     await expect(window.getByTestId('task-card-empty')).toBeVisible()
 
     // Long-press LB opens the ring; the current default is the highlighted sector.
@@ -531,12 +531,12 @@ test('rotates the model ring with the stick and keeps the pick when the stick is
       { m3: recent[3]!.model, recent },
     )
 
-    // Open the map, add the empty card and long-press LB.
+    // Open the map (the empty card is shown automatically with no open tasks)
+    // and long-press LB.
     await pressPad(window, 'Back')
     await releasePad(window, 'Back')
     await expect(window.getByTestId('task-map')).toBeVisible()
-    await pressPad(window, 'Y')
-    await releasePad(window, 'Y')
+    await expect(window.getByTestId('task-card-empty')).toBeVisible()
     await pressPad(window, 'LB')
     await window.waitForTimeout(500)
     await expect(window.getByTestId('model-ring')).toBeVisible()

@@ -63,12 +63,12 @@ function seed(open: SessionRef[], current: SessionRef | null): void {
   })
 }
 
-function renderMap() {
+function renderMap(onClose: () => void = vi.fn()) {
   return render(
     <StrictMode>
       <InputProvider>
         <FocusProvider>
-          <TaskMap open onClose={vi.fn()} />
+          <TaskMap open onClose={onClose} />
         </FocusProvider>
       </InputProvider>
     </StrictMode>,
@@ -138,6 +138,21 @@ describe('TaskMap empty card', () => {
     await waitFor(() => expect(screen.getByTestId('task-card')).not.toBeNull())
     expect(screen.queryByTestId('task-card-empty-hints')).toBeNull()
     expect(screen.getByText('history')).not.toBeNull()
+  })
+
+  it('starts a new task when Y is pressed on the empty card', async () => {
+    installBridge()
+    seed([], null)
+    const onClose = vi.fn()
+    renderMap(onClose)
+
+    await waitFor(() => expect(screen.getByTestId('task-card-empty')).not.toBeNull())
+    expect(screen.getByTestId('task-card-empty').hasAttribute('data-selected')).toBe(true)
+
+    // Y (keyboard N) on the empty card begins the new-task state and closes the map.
+    fireEvent.keyDown(window, { key: 'n' })
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(useWorkbenchStore.getState().ui.current).toBeNull()
   })
 
   it('dismisses the empty card on close and falls back to a task card', async () => {
