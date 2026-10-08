@@ -114,3 +114,10 @@ P-17：删除句子的撤销键，以及除输入框外是否还有其他入口�
 
 - **X 支持按住重复**（用户 2026-10-08 决定）：文本输入框里按住 X 不再只删一个字符，而是按 input 系统既有的重复节拍（350 ms 后每 60 ms）持续向前删除，和物理键盘的自动重复一致。实现只需把 `input.deleteBackward` 标记为 `repeatable`（`src/shared/actions.ts`）；`GestureResolver` 已具备重复能力，各输入框的 `onPress` 处理器（`Composer`、`TextEdit`、`ModelsPage` 搜索框）也已经在 `repeat` 相位触发。键盘路径本就有 OS 自动重复，不受影响。
 
+### 后续补充（2026-10-08）：只在文本编辑页弹出屏幕键盘
+
+- **问题**：Chromium/Electron 在 Windows 上的 input-pane 集成，会在任何可编辑控件获得焦点时拉起系统触屏键盘（spec 17 第一轮的机制）。"当前工作"页的 `Composer` 会自动聚焦 `textarea`（spec 11 需要它保持焦点以供听写 / Win+H），于是键盘频繁弹出、遮挡屏幕（用户 2026-10-08 反馈）。
+- **处理**：只给"当前工作"页的 `Composer` 输入框加 `inputMode="none"`——这是 HTML 标准里"页面自带输入控件、不要弹虚拟键盘"的声明，Chromium 据此不再触发 input-pane。文本编辑页（`textedit/TextEdit.tsx`，与当前工作页是两个独立组件）的隐藏键盘框（`text-edit-keyboard`）和单句编辑框保持默认，仍是能弹出键盘的入口（RB / A）。其余页面暂不改动（用户 2026-10-08 决定：先只处理当前工作页）。
+- **取舍**：当前工作页不再弹出键盘，需要键盘时按 RB 进文本编辑页输入；设置在设置 / 调试页里仍然会弹键盘。若之后要收窄，可同样加属性。
+- **需人工验证**：在掌机上确认 `inputMode="none"` 能否可靠抑制当前工作页的现代触屏键盘；若个别机型仍弹出，再考虑用 VirtualKeyboard API（`navigator.virtualKeyboard`）兜底。
+

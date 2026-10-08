@@ -298,6 +298,11 @@ export function Composer({
               ref={textarea}
               data-testid="composer"
               rows={1}
+              // Opt this field out of the OS virtual keyboard: Windows raises
+              // the touch keyboard for a focused editable control and it covers
+              // the screen. RB opens the text editor, whose hidden field is the
+              // intended keyboard host (spec 17).
+              inputMode="none"
               value={value}
               placeholder={t('composer.placeholder')}
               onChange={(event) => onChange(event.target.value)}

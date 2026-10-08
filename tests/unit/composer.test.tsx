@@ -22,6 +22,11 @@ function setup(value = 'hello') {
 }
 
 describe('Composer', () => {
+  it('opts out of the OS virtual keyboard so it never covers the screen', () => {
+    const { textarea } = setup()
+    expect(textarea.getAttribute('inputmode')).toBe('none')
+  })
+
   it('sends on Enter and not while an IME is composing', () => {
     const { onSend, textarea } = setup()
     fireEvent.keyDown(textarea, { key: 'Enter', isComposing: true })
