@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Settings, SettingsPatch, SpeechProviderId } from '@shared/ipc'
 import { SPEECH_PROVIDER_NONE, type SpeechProviderInfo } from '@shared/speech'
 import { useTranslation } from '../i18n'
-import { ChoiceDialog, Slider, cn, type ChoiceOption } from '../ui'
+import { ChoiceDialog, ConfirmDialog, Slider, cn, type ChoiceOption } from '../ui'
 import { MenuGroupLabel, MenuRow } from './MenuRow'
 
 interface InputDevice {
@@ -46,6 +46,8 @@ export function VoicePage({ settings, update }: VoicePageProps) {
   const { t } = useTranslation()
   const [providers, setProviders] = useState<SpeechProviderInfo[]>([])
   const [providerOpen, setProviderOpen] = useState(false)
+  const [resourceOpen, setResourceOpen] = useState(false)
+  const [clearOpen, setClearOpen] = useState(false)
   const [keyConfigured, setKeyConfigured] = useState(false)
   const [apiKey, setApiKey] = useState('')
   const [status, setStatus] = useState<string | null>(null)
@@ -153,19 +155,6 @@ export function VoicePage({ settings, update }: VoicePageProps) {
     setSelected(devices[next]?.deviceId ?? '')
   }
 
-  const cycleResource = useCallback(
-    (delta: number): void => {
-      const index = Math.max(
-        0,
-        RESOURCE_OPTIONS.findIndex((option) => option.id === resourceId),
-      )
-      const next =
-        RESOURCE_OPTIONS[(index + delta + RESOURCE_OPTIONS.length) % RESOURCE_OPTIONS.length]
-      if (next) void update({ speech: { doubao: { resourceId: next.id } } })
-    },
-    [resourceId, update],
-  )
-
   const saveKey = useCallback(async (): Promise<void> => {
     const speech = window.handheld?.speech
     const key = apiKey.trim()
@@ -195,6 +184,11 @@ export function VoicePage({ settings, update }: VoicePageProps) {
     id: provider.id,
     label: providerLabel(provider.id, provider.displayName),
     ...(provider.requiresCredentials ? { description: t('voice.requiresCredentials') } : {}),
+  }))
+
+  const resourceOptions: ChoiceOption[] = RESOURCE_OPTIONS.map((option) => ({
+    id: option.id,
+    label: t(option.key),
   }))
 
   return (
@@ -254,8 +248,8 @@ export function VoicePage({ settings, update }: VoicePageProps) {
             id="system-menu.voice.clearKey"
             order={3}
             testId="voice-clear-key"
-            onActivate={() => void clearKey()}
-            onClick={() => void clearKey()}
+            onActivate={() => setClearOpen(true)}
+            onClick={() => setClearOpen(true)}
           >
             <span>{t('voice.clearKey')}</span>
           </MenuRow>
@@ -264,15 +258,8 @@ export function VoicePage({ settings, update }: VoicePageProps) {
             order={4}
             activatable
             testId="voice-resource"
-            onActivate={() => cycleResource(1)}
-            onClick={() => cycleResource(1)}
-            onNavigate={(direction) => {
-              if (direction === 'left' || direction === 'right') {
-                cycleResource(direction === 'left' ? -1 : 1)
-                return 'handled'
-              }
-              return 'pass'
-            }}
+            onActivate={() => setResourceOpen(true)}
+            onClick={() => setResourceOpen(true)}
           >
             <span>{t('voice.modelBilling')}</span>
             <span className="text-code text-text-muted">
@@ -344,6 +331,28 @@ export function VoicePage({ settings, update }: VoicePageProps) {
         onChoose={(id) => {
           void update({ speech: { provider: id as SpeechProviderId } })
         }}
+      />
+
+      <ChoiceDialog
+        open={resourceOpen}
+        onOpenChange={setResourceOpen}
+        title={t('voice.modelBilling')}
+        description={t('voice.resourceDescription')}
+        options={resourceOptions}
+        initialId={resourceId}
+        onChoose={(id) => {
+          void update({ speech: { doubao: { resourceId: id } } })
+        }}
+      />
+
+      <ConfirmDialog
+        open={clearOpen}
+        onOpenChange={setClearOpen}
+        title={t('voice.clearKeyTitle')}
+        description={t('voice.clearKeyConfirm')}
+        confirmLabel={t('voice.clearKey')}
+        destructive
+        onConfirm={() => void clearKey()}
       />
     </div>
   )
