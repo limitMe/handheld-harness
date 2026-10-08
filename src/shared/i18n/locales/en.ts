@@ -44,7 +44,7 @@ export const en = {
   },
   agentCard: {
     intermediate: 'Thinking & actions',
-    summary: 'Summary',
+    summary: 'Latest reply',
   },
   choice: {
     youChose: 'You chose',

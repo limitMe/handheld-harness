@@ -191,3 +191,7 @@ P-13（卡片键位）、P-14（滚动与中止的按键）、P-18（粘滞折�
 试用发现滚动时「思考与操作」卡片会空白一阵、同一卡片反复出现。根因：`react-markdown@10` 的同步 `Markdown` 组件**内部没有 memo**，每次渲染都会重新跑一遍 `unified`（parse + `rehype-highlight`）；而滚动会触发 `MessageList` / `AgentCardView` 重渲染（粘滞轮次、`ResizeObserver`），于是这张工具密集的卡片每次重渲染都要把每个文本 part 和每个新增的 `CodeBlock`（每个工具行一个）全部重新高亮一遍。
 
 修复：把 `MarkdownView` 和 `CodeBlock` 用 `React.memo` 包起来。它们的 props 都是原始值（文本 / 代码 / 语言 / 布尔 / 类名），消息完成后不再变化，重渲染时直接命中缓存跳过，只有流式文本真正变化时才重新高亮。没有新增依赖。
+
+### 总结卡片改名为「最新回复」（2026-10-08，试用反馈）
+
+`roundCards` 总是把一轮里最后一条 assistant 消息当作总结卡片（`agentCard.summary` = 原「总结 / Summary」）。但 Agent 正在回复时，这条“最后一条消息”通常还在做操作，标成「总结」会误导。由于卡片类型在流式期间确实难以区分，只在文案上处理：`agentCard.summary` 改为「最新回复 / Latest reply」，`agentCard.intermediate` 保持「思考与操作」。未改分组逻辑。

@@ -44,7 +44,7 @@ export const zh = {
   },
   agentCard: {
     intermediate: '思考与操作',
-    summary: '总结',
+    summary: '最新回复',
   },
   choice: {
     youChose: '你选择了',
