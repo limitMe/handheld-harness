@@ -42,13 +42,17 @@ export function StickyUserMessage({
     onFocus: () => elementRef.current?.scrollIntoView({ block: 'start' }),
   })
 
+  // Focusing a collapsed message expands it: the user must see what they
+  // landed on, even while the round is still pinned under the top edge.
+  const showCollapsed = collapsed && !focus.focused
+
   return (
     <div
       data-testid="sticky-user"
-      data-collapsed={collapsed ? '' : undefined}
+      data-collapsed={showCollapsed ? '' : undefined}
       className="sticky top-0 z-10 flex justify-end"
     >
-      {collapsed ? (
+      {showCollapsed ? (
         <button
           ref={(element) => {
             elementRef.current = element
