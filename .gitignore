@@ -8,12 +8,8 @@ tests/e2e/artifacts/
 test-results/
 playwright-report/
 
-# Harness scratch docs stay local. The specs are part of the project and tracked.
-docs/*
-!docs/specs/
-!docs/recovery.md
-!docs/dogfooding.md
-!docs/releasing.md
+# Harness scratch docs stay local. Public docs are tracked; the Chinese originals are archived under docs/zh-CN/.
+docs/refer/
 
 # Staging directory for the stable build (spec 04).
 .stable-out-tmp/

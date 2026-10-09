@@ -1,216 +1,212 @@
-# HANDHELD.AI Specs 总览
+# HANDHELD.AI Specs
 
-本目录是 HANDHELD.AI 的 SDD（Spec-Driven Development）源头 specs。产品定义见 `../HANDHELD.AI.md`，技术调研见 `../handheld-ai-tech-selection.zh-CN.html`。
+This directory holds the **English spec summaries** for HANDHELD.AI, plus this index. The full, authoritative specs are in Chinese under [`../zh-CN/specs/`](../zh-CN/specs/); each summary links to its Chinese source. The product definition is `docs/HANDHELD.AI.md` (local, Chinese; not tracked in git).
 
-## 阶段划分
+This project follows SDD (Spec-Driven Development): the specs are the source of requirements, and the bootstrap loop lets the app drive the development of itself (see [spec 04](04-dogfooding-loop.md)).
 
-| 阶段 | 编号 | 目标 | 写法 |
+## Stages
+
+| Stage | Range | Goal | Style |
 |---|---|---|---|
-| **A. 自举（Bootstrap）** | 00–04 | 在 Windows 11 掌机上跑起一个能用的框架，并且能**用这个应用本身驱动 AI Agent 开发它自己**（dogfooding） | **严格**：每条都有可执行的验收标准，实现 Agent 必须逐条验证 |
-| **B. 产品功能** | 10–19 | 按产品文档逐步实现四类界面、共享组件、手柄、语音、动效 | **方向性**：给出目标、边界、建议设计和待定输入，实现前由用户在 dogfooding 中细化 |
+| **A. Bootstrap** | 00–04 | Get a usable framework running on a Windows 11 handheld, and **use the app itself to drive AI Agent development of itself** (dogfooding) | **Strict**: every item has an executable acceptance criterion; the implementing Agent must verify each one |
+| **B. Product features** | 10–21 | Implement the four screens, shared components, gamepad, voice, and motion per the product doc | **Directional**: goals, boundaries, suggested designs, and open inputs; refined with the user during dogfooding before implementation |
 
-| 编号 | Spec | 阶段 | 状态 |
+| # | Spec | Stage | Status |
 |---|---|---|---|
-| 00 | [Windows 11 开发环境部署](00-windows-dev-environment.md) | A | 已完成 |
-| 01 | [工程脚手架](01-project-scaffold.md) | A | 已完成 |
-| 02 | [Agent 引擎适配层（OpenCode）](02-agent-engine-opencode.md) | A | 已完成 |
-| 03 | [最小可用工作台](03-workbench-mvp.md) | A | 已完成 |
-| 04 | [自举开发闭环](04-dogfooding-loop.md) | A | 已完成 |
-| 10 | [输入系统与键位映射](10-input-system.md) | B | 已实现（与 11 合并验收：自动化通过，待掌机实测） |
-| 11 | [焦点系统](11-focus-system.md) | B | 已实现（与 10 合并验收：自动化通过，待掌机实测） |
-| 12 | [共享组件：状态栏、操作提示、列表输入、对话框](12-shared-components.md) | B | 已实现（自动化通过，待掌机实测） |
-| 13 | [界面：当前工作](13-screen-current-work.md) | B | 已实现（含 Agent 输出卡片重构；与 16/17 相关的听写、文本编辑仍待接入；待掌机实测） |
-| 14 | [界面：任务地图](14-screen-task-map.md) | B | 已实现（自动化通过，待掌机实测；临时任务切换器已退役；含空卡片模型环与最近模型） |
-| 15 | [界面：系统菜单](15-screen-system-menu.md) | B | 已实现（自动化通过，待掌机实测） |
-| 16 | [语音输入协议与实现](16-voice-input.md) | B | 已实现（协议层 + 豆包适配器 + 长按 Y 听写 + 设置页；自动化通过，待掌机实测；离线兜底未做） |
-| 17 | [界面：文本编辑](17-screen-text-edit.md) | B | 已实现（无撤销；含单句键盘编辑与屏幕键盘；自动化通过，待掌机实测） |
-| 18 | [动效与视觉系统](18-motion-and-visual.md) | B | 部分实现（主题系统 + 任务地图卡片动效；减少动效 / 省电模式未做） |
-| 19 | [打包、原生辅助进程与设备集成](19-packaging-and-native.md) | B | 部分实现（release 基础 + 手动检查更新 / GitHub Release 自动更新；开机自启 / Steam Input / 退出确认 / 原生进程未做；待装包验证） |
-| 20 | [国际化（i18n）](20-i18n.md) | B | 已实现（中英两套文案覆盖渲染层 UI，可在系统菜单切换；引擎诊断文案待后续） |
-| 21 | [界面：会话信息](21-screen-session-info.md) | B | 已实现（自动化通过；每会话目录跨 project 列表、真实 server 的 variant/directory 行为待掌机实测） |
+| 00 | [Windows 11 Development Environment](00-windows-dev-environment.md) | A | Implemented |
+| 01 | [Project Scaffold](01-project-scaffold.md) | A | Implemented |
+| 02 | [Agent Engine Adapter (OpenCode)](02-agent-engine-opencode.md) | A | Implemented |
+| 03 | [Minimal Viable Workbench](03-workbench-mvp.md) | A | Implemented |
+| 04 | [Dogfooding Loop](04-dogfooding-loop.md) | A | Implemented |
+| 10 | [Input System and Key Mapping](10-input-system.md) | B | Implemented (accepted jointly with 11; automated checks pass, pending on-device testing) |
+| 11 | [Focus System](11-focus-system.md) | B | Implemented (accepted jointly with 10; automated checks pass, pending on-device testing) |
+| 12 | [Shared Components: Status Bar, Action Hints, List Input, Dialogs](12-shared-components.md) | B | Implemented (automated checks pass, pending on-device testing) |
+| 13 | [Screen: Current Work](13-screen-current-work.md) | B | Implemented (includes the agent-output card refactor; dictation and text-edit hooks still to come; pending on-device testing) |
+| 14 | [Screen: Task Map](14-screen-task-map.md) | B | Implemented (automated checks pass, pending on-device testing; the temporary task switcher has been retired; includes the empty-card model ring and recent models) |
+| 15 | [Screen: System Menu](15-screen-system-menu.md) | B | Implemented (automated checks pass, pending on-device testing) |
+| 16 | [Voice Input Protocol and Implementation](16-voice-input.md) | B | Partially implemented (protocol layer + Doubao adapter + long-press-Y dictation + settings page; automated checks pass, pending on-device testing; offline fallback not done) |
+| 17 | [Screen: Text Edit](17-screen-text-edit.md) | B | Implemented (no undo; includes single-sentence keyboard editing and the on-screen keyboard; automated checks pass, pending on-device testing) |
+| 18 | [Motion and Visual System](18-motion-and-visual.md) | B | Partially implemented (theme system + task-map card motion; reduced-motion / power-save modes not done) |
+| 19 | [Packaging, Native Helpers, and Device Integration](19-packaging-and-native.md) | B | Partially implemented (release basics + manual / GitHub-Release auto-update; auto-start / Steam Input / exit confirmation / native processes not done; pending install verification) |
+| 20 | [Internationalization (i18n)](20-i18n.md) | B | Implemented (English and Chinese copy cover the renderer UI, switchable in the system menu; engine diagnostics copy pending) |
+| 21 | [Screen: Session Info](21-screen-session-info.md) | B | Implemented (automated checks pass; per-session directory across the project list and the real server's variant / directory behavior pending on-device testing) |
 
-**执行顺序**：00 → 01 → 02 → 03 → 04 必须严格串行。04 通过后进入阶段 B，此时开发方式切换为"在应用里对 Agent 提需求"。阶段 B 的建议顺序是 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21，其中 16 的协议部分可以和 10/11 并行。
+**Execution order**: 00 → 01 → 02 → 03 → 04 must be strictly serial. Once 04 passes, Stage B begins and development switches to "request changes from the Agent inside the app". The suggested Stage B order is 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21; spec 16's protocol part can run in parallel with 10/11.
 
-## 技术栈速览
+## Tech stack
 
-| 层 | 选型 |
+| Layer | Choice |
 |---|---|
-| 外壳 | Electron 44 + electron-vite 5，TypeScript |
-| UI | React 19；组件库用 **Base UI**（无样式，只通过 `ui/` 包装层使用）；样式用 **Tailwind CSS 4**（语义 token 声明在 `@theme` 中，主题取值独立成 `theme/` 下的文件，方便整体替换）；动画用 Motion 加 CSS 过渡 |
-| 状态管理 | zustand |
-| 焦点与输入 | 自研焦点树（参照 Steam `Focusable`）+ ActionMap；手柄用 Gamepad API |
-| Agent 引擎 | OpenCode server 1.18.34（v1）；通过 `AgentEngine` 和能力声明预留其他底座 |
-| 语音 | 协议先行 + provider 可换；首个实现为火山引擎豆包（Seed-ASR 流式）；自举阶段仍可用 Win+H |
-| 测试 | Vitest、Playwright（`_electron`）、引擎契约测试 |
+| Shell | Electron 44 + electron-vite 5, TypeScript |
+| UI | React 19; component library **Base UI** (unstyled, used only through the `ui/` wrapper); styling **Tailwind CSS 4** (semantic tokens declared in `@theme`, theme values kept in separate files under `theme/` for easy whole-theme replacement); animation with Motion plus CSS transitions |
+| State | zustand |
+| Focus & input | a custom focus tree (inspired by Steam `Focusable`) + ActionMap; gamepad via the Gamepad API |
+| Agent engine | OpenCode server 1.18.34 (v1); the `AgentEngine` abstraction and capability declarations leave room for other backends |
+| Voice | protocol-first, swappable providers; first implementation is Volcano Engine Doubao (Seed-ASR streaming); Win+H is still usable during bootstrap |
+| Testing | Vitest, Playwright (`_electron`), engine contract tests |
 
-## 每个 spec 的结构
+## Structure of each spec
 
-- **目标**：做完之后世界有什么不同。
-- **范围**：包含 / 不包含。
-- **依赖**：前置 spec。
-- **设计**：约束和建议方案。阶段 A 中标为"必须"的条目不得偏离；要偏离必须先在 spec 中修改并说明原因。
-- **验收标准**：阶段 A 中每条都要给出验证方法（命令或手动步骤）。
-- **待定输入**：需要用户决定的问题，用 `P-xx` 编号，汇总见下文。
-- **给实现 Agent 的注意事项**。
+- **Goal**: what's different in the world once it's done.
+- **Scope**: in / out.
+- **Dependencies**: prerequisite specs.
+- **Design**: constraints and suggested approach. Items marked "must" in Stage A must not be deviated from; a deviation requires editing the spec first and explaining why.
+- **Acceptance criteria**: in Stage A, each item gives a verification method (command or manual step).
+- **Open inputs**: questions the user must decide, numbered `P-xx`, summarized below.
+- **Notes for the implementing Agent**.
 
-## 给实现 Agent 的通用规则
+## General rules for implementing agents
 
-1. **先核实，再编码。** spec 中出现的第三方 API（OpenCode SDK、Electron、electron-vite 等）以**锁定版本的实际类型定义和文档**为准。spec 中的方法名只用来说明意图，与实际不符时以实际为准，并在 PR 描述或提交说明里记录差异。
-2. **版本锁定。** 依赖使用精确版本（不带 `^` / `~`），升级要单独提交。
-3. **Windows 优先。** 所有脚本必须能在 Windows 11 的 PowerShell 7 中运行。不得依赖 bash 专有语法；跨平台脚本用 Node 写。路径一律用 `path.join`，不得硬编码 `/`。
-4. **完成定义。** `npm run typecheck`、`npm run lint`、`npm test` 全部通过，并逐条满足当前 spec 的验收标准，才算完成。
-5. **不要自行扩大范围。** 发现 spec 有遗漏时，在 spec 末尾的"实现记录"中补充说明，不要顺手实现下一个 spec 的内容。
-6. **注释精简。** 方法名能说明的就不写注释。
-7. 代码、注释、提交信息用英文；specs 用中文。
+1. **Verify first, then code.** Third-party APIs named in a spec (OpenCode SDK, Electron, electron-vite, etc.) are governed by the **actual type definitions and docs of the locked version**. Method names in a spec only convey intent; where they differ from reality, reality wins — record the difference in the PR or commit description.
+2. **Version pinning.** Use exact versions (no `^` / `~`); upgrade in a separate commit.
+3. **Windows first.** All scripts must run in Windows 11 PowerShell 7. Don't rely on bash-specific syntax; write cross-platform scripts in Node. Always use `path.join`, never hardcode `/`.
+4. **Definition of done.** `npm run typecheck`, `npm run lint`, and `npm test` all pass, and every acceptance criterion of the current spec is met.
+5. **Don't expand scope on your own.** If a spec has a gap, note it in that spec's implementation notes at the end; don't implement the next spec along the way.
+6. **Keep comments minimal.** If a method name says it, don't write a comment.
+7. Code, comments, and commit messages are in English; the full specs are Chinese (with English summaries in this directory).
 
-## 术语表
+## Terminology
 
-| 术语 | 含义 |
+| Term | Meaning |
 |---|---|
-| 任务（Task） | 一个 AI 会话，对应 OpenCode 的一个 session |
-| 打开的任务 | 显示在任务地图上的任务集合，由本应用维护，是 OpenCode 全部 session 的子集 |
-| 历史任务 | OpenCode 中存在、但未在任务地图中打开的 session |
-| 当前工作 | 正在全屏展示的那个任务所在的界面（主界面） |
-| 聚焦（Focused） | 焦点树中当前选中的节点，有视觉高亮 |
-| 激活（Activated） | 节点进入内部交互模式，例如输入框获得文本光标。激活后方向键作用于节点内部 |
-| 短按 / 长按 | 默认以 400 ms 为界（可配置），见 spec 10 |
-| 引擎 / 底座（Engine） | Agent 后端的抽象。v1 只有 OpenCode 一种实现。为将来接入其他底座（如 DeepSeek Harness），从第一天起遵守三条约定：底座差异只通过 `capabilities` 表达；会话一律用 `SessionRef = { engineId, sessionId }` 引用；模型按会话设置。见 02 第 9 节 |
+| Task | an AI session, corresponding to one OpenCode session |
+| Open task | a task shown on the task map, maintained by the app; a subset of all OpenCode sessions |
+| History task | a session that exists in OpenCode but is not open on the task map |
+| Current work | the screen (main view) of the task currently shown fullscreen |
+| Focused | the node currently selected in the focus tree, with visual highlight |
+| Activated | a node has entered its internal interaction mode, e.g. a text field has a caret. While activated, direction keys act inside the node |
+| Short / long press | defaults to a 400 ms threshold (configurable), see spec 10 |
+| Engine / backend | abstraction of the agent backend. v1 has only OpenCode. To allow other backends later (e.g. DeepSeek Harness), three rules apply from day one: backend differences are expressed only through `capabilities`; sessions are always referenced as `SessionRef = { engineId, sessionId }`; models are set per session. See spec 02 §9 |
 
-## 按键：产品文档与技术调研的差异
+## Default key map
 
-产品文档是最终依据。调研里的以下设想**已被产品文档替换**：
-
-| 项 | 技术调研设想 | 产品文档（采用） |
+| Context | Key | Action |
 |---|---|---|
-| 切换模型 | LB / RB 像换武器一样切换 | **不做快捷切换**（P-01）。模型是低频需求，只在"系统菜单 › 模型管理"中设置；"换武器"只是调研时借用的游戏化类比。LB / RB 另有用途 |
-| 语音输入 | 按住 RT 说话 | **长按 Y**，实时插入到当前激活的光标位置 |
-| LB | 上一个模型 | 输入框激活时：**列表输入**（如 `/clear` 等常用命令） |
-| RB | 下一个模型 | 输入框激活时：进入**文本编辑**界面 |
-| 任务地图 | View 键，3×2 网格 | **Back（= View）键**，横向轮播 3 或 5 张卡片，中间放大 |
-| 系统菜单 | Menu 键，键位浮层 | **Start（= Menu）键**，左右两栏的设置界面 |
-| Y | 快捷操作轮盘 | 全局：长按说话；任务地图中：新建任务卡片 |
-| 授权请求 | Ⓐ允许 Ⓑ拒绝 Ⓧ始终 的 QTE | 沿用同样的键位，但呈现方式复用**操作提示**（P-02）：卡片出现时自动聚焦，旁边显示可用按键，见 spec 13 |
+| Global | Start | Open / close the system menu |
+| Global | Back | Open / close the task map |
+| Global | Long-press Y | Voice dictation, inserted at the active caret. Does nothing when focus isn't on an input (P-05), see spec 16 |
+| Global · keyboard | `Ctrl+D` | Dictation toggle (keyboards have no long-press); `Esc` cancels while dictating |
+| Global · keyboard | `Esc` / `Tab` | Open / close the system menu / task map (inactive inside text fields; rebindable) |
+| Current work · input focused | A | Activate the input |
+| Current work · input active | A | Send |
+| Current work · input active | B | Leave the active state |
+| Current work · input active | X | Delete one character backward |
+| Current work · input active | LB | List input |
+| Current work · input active | RB | Enter text edit |
+| Current work · permission card | A / X / B | Allow once / Always allow / Deny (default keys, pending P-13; backends without "always allow" have no X) |
+| Current work · question card | Up / Down / A / B | Select option / confirm (toggle when multi-select) / ignore (pending P-13) |
+| Task map | Left / Right | Switch the selected card |
+| Task map | A | Switch to that task and return to current work |
+| Task map | Short B | Leave the task map (P-03) |
+| Task map | Long-press B | Close the selected task (with confirmation). Only removes it from the map; the session is kept as a history task (P-04) |
+| Task map | Y | New empty task card |
+| Task map · empty card | X | Expand the history list ("open recent task") |
+| Task map · empty card | A | Create a new task and switch to it |
+| Task map · empty card | Long-press LB | Open the model ring, rotate the stick to choose a model, release LB to apply (see 14) |
+| Text edit | Direction keys / both sticks | Move focus between sentences (geometric navigation) |
+| Text edit | X | Delete one character before the caret (same as the input) |
+| Text edit | Long-press Y | Dictation, inserted after the focused sentence (P-07) |
+| Text edit | B | Save and return: exit and confirm the changes (P-07) |
+| Text edit | RB | Bring up the Windows on-screen keyboard (touch fallback) |
 
-> Xbox 的 "Back" 和 "Start" 在新手柄上叫 View（⧉）和 Menu（≡），在 Gamepad API 标准映射中分别是 `buttons[8]` 和 `buttons[9]`。本文档统一称为 **Back** 和 **Start**。
+> On newer controllers, Xbox "Back" and "Start" are called View (⧉) and Menu (≡); in the Gamepad API standard mapping they are `buttons[8]` and `buttons[9]`. This document calls them **Back** and **Start**.
 
-### 默认键位总表（产品文档推导，详见 spec 10）
+## Conventions at a glance
 
-| 上下文 | 按键 | 动作 |
+### Environment variables
+
+| Variable | Purpose | Defined in |
 |---|---|---|
-| 全局 | Start | 打开 / 关闭系统菜单 |
-| 全局 | Back | 打开 / 关闭任务地图 |
-| 全局 | 长按 Y | 语音听写，插入到激活的光标处。焦点不在输入框上时无效（P-05），见 spec 16 |
-| 全局 · 键盘 | `Ctrl+D` | 听写开关（键盘没有长按概念）；听写中 `Esc` 取消 |
-| 全局 · 键盘 | `Esc` / `Tab` | 打开 / 关闭系统菜单 / 任务地图（文本框内不生效；可在键位绑定里改） |
-| 当前工作 · 输入框已聚焦 | A | 激活输入框 |
-| 当前工作 · 输入框已激活 | A | 发送 |
-| 当前工作 · 输入框已激活 | B | 退出激活 |
-| 当前工作 · 输入框已激活 | X | 向前删除一个字符 |
-| 当前工作 · 输入框已激活 | LB | 列表输入 |
-| 当前工作 · 输入框已激活 | RB | 进入文本编辑 |
-| 当前工作 · 授权请求卡片 | A / X / B | 允许一次 / 始终允许 / 拒绝（默认键位，待 P-13 确认；不支持"始终允许"的底座没有 X） |
-| 当前工作 · 提问卡片 | 上下 / A / B | 选择选项 / 确认（多选时切换勾选）/ 忽略（待 P-13 确认） |
-| 任务地图 | 左 / 右 | 切换选中卡片 |
-| 任务地图 | A | 切换到该任务并返回当前工作 |
-| 任务地图 | 短按 B | 退出任务地图（P-03） |
-| 任务地图 | 长按 B | 关闭选中的任务（二次确认）。只是从地图上关闭，会话保留为历史任务（P-04） |
-| 任务地图 | Y | 新建空任务卡片 |
-| 任务地图 · 空卡片 | X | 展开历史任务列表（“打开最近任务”） |
-| 任务地图 · 空卡片 | A | 创建新任务并切换过去 |
-| 任务地图 · 空卡片 | 长按 LB | 打开模型环，旋转摇杆选择模型，松开 LB 采用（见 14） |
-| 文本编辑 | 方向键 / 两摇杆 | 在句子之间移动焦点（几何导航） |
-| 文本编辑 | X | 删除光标前一个字符（与输入框一致） |
-| 文本编辑 | 长按 Y | 听写，插入到聚焦句子之后（P-07） |
-| 文本编辑 | B | 保存并返回：退出并确认修改（P-07） |
-| 文本编辑 | RB | 呼出 Windows 屏幕键盘（触屏兜底） |
+| `HANDHELD_PROFILE` | profile name. Dev defaults to `dev`, the built app to `default` | 01 |
+| `HANDHELD_WINDOW` | `windowed` / `fullscreen`. Dev defaults to `windowed`, the built app to `fullscreen` | 01 |
+| `HANDHELD_ENGINE_MODE` | `attached` / `detached` / `external` / `fake`. Dev defaults to `detached`, the built app to `attached` | 02, 03 |
+| `HANDHELD_WORKSPACE` | workspace directory | 02 |
+| `HANDHELD_OPENCODE_BIN` / `HANDHELD_OPENCODE_ALLOW_PATH` | specify the OpenCode binary / allow the `opencode` on PATH | 02 |
+| `HANDHELD_OPENCODE_URL` / `HANDHELD_OPENCODE_PASSWORD` | connection info for `external` mode | 02 |
+| `HANDHELD_OPENCODE_CONFIG_CONTENT` | `OPENCODE_CONFIG_CONTENT` passed to the server | 02 |
+| `HANDHELD_FAKE_CAPABILITIES` | disable some Fake-engine capabilities to test UI degradation | 03 |
+| `HANDHELD_STABLE_DIR` | override the stable worktree directory (default `<sibling of main repo>/<main repo name>-stable`) | 04 |
 
-## 约定速览
+### Dev / debug shortcuts (keyboard)
 
-各 spec 里分散定义的约定，汇总在这里方便检查一致性。有出入时以各 spec 为准，并回来修正这里。
-
-### 环境变量
-
-| 变量 | 作用 | 定义于 |
+| Shortcut | Action | Defined in |
 |---|---|---|
-| `HANDHELD_PROFILE` | profile 名。开发模式默认 `dev`，构建产物默认 `default` | 01 |
-| `HANDHELD_WINDOW` | `windowed` / `fullscreen`。开发模式默认 `windowed`，构建产物默认 `fullscreen` | 01 |
-| `HANDHELD_ENGINE_MODE` | `attached` / `detached` / `external` / `fake`。开发模式默认 `detached`，构建产物默认 `attached` | 02, 03 |
-| `HANDHELD_WORKSPACE` | 工作区目录 | 02 |
-| `HANDHELD_OPENCODE_BIN` / `HANDHELD_OPENCODE_ALLOW_PATH` | 指定 OpenCode 二进制 / 允许使用 PATH 里的 `opencode` | 02 |
-| `HANDHELD_OPENCODE_URL` / `HANDHELD_OPENCODE_PASSWORD` | `external` 模式的连接信息 | 02 |
-| `HANDHELD_OPENCODE_CONFIG_CONTENT` | 传给 server 的 `OPENCODE_CONFIG_CONTENT` | 02 |
-| `HANDHELD_FAKE_CAPABILITIES` | 关闭 Fake 引擎的部分能力，用来测试 UI 降级 | 03 |
-| `HANDHELD_STABLE_DIR` | 覆盖稳定版 worktree 的目录（默认 `<主仓库同级>/<主仓库名>-stable`） | 04 |
+| `F11` / `Ctrl+Shift+I` / `Ctrl+R` | toggle fullscreen / DevTools / reload | 01 |
+| `Ctrl+Shift+G` / `Ctrl+Shift+M` | gamepad debug / microphone debug | 01 |
+| `Ctrl+Shift+E` | engine debug | 02 |
+| `Ctrl+Shift+V` | voice debug (provider, API key, live transcription) | 16 |
+| `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | font zoom | 03 |
+| `Ctrl+Shift+F` | overlay the focus tree | 11 |
 
-### 开发与调试快捷键（键盘）
+### settings.json fields
 
-| 快捷键 | 作用 | 定义于 |
+| Field | Meaning | Defined in |
 |---|---|---|
-| `F11` / `Ctrl+Shift+I` / `Ctrl+R` | 切换全屏 / DevTools / 重新加载 | 01 |
-| `Ctrl+Shift+G` / `Ctrl+Shift+M` | 手柄调试页 / 麦克风调试页 | 01 |
-| `Ctrl+Shift+E` | 引擎调试页 | 02 |
-| `Ctrl+Shift+V` | 语音调试页（provider 选择、API Key、实时转写） | 16 |
-| `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | 字号缩放 | 03 |
-| `Ctrl+Shift+F` | 叠加显示焦点树 | 11 |
+| `schemaVersion`, `window.mode` | version, window mode | 01 |
+| `engine.workspaceDir` | workspace directory | 02 |
+| `ui.lastSession` (`SessionRef`), `ui.zoom`, `ui.scrollSpeed`, `ui.theme` | last opened task, font zoom, stick scroll speed, theme (`system` / `dark` / `light`) | 03, 10, 18 |
+| `ui.language` | UI language (`system` / `en` / `zh`) | 20 |
+| `input` | user key bindings (the user layer of the ActionMap) | 10 |
+| `tasks.open` (`SessionRef[]`), `tasks.unread` (`SessionRef[]`) | tasks open on the map (by creation time) and tasks showing a red dot | 14 |
+| `hints = { enabled, delayMs }` | action hints on/off and wait time | 12, 15 |
+| `model.default` | default model for new tasks | 15 |
+| `model.recent` | recently used models (`{ model, slot, name? }[]`, most recent first; `slot` is the model-ring slot) | 14 |
+| `speech` (`provider` / `language` / `doubao.{...}` / `funasr.{...}` / `openai.{...}`) | speech provider, language, and per-provider params; default provider is `none` | 16 |
 
-> 03 的临时任务切换器快捷键（`Ctrl+K` / `Ctrl+N` / `Ctrl+Shift+Backspace`）已随 14 上线移除；任务地图用 Back 打开，状态栏左侧的 `Tasks` 按钮是触屏 / 键盘入口。
+Speech API keys are not in `settings.json`: they are encrypted with Electron `safeStorage` into a profile-private `speech-credentials.json` (spec 16).
 
-### settings.json 字段
+Settings files are per-profile (under each `userData`). The only cross-profile state is spec 02's server registry and the "session → model" table.
 
-| 字段 | 含义 | 定义于 |
-|---|---|---|
-| `schemaVersion`、`window.mode` | 版本号、窗口模式 | 01 |
-| `engine.workspaceDir` | 工作区目录 | 02 |
-| `ui.lastSession`（`SessionRef`）、`ui.zoom`、`ui.scrollSpeed`、`ui.theme` | 上次打开的任务、字号缩放、摇杆滚动速度、主题（`system` / `dark` / `light`） | 03, 10, 18 |
-| `ui.language` | 界面语言（`system` / `en` / `zh`） | 20 |
-| `input` | 用户键位配置（ActionMap 的用户层） | 10 |
-| `tasks.open`（`SessionRef[]`）、`tasks.unread`（`SessionRef[]`） | 任务地图里打开的任务（按创建时间）和显示红点的任务 | 14 |
-| `hints = { enabled, delayMs }` | 操作提示的开关和等待时间 | 12, 15 |
-| `model.default` | 新任务使用的默认模型 | 15 |
-| `model.recent` | 最近使用的模型（`{ model, slot, name? }[]`，最近在前；`slot` 是模型环扇环位置） | 14 |
-| `speech`（`provider` / `language` / `doubao.{resourceId,endpoint}` / `funasr.{model,endpoint}` / `openai.{model,endpoint}`） | 语音服务商、语言与各服务商参数；默认 provider 为 `none` | 16 |
+Default workspace directory: the repo root in dev mode (bootstrap); the OS Documents folder for the built app (Windows `%USERPROFILE%\Documents`, matching OpenCode). Explicit config (`settings.engine.workspaceDir` / `HANDHELD_WORKSPACE`) wins. See spec 02 §4 and spec 19.
 
-语音服务的 API Key 不进 `settings.json`：用 Electron `safeStorage` 加密后存 profile 私有的 `speech-credentials.json`（spec 16）。
+## Open inputs
 
-设置文件是 profile 私有的（在各自的 `userData` 下）。跨 profile 共享的状态只有 02 的 server 登记文件和"会话 → 模型"表。
+### Decided (P-01 … P-12, P-22, P-23)
 
-工作区目录的默认值：开发模式是仓库根目录（自举）；构建产物是操作系统的"文档"目录（Windows `%USERPROFILE%\Documents`，与 OpenCode 默认一致）。显式配置（`settings.engine.workspaceDir` / `HANDHELD_WORKSPACE`）优先。见 spec 02 §4、spec 19。
-
-## 待定输入汇总
-
-### 已决定（P-01 ~ P-12、P-22、P-23）
-
-回答列是用户的原话，"落实到"列说明已经改了哪些 spec。
-
-| ID | 问题 | 回答 | 落实到 |
+| ID | Question | Decision | Landed in |
 |---|---|---|---|
-| P-01 | 是否保留"换武器式"的快捷模型切换？ | 不保留。切换模型是低频需求，"切换武器"只是游戏化设计概念 | 10, 13, 15。模型只在系统菜单里设置；接口层仍按会话设置模型（02） |
-| P-02 | Agent 授权请求和提问怎么呈现、用什么键响应？ | 和普通操作提示类似，甚至可以直接聚焦到提问，复用操作提示 | 12, 13, 10。03 的最小实现（卡片 + 按钮）保持不变 |
-| P-03 | 任务地图里怎么不选任务直接退出？ | 长按 B 关闭卡片，短按 B 退出地图。键盘可以把长按 B 和短按 B 绑定到不同的按键 | 10, 14 |
-| P-04 | 任务地图里的"删除"是否同时删除 OpenCode 会话？ | 只从地图关闭，会话保留为历史任务 | 14 |
-| P-05 | 没有激活的输入框时长按 Y 的行为 | 无效 | 16 |
-| P-06 | 语音服务商选择 | SDD 先留空，只把接口留好；MVP 之后用户自己试用再选。MVP 阶段直接用系统自带的语音输入。**2026-10-07 更新：先实现火山引擎豆包（Seed-ASR 流式），仅此一种；接口仍保持可换** | 16, 15, 17 |
-| P-07 | 文本编辑里听写插到哪里、怎么退出？ | 插入到聚焦句子之后，聚焦的句子末尾显示闪烁光标；退出即默认确认修改 | 17 |
-| P-08 | 视觉风格 | 参考 UI 库的默认风格，视觉主题做得独立一点，MVP 之后方便整体替换 | 01, 14, 18 |
-| P-09 | 操作提示的等待时间 | 所有组件一样，可以在设置里配置等待时间和是否开启 | 12, 15 |
-| P-10 | 是否支持远程 OpenCode server | 只支持本地 | 02, 15 |
-| P-11 | 应用退出时任务是否继续运行 | 一起结束 | 02, 04, 19 |
-| P-12 | 列表输入的条目来源 | MVP 只支持默认命令。不同底座命令不同，每个底座维护一份命令列表 | 12, 02 |
-| P-22 | 会话的工作目录怎么处理？ | 每会话独立目录（OpenCode `directory` 参数），新建任务、发出第一条消息前可改，之后锁定 | 21, 02 |
-| P-23 | 模型的 effort 做到什么程度？ | 可编辑：从模型 `variants` 读取可选值，作为后续 prompt 的 variant | 21 |
+| P-01 | Keep "weapon-swap" quick model switching? | No. Switching models is low-frequency; "weapon swap" was just a game-ified concept | 10, 13, 15. Models are set only in the system menu; the API still sets models per session (02) |
+| P-02 | How are agent permission requests and questions shown, and which keys answer them? | Similar to ordinary action hints; can even focus the question directly, reusing action hints | 12, 13, 10. The minimal implementation (card + buttons) from 03 stays |
+| P-03 | How to leave the task map without selecting a task? | Long-press B closes the card; short B leaves the map. Keyboards can bind long B and short B to different keys | 10, 14 |
+| P-04 | Does "delete" on the task map also delete the OpenCode session? | Only closes it on the map; the session is kept as a history task | 14 |
+| P-05 | Behavior of long-press Y when no input is active | Does nothing | 16 |
+| P-06 | Voice provider choice | Leave it open in the SDD, only fix the interface; the user picks after MVP. During MVP use the built-in system dictation. **2026-10-07 update: implement Volcano Engine Doubao (Seed-ASR streaming) first, and only this one; the interface stays swappable** | 16, 15, 17 |
+| P-07 | Where does dictation insert in text edit, and how do you exit? | Insert after the focused sentence, with a blinking caret at the sentence end; exiting confirms the changes by default | 17 |
+| P-08 | Visual style | Follow the UI library's default style; keep the visual theme decoupled so the whole theme can be swapped after MVP | 01, 14, 18 |
+| P-09 | Action-hint wait time | Same for all components; the wait time and on/off are configurable in settings | 12, 15 |
+| P-10 | Support remote OpenCode servers? | Local only | 02, 15 |
+| P-11 | Do tasks keep running when the app exits? | They end together | 02, 04, 19 |
+| P-12 | Source of list-input entries | MVP supports default commands only. Different backends have different commands; each backend keeps its own list | 12, 02 |
+| P-22 | How is a session's working directory handled? | Per-session directory (OpenCode `directory` param); editable on a new task and before the first message, then locked | 21, 02 |
+| P-23 | How far does model effort go? | Editable: read the choices from the model `variants` and pass the selection as a variant on subsequent prompts | 21 |
 
-### 新增待定（非阻塞，阶段 B 实现对应 spec 时由 Agent 给出方案、用户确认）
+### Open (non-blocking; the Agent proposes an option and the user confirms when implementing the relevant Stage B spec)
 
-下面的默认值都是各 spec 里的建议方案，不是已决定的事项。
+The defaults below are the suggestions in each spec, not decided items.
 
-| ID | 问题 | 影响的 spec |
+| ID | Question | Affected specs |
 |---|---|---|
-| P-13 | 授权请求 / 提问卡片的默认键位（建议授权用 A 允许一次、X 始终允许、B 拒绝）和提问卡片的交互细节（多选如何提交等） | 10, 13 |
-| P-14 | 滚动对话、中止 Agent 的按键（建议右摇杆 / 十字键滚动；中止长按 LB） | 10, 13 |
-| P-15 | 输入框激活时左摇杆是否也移动光标；消息列表里哪些元素可聚焦 | 11 |
-| P-16 | 任务地图：首次运行是否自动打开最近的任务；关闭当前卡片后切换到哪一张 | 14 |
-| P-17 | 文本编辑：删除句子的撤销键；除输入框外是否还有其他入口 | 17 |
-| P-18 | 用户消息粘滞折叠时截取多少字 （建议由屏幕最长宽度决定） | 13 |
-| P-19 | 设备集成：自动更新、开机自启、Steam Input 模板、有进行中任务时退出是否确认 | 19 |
-| P-20 | 是否在应用里配置模型服务商和语音服务商的凭据（目前依赖 `opencode auth login` 和主进程设置） | 15, 16 |
-| P-21 | 可选增强：语音结果的 LLM 润色、PixiJS / Rive 背景层 | 16, 18 |
+| P-13 | Default keys for the permission / question cards (suggested: A allow once, X always allow, B deny) and the question-card interaction details (how a multi-select submits) | 10, 13 |
+| P-14 | Keys to scroll the conversation and abort the Agent (suggested: right stick / D-pad to scroll; long-press LB to abort) | 10, 13 |
+| P-15 | Whether the left stick also moves the caret while the input is active; which elements in the message list are focusable | 11 |
+| P-16 | Task map: whether to auto-open the most recent task on first run; which card to switch to after closing the current one | 14 |
+| P-17 | Text edit: the undo key for deleting a sentence; whether there are entry points other than the input | 17 |
+| P-18 | How many characters to keep when a user message is sticky-collapsed (suggested: determined by the longest screen width) | 13 |
+| P-19 | Device integration: auto-update, launch at startup, Steam Input template, whether to confirm quitting with tasks in progress | 19 |
+| P-20 | Whether to configure model-provider and speech-provider credentials inside the app (currently relies on `opencode auth login` and main-process settings) | 15, 16 |
+| P-21 | Optional enhancements: LLM polish of voice results, PixiJS / Rive background layers | 16, 18 |
+
+## Key differences from the tech research
+
+The product doc is authoritative. The following ideas from the research were superseded:
+
+| Item | Research idea | Product doc (adopted) |
+|---|---|---|
+| Model switching | LB / RB swap models like weapons | **No quick switching** (P-01). Models are a low-frequency need, set only in "System menu › Model management"; "weapon swap" was just a game-ified analogy. LB / RB have other uses |
+| Voice input | Hold RT to talk | **Long-press Y**, inserting live at the active caret |
+| LB | Previous model | While the input is active: **list input** (e.g. `/clear`) |
+| RB | Next model | While the input is active: enter **text edit** |
+| Task map | View key, 3×2 grid | **Back (= View) key**, a horizontal carousel of 3 or 5 cards, the middle one enlarged |
+| System menu | Menu key, key overlay | **Start (= Menu) key**, a two-column settings screen |
+| Y | Quick-action wheel | Global: long-press to talk; on the task map: new task card |
+| Permission requests | A allow / B deny / X always, QTE-style | Same keys, but presented by reusing **action hints** (P-02): the card auto-focuses and shows the available keys beside it, see spec 13 |

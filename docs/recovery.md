@@ -1,41 +1,41 @@
-# 故障恢复手册（spec 04）
+# Recovery handbook (spec 04)
 
-自举开发时有两类实例：**稳定版**（`handheld-harness-stable`，全屏，用上一个确认可用的构建）和**开发版**（主仓库，`npm run dev`，正在修改的代码）。稳定版是"救生艇"：只要它还能用，就总能通过它指挥 Agent 修复开发版。
+While dogfooding there are two kinds of instance: the **stable build** (`handheld-harness-stable`, fullscreen, last confirmed-good build) and the **dev build** (main repository, `npm run dev`, the code being edited). The stable build is the lifeboat: as long as it works, you can always direct the Agent through it to fix the dev build.
 
-本手册只列出人工（或用户指挥 Agent）执行的恢复动作。**Agent 不得自行结束 opencode / electron / node 进程，也不得运行 `server:stop`、`taskkill`、`Stop-Process`**（见 `AGENTS.md` 的自举开发规则）。
+This handbook lists only actions performed by a human (or by the user directing the Agent). **The Agent must not terminate opencode / electron / node processes on its own, and must not run `server:stop`, `taskkill`, or `Stop-Process`** (see the bootstrap development rules in `AGENTS.md`).
 
-| 症状 | 恢复方式 |
+| Symptom | Recovery |
 |---|---|
-| 开发版白屏，或出现编译错误浮层 | 在**稳定版**里把错误现象告诉 Agent，Agent 运行 `npm run typecheck` 定位并修复 |
-| 开发版主进程反复崩溃重启 | 同上。必要时在开发版终端里按 `Ctrl+C` 停掉它，修好之后再 `npm run dev` |
-| 稳定版也出了问题 | 运行 `npm run stable:rollback`，或双击上一个可用的快捷方式 |
-| 两个实例都不能用 | 在 Windows Terminal 中进入主仓库，运行 `opencode`（TUI）。若锁定版本支持连接已有 server（例如 `opencode attach <url>`，以 `opencode --help` 为准），可以直接接管原来的会话 |
-| 代码被改乱，想放弃这次修改 | **用户手动**执行 `git stash` 或 `git checkout -- .`。Agent 不得自行执行 |
-| server 卡死 | 用户运行 `npm run server:status` 查看，然后 `npm run server:stop -- <workspace>`，再重启实例 |
+| Dev build shows a blank screen or a compile-error overlay | In the **stable build**, tell the Agent the symptom; the Agent runs `npm run typecheck` to locate and fix it |
+| Dev build's main process keeps crashing and restarting | Same. If needed, press `Ctrl+C` in the dev terminal to stop it, fix, then `npm run dev` again |
+| The stable build also breaks | Run `npm run stable:rollback`, or double-click the last working shortcut |
+| Neither instance works | In Windows Terminal, enter the main repository and run `opencode` (TUI). If the locked version supports attaching to an existing server (e.g. `opencode attach <url>`, per `opencode --help`), you can take over the original session directly |
+| The code is a mess and you want to drop this change | **The user** manually runs `git stash` or `git checkout -- .`. The Agent must not run these on its own |
+| The server hangs | The user runs `npm run server:status` to inspect, then `npm run server:stop -- <workspace>`, then restarts the instance |
 
-## 常用命令
+## Common commands
 
 ```powershell
-# 查看所有登记的 OpenCode server（pid、地址、版本、工作区、是否健康）
+# List every registered OpenCode server (pid, address, version, workspace, health)
 npm run server:status
 
-# 结束指定工作区的 server 并删除登记文件
+# Stop the server for a workspace and delete its registration file
 npm run server:stop -- C:\Apps\handheld-harness
 
-# 回退稳定版到上一个 stable-* 标签并重新构建
+# Roll the stable build back to the previous stable-* tag and rebuild
 npm run stable:rollback
 
-# 重新构建并升级稳定版（要求主仓库干净且 npm run check 通过）
+# Rebuild and upgrade the stable build (requires a clean main repo and a passing npm run check)
 npm run stable:update
 ```
 
-## 兜底：TUI
+## Fallback: the TUI
 
-两个实例都打不开时，OpenCode 的 TUI 仍然可用：
+If neither instance opens, OpenCode's TUI still works:
 
 ```powershell
 cd C:\Apps\handheld-harness
 opencode
 ```
 
-TUI 直接使用主仓库的工作区。如果 `opencode` 支持 `attach`，还能接管应用正在使用的同一个会话；否则从 TUI 里重新描述需求即可，代码改动落在同一个仓库，开发版恢复后能看到。
+The TUI uses the main repository's workspace directly. If `opencode` supports `attach`, it can even take over the same session the app is using; otherwise just describe the request again from the TUI and the code changes land in the same repository, so the dev build sees them once it recovers.

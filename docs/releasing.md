@@ -1,91 +1,91 @@
-# 发版与自动更新（spec 19）
+# Releasing and auto-update (spec 19)
 
-把 HANDHELD.AI 打包成 NSIS 安装包，并通过 GitHub Releases 分发更新。应用内「设置 → 关于与诊断 → 软件更新 → 检查更新」手动检查，确认后下载，下载完成弹「立即重启 / 稍后」。
+Package HANDHELD.AI as an NSIS installer and distribute updates through GitHub Releases. In-app, "Settings → About & Diagnostics → Software update → Check for updates" checks manually, downloads after confirmation, and shows "Restart now / Later" when the download completes.
 
-仓库：`https://github.com/limitMe/handheld-harness`（公开）。运行时匿名读取 Releases，**应用内不携带任何 token**；token 只在发版时用于上传。
+Repository: `https://github.com/limitMe/handheld-harness` (public). At runtime it reads Releases anonymously; **the app carries no token**. The token is used only at release time to upload.
 
-## 前置条件
+## Prerequisites
 
-- 构建机已 `npm install`（会带出 `electron-builder`、`electron-updater` 和 OpenCode 平台二进制）。
-- 发版时提供 `GH_TOKEN`：
-  - classic PAT，勾选 `repo`；或
-  - fine-grained token，仅本仓库，权限 `Contents: Read and write`。
-- 关闭正在运行的开发版实例：运行中 `node_modules` 与 Electron 二进制被锁定，`npm install` 会报 EBUSY / EPERM。
+- The build machine has run `npm install` (pulls in `electron-builder`, `electron-updater`, and the OpenCode platform binary).
+- Provide `GH_TOKEN` when releasing:
+  - a classic PAT with `repo`; or
+  - a fine-grained token limited to this repo with `Contents: Read and write`.
+- Close any running dev build: while it runs, `node_modules` and the Electron binary are locked and `npm install` fails with EBUSY / EPERM.
 
-## 发版步骤
+## Release steps
 
 ```powershell
-# 1) 递增版本（package.json 的 "version"，例如 0.1.0 -> 0.2.0）
-#    版本号决定用户是否收到更新，必须是严格变大的 semver
+# 1) Bump the version (package.json "version", e.g. 0.1.0 -> 0.2.0)
+#    The version decides whether users get the update and must be strictly increasing semver.
 
-# 2) 确保开发版已关闭，然后安装依赖（首次或 lock 变化时）
+# 2) Make sure the dev build is closed, then install dependencies (first time or when the lockfile changes)
 npm install
 
-# 3) 自检必须通过
+# 3) The self-check must pass
 npm run check
 
-# 4) 构建 + 打包 + 发布到 GitHub Releases
-$env:GH_TOKEN = "<你的 token>"
+# 4) Build + package + publish to GitHub Releases
+$env:GH_TOKEN = "<your token>"
 npm run dist:publish
 ```
 
-`dist:publish` 等价于：
+`dist:publish` is equivalent to:
 
 ```
 npm run build && electron-builder --win --x64 --publish always
 ```
 
-## 产物
+## Artifacts
 
-electron-builder 会在 `dist/` 生成并在 GitHub 上创建 release。每个 Release 必须带齐：
+electron-builder produces the files in `dist/` and creates a GitHub release. Every release must include:
 
-| 资产 | 作用 |
+| Asset | Purpose |
 |---|---|
-| `HANDHELD.AI-<version>-setup.exe` | NSIS 安装包（x64） |
-| `HANDHELD.AI-<version>-setup.exe.blockmap` | 差量更新用 |
-| `latest.yml` | **更新清单**，electron-updater 靠它判断新版本 |
+| `HANDHELD.AI-<version>-setup.exe` | NSIS installer (x64) |
+| `HANDHELD.AI-<version>-setup.exe.blockmap` | for differential updates |
+| `latest.yml` | the **update manifest**; electron-updater relies on it to detect new versions |
 
-安装包内嵌 `app-update.yml`（记录 `provider/owner/repo`），安装版据此查更新。
+The installer embeds `app-update.yml` (recording `provider/owner/repo`); installed builds use it to check for updates.
 
-## 发布规则（自动更新依赖）
+## Publishing rules (auto-update depends on them)
 
-- tag 用 `v<version>`（electron-builder 默认）。
-- **不能是 draft**，正式版**不能勾 prerelease**，否则 electron-updater 会忽略。已在 `electron-builder.yml` 用 `releaseType: release` 强制。
-- 版本必须严格大于已安装版本；electron-updater **不会降级**。要"回退"只能发一个版本号更大的包，或让用户手动装旧安装包。
-- release note 写进 GitHub Release 正文；应用优先用 update 元数据，缺失时按 tag 调 GitHub API 取正文。
+- Tag with `v<version>` (electron-builder default).
+- Must **not** be a draft, and a stable release must **not** be marked prerelease, or electron-updater ignores it. `electron-builder.yml` forces `releaseType: release`.
+- The version must be strictly greater than the installed one; electron-updater **never downgrades**. To "roll back", ship a package with a higher version number, or have the user install the old installer manually.
+- Release notes go in the GitHub Release body; the app prefers the update metadata and falls back to the GitHub API using the tag when it's missing.
 
-## 应用内的更新流程
+## In-app update flow
 
-1. 用户打开「关于与诊断 → 软件更新 → 检查更新」。
-2. 有新版本 → 弹窗显示 release note，按钮「更新 / 取消」。
-3. 点「更新」→ 后台下载，显示百分比。
-4. 下载完成 → 弹「立即重启 / 稍后」；「立即重启」走 `quitAndInstall`，退出时会按 P-11 结束正在运行的任务。
-5. 「稍后」只关闭弹窗，更新文件已缓存，下次检查可继续。
+1. The user opens "About & Diagnostics → Software update → Check for updates".
+2. A new version exists → a dialog shows the release notes with "Update / Cancel".
+3. Click "Update" → background download with a percentage.
+4. Download completes → "Restart now / Later"; "Restart now" calls `quitAndInstall`, and on exit it ends running tasks per P-11.
+5. "Later" just closes the dialog; the update file is cached and the next check can continue.
 
-仅在 **NSIS 安装版**可用；`npm run dev` 和 `stable:start`（preview）会提示"仅安装版可用"。
+Available only in the **NSIS-installed build**; `npm run dev` and `stable:start` (preview) show "installed build only".
 
-## 测试一次更新
+## Testing an update
 
-1. 装一个旧版本（例如把 `version` 设为 `0.1.0` 发一版并安装）。
-2. 把 `version` 改成 `0.2.0`，`npm run dist:publish`。
-3. 在已安装的 `0.1.0` 里点「检查更新」，确认弹出 `0.2.0` 的 release note，更新后版本变为 `0.2.0`。
+1. Install an old version (e.g. set `version` to `0.1.0`, publish, install).
+2. Set `version` to `0.2.0` and run `npm run dist:publish`.
+3. In the installed `0.1.0`, click "Check for updates" and confirm the `0.2.0` release notes appear; after updating, the version becomes `0.2.0`.
 
-## 手动发布（备选）
+## Manual publishing (alternative)
 
-不带 `--publish` 的 `npm run dist` 只产出文件、不建 Release。若想手动上传：
+`npm run dist` without `--publish` produces files only, no release. To upload manually:
 
-1. `npm run dist`。
-2. 在 GitHub 建一个 `v<version>` 的 Release（非 draft、非 prerelease）。
-3. 上传上表的 3 个资产。
-4. 漏传 `latest.yml` 会导致更新查不到。
+1. `npm run dist`.
+2. Create a `v<version>` release on GitHub (not draft, not prerelease).
+3. Upload the three assets above.
+4. Forgetting `latest.yml` means updates can't be found.
 
-## 常见问题
+## FAQ
 
-| 现象 | 原因 / 处理 |
+| Symptom | Cause / fix |
 |---|---|
-| 应用里提示"仅安装版可用" | 当前是 dev / preview，不是安装版 |
-| 查不到新版本 | Release 是 draft / prerelease；或没传 `latest.yml`；或版本号没有变大 |
-| 首次安装被 SmartScreen 拦 | 未做代码签名，个人使用可接受；点"仍要运行"。签名的证书不是自动更新的前提 |
-| `npm install` 报 EBUSY / EPERM | 开发版在运行，先关掉 |
-| 发布报 401 / 403 | `GH_TOKEN` 缺失或权限不足（需要 `repo` 或 `Contents: write`） |
-| release note 为空 | Release 正文为空；应用会显示"该版本没有提供更新说明" |
+| The app says "installed build only" | It's a dev / preview build, not an installed one |
+| New version not found | The release is draft / prerelease; or `latest.yml` is missing; or the version didn't increase |
+| First install blocked by SmartScreen | No code signing; acceptable for personal use, click "Run anyway". A signing certificate is not a prerequisite for auto-update |
+| `npm install` reports EBUSY / EPERM | The dev build is running; close it first |
+| Publishing returns 401 / 403 | Missing `GH_TOKEN` or insufficient permissions (needs `repo` or `Contents: write`) |
+| Empty release notes | The release body is empty; the app shows "this version has no update notes" |

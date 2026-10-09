@@ -1,97 +1,97 @@
 # HANDHELD.AI
 
-掌机（Windows 11 掌上游戏机）上的 AI Agent harness：Electron 外壳 + React UI，用游戏手柄在客厅 / 掌机场景里驱动 AI 编码会话。产品定义见 `docs/HANDHELD.AI.md`，规格源头见 [`docs/specs/README.md`](docs/specs/README.md)。
+An AI agent harness for handheld gaming PCs (Windows 11): an Electron shell plus a React UI that drives AI coding sessions from a gamepad, in the living room or on a handheld. The product definition is `docs/HANDHELD.AI.md` (local, Chinese; not tracked in git). Requirements live in [`docs/specs/README.md`](docs/specs/README.md) (English summaries); the full Chinese originals are under [`docs/zh-CN/specs/`](docs/zh-CN/specs/).
 
-## 常用命令
+## Common commands
 
-| 命令 | 作用 |
+| Command | Purpose |
 |---|---|
-| `npm run dev` | electron-vite 开发模式。渲染进程走 HMR，main / preload 改动自动重启 Electron |
-| `npm run build` | 构建到 `out/` |
-| `npm run start` | 运行构建产物（electron-vite preview） |
-| `npm run typecheck` | 分别检查 main / preload / renderer 三个 tsconfig |
-| `npm run lint` | ESLint，零 warning |
-| `npm run format` | Prettier 写回 |
-| `npm test` | Vitest 单元测试 |
-| `npm run test:e2e` | 先构建，再用 Playwright `_electron` 跑冒烟测试（会打开 GUI，只在本地跑） |
-| `npm run check` | 依次运行 typecheck、lint、test，完成任务前的统一自检 |
-| `npm run clean` | 删除 `out/` 与 e2e 截图产物 |
+| `npm run dev` | electron-vite dev mode. The renderer uses HMR; main / preload changes restart Electron automatically |
+| `npm run build` | Build to `out/` |
+| `npm run start` | Run the built output (electron-vite preview) |
+| `npm run typecheck` | Check the three tsconfigs (main / preload / renderer) separately |
+| `npm run lint` | ESLint, zero warnings |
+| `npm run format` | Prettier write-back |
+| `npm test` | Vitest unit tests |
+| `npm run test:e2e` | Build first, then run Playwright `_electron` smoke tests (opens a GUI; local only) |
+| `npm run check` | Run typecheck, lint, and test in sequence; the standard self-check before finishing a task |
+| `npm run clean` | Remove `out/` and e2e screenshot artifacts |
 
-**完成任何改动之前必须运行 `npm run check`，而且必须通过。**
+**You must run `npm run check` before finishing any change, and it must pass.**
 
-## 目录结构
+## Directory layout
 
 ```
-electron.vite.config.ts   # main / preload / renderer 三段构建配置
-scripts/                  # 跨平台 Node 脚本（不用 .sh）
+electron.vite.config.ts   # main / preload / renderer build config
+scripts/                  # cross-platform Node scripts (no .sh)
 src/
-  shared/                 # 主进程与渲染进程共用的纯 TS：IPC 契约、zod schema、设置类型
-  main/                   # 主进程：系统能力、网络、Agent 引擎、IPC、设置、日志
-  preload/                # contextBridge，只暴露 window.handheld
-  renderer/               # UI，只负责渲染
-    src/ui/               # 第三方 UI 库（Base UI）的唯一入口
-    src/components/       # 业务组件
-    src/debug/            # 手柄 / 麦克风调试页
-    src/styles/           # Tailwind 入口、语义 token、主题取值
+  shared/                 # pure TS shared by main and renderer: IPC contract, zod schemas, settings types
+  main/                   # main process: system capabilities, networking, agent engine, IPC, settings, logging
+  preload/                # contextBridge; exposes only window.handheld
+  renderer/               # UI only
+    src/ui/               # the only entry point for third-party UI (Base UI)
+    src/components/       # product components
+    src/debug/            # gamepad / microphone debug pages
+    src/styles/           # Tailwind entry, semantic tokens, theme values
 tests/
   unit/                   # Vitest
-  e2e/                    # Playwright 冒烟测试（artifacts/ 不入库）
+  e2e/                    # Playwright smoke tests (artifacts/ not committed)
 ```
 
-职责边界：
+Responsibilities:
 
-- **main 进程**负责系统能力、网络和 Agent 引擎；渲染进程不直接访问网络或 Node。
-- **renderer** 只负责 UI。
-- **shared** 里只放纯 TS，**不得** import electron 或 react。
+- **main process** owns system capabilities, networking, and the agent engine; the renderer never touches the network or Node directly.
+- **renderer** is UI only.
+- **shared** holds pure TS only; it **must not** import electron or react.
 
-## 运行时数据（profile 私有）
+## Runtime data (per-profile)
 
-设置在 `%APPDATA%\handheld-ai\<profile>\settings.json`（首次启动写入默认值），日志在 `<profile>\logs\main.log`。dev 模式的 profile 是 `dev`，构建产物是 `default`，可用 `HANDHELD_PROFILE` 覆盖；跨 profile 共享的状态由 spec 02 定义。
+Settings live in `%APPDATA%\handheld-ai\<profile>\settings.json` (defaults are written on first launch), and logs in `<profile>\logs\main.log`. The dev profile is `dev`, the built app uses `default`; override with `HANDHELD_PROFILE`. State shared across profiles is defined by spec 02.
 
-## 平台约定（Windows 优先）
+## Platform conventions (Windows first)
 
-- 所有脚本必须能在 Windows 11 的 PowerShell 7 中运行；跨平台脚本用 Node 写，不依赖 bash 专有语法。
-- 路径一律用 `node:path` 拼接，不得硬编码 `/` 或盘符路径。
-- 仓库统一 LF 换行（`.gitattributes` 控制），提交前不要引入 CRLF。
+- All scripts must run in Windows 11 PowerShell 7; write cross-platform scripts in Node, not bash-specific syntax.
+- Always join paths with `node:path`; never hardcode `/` or drive letters.
+- The repo uses LF endings (enforced by `.gitattributes`); don't introduce CRLF.
 
-## 安全约定
+## Security conventions
 
-- `contextIsolation: true`、`nodeIntegration: false`、`sandbox: true`；渲染进程拿不到 `require`。
-- preload 只暴露契约定义的 `window.handheld`，不暴露 `ipcRenderer` 本身；主进程在每个 handle 入口用 zod 校验入参。
-- 不在渲染进程里访问网络；所有网络请求走主进程。
-- 不把 API key 写进仓库或日志。
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`; the renderer has no `require`.
+- preload exposes only the contracted `window.handheld`, never `ipcRenderer` itself; main validates every handler's input with zod.
+- No network access in the renderer; all requests go through main.
+- Never write API keys into the repo or logs.
 
-## 依赖约定
+## Dependency conventions
 
-- 依赖使用精确版本（不带 `^` / `~`），升级单独提交。
-- 阶段 A **禁止**引入需要 node-gyp 本地编译的依赖。
-- preload 在 `sandbox: true` 下以 CommonJS 单文件打包，不要改成 ESM。
+- Pin exact dependency versions (no `^` / `~`); upgrade in a separate commit.
+- Stage A **must not** add dependencies that need a node-gyp native build.
+- preload is bundled as a single CommonJS file under `sandbox: true`; don't switch it to ESM.
 
-## 代码风格
+## Code style
 
-- 代码、注释、提交信息一律用英文；命名遵循业界常用实践（组件 PascalCase、函数/变量 camelCase、常量 UPPER_SNAKE_CASE）。
-- 注释精简：只解释意图、约束和非显而易见的取舍，方法名能说明的不写注释。
+- Code, comments, and commit messages in English; follow common naming practices (components PascalCase, functions / variables camelCase, constants UPPER_SNAKE_CASE).
+- Keep comments minimal: explain intent, constraints, and non-obvious trade-offs only. If a method name says it, don't write a comment.
 
-## UI 约定
+## UI conventions
 
-- 第三方 UI 组件只能通过 `src/renderer/src/ui/` 使用，业务代码不得直接 import `@base-ui/react`（ESLint 会拦截）。
-- 样式用 Tailwind；设计变量只能来自语义 token（`src/renderer/src/styles/tokens.css`），组件里不得硬编码颜色 / 字号 / 时长，也不得使用 Tailwind 调色板类名（如 `bg-zinc-900`）。
-- 主题的具体取值只放在 `src/renderer/src/styles/theme/` 下；整体换主题只替换该目录。
-- 新组件先在 `ui/` 里找有没有可以复用的。
+- Use third-party UI components only through `src/renderer/src/ui/`; product code must not import `@base-ui/react` directly (ESLint blocks it).
+- Style with Tailwind; design values must come from semantic tokens (`src/renderer/src/styles/tokens.css`). Components must not hardcode colors / font sizes / durations, nor use Tailwind palette classes (e.g. `bg-zinc-900`).
+- Theme values live only under `src/renderer/src/styles/theme/`; swapping the whole theme means replacing that directory.
+- Before adding a component, check `ui/` for an existing one to reuse.
 
-## 网络
+## Networking
 
-- 需要访问外文资源或遇到网络超时时，先设置代理再重试：
+- When accessing foreign resources or hitting network timeouts, set the proxy and retry:
   `$env:HTTP_PROXY="http://127.0.0.1:7890"; $env:HTTPS_PROXY="http://127.0.0.1:7890"`
-- 访问境内服务（如国内 npm 镜像）时直连，不要设代理。
+- Connect directly (no proxy) for domestic services (e.g. domestic npm mirrors).
 
-## Git 管理
+## Git management
 
-- 不在 master 上提交。简单任务在 master 上改完文件、验证后提醒用户自行提交；复杂任务新开 branch、做多个 commit，完成后提醒用户自行 squash and merge。
+- Never commit to master. For simple tasks, change files on master, verify, then ask the user to commit; for complex tasks, open a branch and make several commits, then ask the user to squash and merge.
 
-## 自举开发规则
+## Bootstrap development rules
 
-（由 spec 04 追加。）
+(Added by spec 04.)
 
 ### Dogfooding rules (spec 04)
 
@@ -103,7 +103,7 @@ tests/
    - whether the change is live immediately through HMR (renderer) or restarts the dev instance (main / preload).
 5. **Dependency changes:** on Windows, the Electron binary and files under `node_modules` are locked while the dev instance runs, so `npm install` fails with EBUSY or EPERM. Before adding or removing a dependency, tell the user the reason and the package name, and ask them to close the dev instance before installing.
 6. Without an explicit user instruction, never `git commit`, `git push`, or `git reset --hard`, and never delete branches. When the user says "commit", follow the agreed format and make one commit per feature.
-7. specs are the source of requirements. If the implementation diverges, say so first and record it in that spec's "实现记录". Stage B specs are directional: for open inputs (`P-xx`), propose an option and get the user's confirmation before acting.
+7. Specs are the source of requirements. If the implementation diverges, say so first and record it in that spec's implementation notes. Stage B specs are directional: for open inputs (`P-xx`), propose an option and get the user's confirmation before acting.
 8. Keep changes small and verifiable. One conversation does one thing; let the user verify before moving on.
 
 Recovery procedures: [`docs/recovery.md`](docs/recovery.md). Daily workflow: [`docs/dogfooding.md`](docs/dogfooding.md).

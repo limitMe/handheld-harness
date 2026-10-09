@@ -1,46 +1,46 @@
-# 日常自举工作流（spec 04）
+# Daily dogfooding workflow (spec 04)
 
-"用 HANDHELD.AI 开发 HANDHELD.AI"：用户在稳定版里向 Agent 提需求，Agent 修改主仓库，用户在开发版里立刻看到效果，满意后提交，定期升级稳定版。
+"Develop HANDHELD.AI with HANDHELD.AI": the user requests changes from the Agent in the stable build, the Agent edits the main repository, the user sees the result immediately in the dev build, commits when satisfied, and periodically upgrades the stable build.
 
-## 拓扑
+## Topology
 
 ```
-C:\Apps\handheld-harness-stable   稳定版（stable 分支 worktree，已构建，全屏）
-   └─ profile=stable，workspace=C:\Apps\handheld-harness   ←── 用户在这里和 Agent 对话
+C:\Apps\handheld-harness-stable   stable build (stable-branch worktree, built, fullscreen)
+   └─ profile=stable, workspace=C:\Apps\handheld-harness   ←── the user talks to the Agent here
             │
             ▼
-   OpenCode server（detached，按"工作区 + 版本"共享）
+   OpenCode server (detached, shared per "workspace + version")
             ▲
-   └─ profile=dev，npm run dev，窗口化                    ←── 用户在这里看修改效果（HMR）
-C:\Apps\handheld-harness          主仓库（main / 功能分支）
+   └─ profile=dev, npm run dev, windowed                    ←── the user watches changes here (HMR)
+C:\Apps\handheld-harness          main repository (main / feature branches)
 ```
 
-- 稳定版跑上一个确认可用的构建产物，Agent 改代码不会影响它。
-- 开发版跑正在修改的代码；两个实例指向同一工作区、同一 OpenCode 版本时会复用同一个 server，因此看到同样的会话。
-- **简化模式**：只开开发版，直接在开发版里对话。只改渲染进程的小修改可以这样；改坏时用 [`recovery.md`](recovery.md)。
+- The stable build runs the last confirmed-good artifact, so Agent edits can't break it.
+- The dev build runs the code being edited; when both instances point at the same workspace and OpenCode version they reuse one server, so they see the same sessions.
+- **Simplified mode**: run only the dev build and talk to the Agent there. Fine for renderer-only changes; use [`recovery.md`](recovery.md) if you break it.
 
-## 步骤
+## Steps
 
-1. 打开稳定版（桌面 / 开始菜单快捷方式）和开发版（终端里 `npm run dev`）。
-2. 在**稳定版**里新建任务，例如："实现 `docs/specs/13-screen-current-work.md` 里的『输入框：收起与展开』"。
-3. Agent 若提出待定问题（`P-xx`），用户回答。
-4. Agent 修改代码并运行 `npm run check`，然后说明改了什么、应该去哪里看、走 HMR 还是重启。用户切到开发版窗口（`Alt+Tab` 或厂商的任务切换键）验证。
-5. 不满意就在同一个任务里继续反馈；满意就说"**提交**"。
-6. 积累一批可用的修改后，运行 `npm run stable:update`，然后重启稳定版。之后就可以用新功能（比如手柄操作）继续开发。
+1. Open the stable build (desktop / Start menu shortcut) and the dev build (`npm run dev` in a terminal).
+2. In the **stable build**, create a task such as: "Implement the 'input box: collapse and expand' part of `docs/zh-CN/specs/13-screen-current-work.md`."
+3. If the Agent raises an open question (`P-xx`), the user answers.
+4. The Agent edits code and runs `npm run check`, then explains what changed, where to look, and whether it goes live via HMR or restarts. The user switches to the dev window (`Alt+Tab` or the vendor's task switcher) to verify.
+5. If unsatisfied, keep giving feedback in the same task; if satisfied, say "commit".
+6. After accumulating a batch of usable changes, run `npm run stable:update` and restart the stable build. You can then use the new features (e.g. gamepad control) to keep developing.
 
-## 约定
+## Conventions
 
-- 一个任务只做一件事；小步、可验证。
-- 用户说"提交"时，Agent 按仓库约定的格式提交，一个功能一个提交；没有明确指令不得 `commit` / `push` / `reset --hard` / 删分支。
-- 依赖变更：开发版运行时 Electron 和 `node_modules` 被锁定，`npm install` 会失败。Agent 必须先把包名和原因告诉用户，由用户关闭开发版后再装。
-- 升级稳定版前，Agent 需要保证主仓库工作区干净且 `npm run check` 通过；`stable:update` 会自己再跑一次 check。
+- One task does one thing; small, verifiable steps.
+- When the user says "commit", the Agent commits in the agreed format, one feature per commit; without an explicit instruction it must not `commit` / `push` / `reset --hard` / delete branches.
+- Dependency changes: while the dev build runs, Electron and `node_modules` are locked and `npm install` fails. The Agent must tell the user the package name and reason first, and the user closes the dev build before installing.
+- Before upgrading the stable build, the Agent must ensure the main repository is clean and `npm run check` passes; `stable:update` runs check again itself.
 
-## 相关命令
+## Related commands
 
-| 命令 | 作用 |
+| Command | Purpose |
 |---|---|
-| `npm run stable:setup` | 首次创建 stable 分支 / worktree，`npm ci` 并构建 |
-| `npm run stable:start` | 以 `profile=stable`、共享 server、全屏启动稳定版 |
-| `npm run stable:shortcut` | 在桌面和开始菜单创建 "HANDHELD.AI (stable)" 快捷方式 |
-| `npm run stable:update` | 把 stable fast-forward 到 main、打标签、必要时 `npm ci`、重新构建 |
-| `npm run stable:rollback` | 回退到上一个 `stable-*` 标签并重新构建 |
+| `npm run stable:setup` | Create the stable branch / worktree for the first time, `npm ci`, and build |
+| `npm run stable:start` | Start the stable build with `profile=stable`, shared server, fullscreen |
+| `npm run stable:shortcut` | Create the "HANDHELD.AI (stable)" shortcuts on the desktop and Start menu |
+| `npm run stable:update` | Fast-forward stable to main, tag, `npm ci` if needed, rebuild |
+| `npm run stable:rollback` | Roll back to the previous `stable-*` tag and rebuild |
