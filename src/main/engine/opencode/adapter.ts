@@ -64,6 +64,8 @@ export interface OpenCodeEngineOptions {
   logsDir: string
   sdkVersion: string
   baseDir: string
+  /** `process.resourcesPath`; set in packaged builds (spec 19). */
+  resourcesDir?: string
   binaryPath?: string
   externalUrl?: string
   externalPassword?: string
@@ -266,6 +268,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
       platform: process.platform,
       arch: process.arch,
       baseDir: this.options.baseDir,
+      resourcesDir: this.options.resourcesDir,
       ...this.options.binaryResolve,
     })
     this.logger.info(`located opencode binary (${resolution.source})`, { path: resolution.path })

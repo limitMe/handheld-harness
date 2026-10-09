@@ -20,6 +20,11 @@ export interface ResolveBinaryOptions {
   arch: string
   /** Root used to resolve node_modules packages (project root / app path). */
   baseDir: string
+  /**
+   * Electron's `process.resourcesPath`; set in packaged builds so the bundled
+   * OpenCode binary (`extraResources`, spec 19) can be found.
+   */
+  resourcesDir?: string
   existsSync?: (candidate: string) => boolean
   resolvePackageDir?: (name: string) => string | undefined
 }
@@ -106,6 +111,14 @@ export function resolveBinary(options: ResolveBinaryOptions): BinaryResolution {
     decisions.push(`node_modules/opencode-ai/bin/${BINARY_NAME} (missing)`)
   } else {
     decisions.push('node_modules/opencode-ai (not installed)')
+  }
+
+  if (options.resourcesDir) {
+    const candidate = path.join(options.resourcesDir, 'opencode', BINARY_NAME)
+    if (lookup.existsSync(candidate)) {
+      return { path: candidate, source: 'bundled resources' }
+    }
+    decisions.push(`resources/opencode/${BINARY_NAME} (missing)`)
   }
 
   if (options.env.HANDHELD_OPENCODE_ALLOW_PATH === '1') {

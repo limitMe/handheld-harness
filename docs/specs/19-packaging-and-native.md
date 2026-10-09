@@ -41,3 +41,33 @@
 ## 待定输入
 
 P-19：是否需要自动更新、开机自启、Steam Input 模板，以及有进行中的任务时退出是否确认。P-11 已决定。
+
+## 实现记录
+
+实现日期：2026-10-09（在主仓库工作区直接修改，未提交）。
+
+### 本轮范围（用户已确认）
+
+- 只做 **release 基础**：打包配置 + 发布版默认工作区；**不做**设备集成、自动更新、原生辅助进程与 `P-19` 的其余项。
+- 打包产物由**用户自己运行** `npm run dist` 生成，实现 Agent 不运行打包、不启动 GUI（遵守自举规则）。
+- release（无自举）时 OpenCode 的默认工作区 = 操作系统的"文档"目录（Windows `%USERPROFILE%\Documents`，与 OpenCode 默认一致），用户已确认。
+
+### 实现说明
+
+- **发布版默认工作区**：`src/main/engine/mode.ts` 的 `resolveWorkspaceDir` 新增可选 `defaultWorkspaceDir` 与来源 `release-default`，插在"开发模式仓库根目录"之后；`engine-runtime.ts` 传 `app.getPath('documents')`，并在该来源下递归创建目录。已同步 spec 02 第 4 节与实现记录。
+- **打包态二进制定位**：`src/main/engine/binary.ts` 新增 `resourcesDir` 查找档（`<process.resourcesPath>/opencode/opencode.exe`，来源 `bundled resources`），排在 `node_modules` 与 PATH 之间；`OpenCodeEngine` 新增 `resourcesDir` 选项，`engine-runtime.ts` 传 `process.resourcesPath`。
+- **打包配置**：新增 `electron-builder.yml`（NSIS、x64、`oneClick: false`、可改安装目录、桌面 / 开始菜单快捷方式、`artifactName: HANDHELD.AI-<version>-setup.exe`）。`extraResources` 把 `node_modules/opencode-windows-x64/bin/opencode.exe` 复制到 `resources/opencode/opencode.exe`；`files` 排除 `node_modules/opencode-*/**` 与 `node_modules/opencode-ai/bin/**`，避免把不能执行的二进制塞进 asar。图标复用 `resources/icons/handheld-ai.ico`。未配置代码签名（SmartScreen 会警告，个人使用可接受）；未配置 `publish`（自动更新待 `P-19`）。
+- **脚本**：`package.json` 新增 `"dist": "npm run build && electron-builder --win --x64"`。
+- **自举解耦**：`stable:*` 脚本、`HANDHELD_STABLE_DIR`、`STABLE`/`DEV` 徽标都只存在于仓库或开发 profile，安装包不包含；本轮无需改动。`README` 里 04 的状态修正为"已完成"。
+
+### 新增依赖（需用户安装）
+
+- `electron-builder@26.15.3`（devDependency，精确版本）。Windows 上开发版运行时 `node_modules` 被锁定，`npm install` 会报 EBUSY / EPERM。**请先关闭开发版实例，再在仓库里运行 `npm install`**，之后 `npm run dist` 才可用。
+- 实现 Agent 未执行 `npm install`，因此本轮 `npm run check` 不覆盖打包脚本本身；打包需用户在安装依赖后自行验证。
+
+### 未完成 / 需要用户验证
+
+- 运行 `npm run dist` 生成安装包，安装后确认：应用全屏启动；状态栏无 `STABLE`/`DEV` 标记；引擎状态为 ready，工作区为"文档"目录；新建任务能正常对话；退出后 `npm run server:status` 无残留（`attached` 模式）。
+- 掌机上不同分辨率 / 高 DPI 的图标与安装目录表现。
+- `P-19` 的自动更新、开机自启、Steam Input 模板、退出确认，以及原生辅助进程，均未实现，留待后续。
+

@@ -96,7 +96,8 @@
   1. `settings.engine.workspaceDir`；
   2. 环境变量 `HANDHELD_WORKSPACE`；
   3. 开发模式下默认是**本仓库根目录**（自举开发需要）；
-  4. 构建产物中没有配置时，引擎状态为 `down`，并提示需要配置的环境变量或设置项。
+  4. 构建产物中默认是**操作系统的"文档"目录**（Windows 为 `%USERPROFILE%\Documents`，与 OpenCode 自身默认一致；不存在时创建），见 spec 19；
+  5. 以上都不可用时（例如 `documents` 路径拿不到），引擎状态为 `down`，并提示需要配置的环境变量或设置项。
 - v1 只支持一个工作区，所有会话都建在这个目录下。
 - 实现前先确认锁定版本的 server 如何区分项目：是按启动时的 `cwd`，还是按请求参数里的 `directory`。把结论写进实现记录，后续如果要支持多个工作区会用到。
 
@@ -463,6 +464,12 @@ v1 不实现第二种底座，但以下约定要从第一天开始遵守。这�
 ### `listModels` 契约调整（2026-10-09，由 spec 15 追加）
 
 第 5 节的 `listModels()` 返回值由 `Promise<Array<{ providerId, name, models }>>` 调整为 `Promise<ModelCatalog>`，`ModelCatalog = { groups: ModelGroup[]; setupCommand?: string }`。原因见 spec 15“模型页只显示已认证模型”：只返回可运行的模型，并在没有可用模型时携带 base-specific 的登录命令（OpenCode 为 `opencode auth login`），UI 用它拼本地化提示而不写死底座工具名。IPC `engine:listModels` 的响应类型同步；Fake 引擎已按新契约返回。其余能力声明、`SessionRef`、按会话设模型等扩展点约定不变。
+
+### 打包态默认工作区与二进制定位（2026-10-09，由 spec 19 追加）
+
+- 第 4 节优先级新增一条：构建产物中默认使用操作系统的"文档"目录（`app.getPath('documents')`）。`resolveWorkspaceDir` 新增可选入参 `defaultWorkspaceDir` 与来源 `release-default`；`engine-runtime.ts` 传入 `app.getPath('documents')`，并在该来源下 `mkdirSync(recursive)` 确保目录存在。开发模式的"仓库根目录"默认保持不变（自举）。
+- 第 2 节二进制定位新增一档：`<process.resourcesPath>/opencode/opencode.exe`（来源标记 `bundled resources`），排在 `node_modules` 与 PATH 之间。打包时由 electron-builder 的 `extraResources` 放入该路径；`OpenCodeEngine` 新增 `resourcesDir` 选项，`engine-runtime.ts` 传 `process.resourcesPath`。开发模式下该路径不存在，自动落回 `node_modules`。
+
 
 
 

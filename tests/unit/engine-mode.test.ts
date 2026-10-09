@@ -44,6 +44,12 @@ describe('resolveWorkspaceDir', () => {
     expect(result.dir).toBe('C:\\repo')
   })
 
+  it('falls back to the packaged default (documents) in release builds', () => {
+    const result = resolveWorkspaceDir({ ...base, defaultWorkspaceDir: 'C:\\Users\\me\\Documents' })
+    expect(result.source).toBe('release-default')
+    expect(result.dir).toBe('C:\\Users\\me\\Documents')
+  })
+
   it('reports no workspace in production without configuration', () => {
     expect(resolveWorkspaceDir(base)).toEqual({ source: 'none' })
   })

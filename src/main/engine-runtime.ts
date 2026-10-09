@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { app, BrowserWindow } from 'electron'
 import type { Settings } from '../shared/ipc'
@@ -42,7 +43,21 @@ export function startEngineRuntime(getSettings: () => Settings): void {
     env: process.env,
     isDev: isDevMode(),
     repositoryRoot: app.getAppPath(),
+    defaultWorkspaceDir: app.getPath('documents'),
   })
+
+  // The packaged default (OS documents folder) must exist before the engine
+  // starts; a missing workspace makes the host refuse to launch the server.
+  if (workspace.dir && workspace.source === 'release-default') {
+    try {
+      fs.mkdirSync(workspace.dir, { recursive: true })
+    } catch (error) {
+      log.warn('could not create the default workspace directory', {
+        dir: workspace.dir,
+        error: String(error),
+      })
+    }
+  }
 
   manager = new EngineManager()
   manager.onEvent((payload: EngineEventPayload) => {
@@ -77,6 +92,7 @@ export function startEngineRuntime(getSettings: () => Settings): void {
     logsDir: path.join(app.getPath('userData'), 'logs'),
     sdkVersion: readSdkVersion(),
     baseDir: app.getAppPath(),
+    resourcesDir: process.resourcesPath,
     externalUrl: process.env.HANDHELD_OPENCODE_URL,
     externalPassword: process.env.HANDHELD_OPENCODE_PASSWORD,
     configContent: process.env.HANDHELD_OPENCODE_CONFIG_CONTENT,

@@ -1,0 +1,40 @@
+# Packaging and installer config for HANDHELD.AI (spec 19).
+# Run `npm run dist`. Signing is not configured, so SmartScreen will warn on the
+# first install of an unsigned build; that is acceptable for personal use.
+appId: ai.handheld.app
+productName: HANDHELD.AI
+
+directories:
+  buildResources: resources
+  output: dist
+
+# The default `**/*` pattern still applies; these entries only drop the large
+# OpenCode binaries that ship through extraResources instead (a binary cannot be
+# executed from inside an asar archive).
+files:
+  - '!node_modules/opencode-*/**'
+  - '!node_modules/opencode-ai/bin/**'
+
+# Platform binary kept outside the archive and read from `process.resourcesPath`.
+# x64 only for now; add the arm64 package here when an ARM device is targeted.
+extraResources:
+  - from: node_modules/opencode-windows-x64/bin/opencode.exe
+    to: opencode/opencode.exe
+
+win:
+  icon: icons/handheld-ai.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: HANDHELD.AI
+  artifactName: ${productName}-${version}-setup.${ext}
+
+npmRebuild: false

@@ -64,6 +64,20 @@ describe('resolveBinary', () => {
     expect(resolution.source).toBe('node_modules/opencode-ai')
   })
 
+  it('finds the bundled binary under resources in packaged builds', () => {
+    const bundled = path.join('C:\\app\\resources', 'opencode', 'opencode.exe')
+    const resolution = resolveBinary({
+      env: {},
+      platform: 'win32',
+      arch: 'x64',
+      baseDir: 'C:\\app\\resources\\app.asar',
+      resourcesDir: 'C:\\app\\resources',
+      ...lookup([bundled], {}),
+    })
+    expect(resolution.path).toBe(bundled)
+    expect(resolution.source).toBe('bundled resources')
+  })
+
   it('does not use PATH unless explicitly allowed', () => {
     const onPath = path.join('C:\\tools', 'opencode.exe')
     expect(() =>

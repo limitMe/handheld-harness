@@ -13,7 +13,7 @@ export function resolveEngineMode(env: NodeJS.ProcessEnv, isDev: boolean): Engin
 export interface WorkspaceResolution {
   dir?: string
   /** Where the value came from, for logging and the "engine down" hint. */
-  source: 'settings' | 'env' | 'dev-default' | 'none'
+  source: 'settings' | 'env' | 'dev-default' | 'release-default' | 'none'
 }
 
 /**
@@ -21,13 +21,17 @@ export interface WorkspaceResolution {
  * 1. settings.engine.workspaceDir
  * 2. HANDHELD_WORKSPACE
  * 3. the repository root in development (needed for dogfooding)
- * 4. none -> the engine reports `down` with a configuration hint
+ * 4. a user-writable default in packaged builds (spec 19; the OS documents
+ *    folder, matching OpenCode's own default)
+ * 5. none -> the engine reports `down` with a configuration hint
  */
 export function resolveWorkspaceDir(input: {
   settingsWorkspace?: string
   env: NodeJS.ProcessEnv
   isDev: boolean
   repositoryRoot: string
+  /** User-writable fallback for packaged builds; absent means no default. */
+  defaultWorkspaceDir?: string
 }): WorkspaceResolution {
   const fromSettings = input.settingsWorkspace?.trim()
   if (fromSettings) return { dir: path.resolve(fromSettings), source: 'settings' }
@@ -36,6 +40,9 @@ export function resolveWorkspaceDir(input: {
   if (fromEnv) return { dir: path.resolve(fromEnv), source: 'env' }
 
   if (input.isDev) return { dir: path.resolve(input.repositoryRoot), source: 'dev-default' }
+
+  const fromDefault = input.defaultWorkspaceDir?.trim()
+  if (fromDefault) return { dir: path.resolve(fromDefault), source: 'release-default' }
 
   return { source: 'none' }
 }
