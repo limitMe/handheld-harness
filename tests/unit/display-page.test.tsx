@@ -34,7 +34,7 @@ function installBridge(): {
       openExternal: vi.fn(async () => undefined),
       openLogDir: vi.fn(async () => undefined),
     },
-    engine: { listModels: vi.fn(async () => []) },
+    engine: { listModels: vi.fn(async () => ({ groups: [] })) },
     window: { setZoom },
   }
   ;(window as unknown as { handheld: unknown }).handheld = bridge

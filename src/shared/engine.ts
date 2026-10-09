@@ -176,6 +176,18 @@ export interface ModelGroup {
   }>
 }
 
+/**
+ * Model catalog for the models page (spec 15). `groups` lists only the models
+ * the user can actually run (e.g. authenticated providers). `setupCommand` is
+ * base-specific guidance shown when nothing is usable yet, such as the base's
+ * login command; the UI renders its own localized sentence around it instead of
+ * hardcoding any backend's tooling (spec 02 section 9).
+ */
+export interface ModelCatalog {
+  groups: ModelGroup[]
+  setupCommand?: string
+}
+
 export interface CommandInfo {
   name: string
   description?: string
@@ -204,7 +216,7 @@ export interface AgentEngine {
   replyPermission(sessionId: string, requestId: string, reply: PermissionReply): Promise<void>
   replyQuestion(sessionId: string, requestId: string, answers: string[][]): Promise<void>
   rejectQuestion(sessionId: string, requestId: string): Promise<void>
-  listModels(): Promise<ModelGroup[]>
+  listModels(): Promise<ModelCatalog>
   listCommands(): Promise<CommandInfo[]>
   /**
    * Runs a command that cannot go through the normal prompt path (spec 12),

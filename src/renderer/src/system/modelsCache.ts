@@ -1,4 +1,4 @@
-import type { ModelGroup } from '@shared/engine'
+import type { ModelCatalog } from '@shared/engine'
 
 /**
  * Model-catalog cache (spec 15). The engine can return thousands of entries, so
@@ -8,14 +8,14 @@ import type { ModelGroup } from '@shared/engine'
 
 const DEFAULT_ENGINE = ''
 
-const cache = new Map<string, ModelGroup[]>()
-const inflight = new Map<string, Promise<ModelGroup[]>>()
+const cache = new Map<string, ModelCatalog>()
+const inflight = new Map<string, Promise<ModelCatalog>>()
 
-export function cachedModels(engineId = DEFAULT_ENGINE): ModelGroup[] | undefined {
+export function cachedModels(engineId = DEFAULT_ENGINE): ModelCatalog | undefined {
   return cache.get(engineId)
 }
 
-export function loadModels(engineId = DEFAULT_ENGINE, force = false): Promise<ModelGroup[]> {
+export function loadModels(engineId = DEFAULT_ENGINE, force = false): Promise<ModelCatalog> {
   if (!force) {
     const hit = cache.get(engineId)
     if (hit) return Promise.resolve(hit)

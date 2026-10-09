@@ -177,7 +177,10 @@ function ModelSearchRow({ onApply }: { onApply: (query: string) => void }) {
  */
 export function ModelsPage({ settings, update }: ModelsPageProps) {
   const { t } = useTranslation()
-  const [groups, setGroups] = useState<ModelGroup[]>(() => cachedModels() ?? [])
+  const [groups, setGroups] = useState<ModelGroup[]>(() => cachedModels()?.groups ?? [])
+  const [setupCommand, setSetupCommand] = useState<string | undefined>(
+    () => cachedModels()?.setupCommand,
+  )
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(() =>
     cachedModels() ? 'ready' : 'loading',
   )
@@ -195,9 +198,10 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
     if (cachedModels()) return undefined
     let cancelled = false
     loadModels()
-      .then((list) => {
+      .then((catalog) => {
         if (cancelled) return
-        setGroups(list)
+        setGroups(catalog.groups)
+        setSetupCommand(catalog.setupCommand)
         setStatus('ready')
       })
       .catch(() => {
@@ -212,8 +216,9 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
   const refresh = useCallback(() => {
     setRefreshing(true)
     loadModels(undefined, true)
-      .then((list) => {
-        setGroups(list)
+      .then((catalog) => {
+        setGroups(catalog.groups)
+        setSetupCommand(catalog.setupCommand)
         setStatus('ready')
       })
       .catch(() => setStatus('error'))
@@ -285,7 +290,13 @@ export function ModelsPage({ settings, update }: ModelsPageProps) {
       ) : null}
       {status === 'error' ? <p className="px-3 py-4 text-danger">{t('models.loadError')}</p> : null}
       {status === 'ready' && groups.length === 0 ? (
-        <p className="px-3 py-4 text-text-muted">{t('models.none')}</p>
+        setupCommand ? (
+          <p className="px-3 py-4 text-text-muted" data-testid="models-setup-hint">
+            {t('models.setupHint', { command: setupCommand })}
+          </p>
+        ) : (
+          <p className="px-3 py-4 text-text-muted">{t('models.none')}</p>
+        )
       ) : null}
       {status === 'ready' && searching && visibleGroups.length === 0 ? (
         <p className="px-3 py-4 text-text-muted" data-testid="models-no-matches">

@@ -159,4 +159,14 @@ P-20：是否在应用里配置模型服务商凭据。分类 4（显示与提�
 - `app:quit` 走完整契约（`InvokeContract` / `INVOKE_CHANNELS` / `IPC_INVOKE_SCHEMAS` / `HandheldApi` / preload）。主进程用 `setImmediate` 延迟退出，让 IPC 回执先发出去再拆窗口。
 - 单测：`system-menu` 增加「只有确认对话框被接受才退出」；`ipc-contract` 覆盖新通道。
 
+### 模型页只显示已认证模型（2026-10-09，用户要求）
+
+- **问题**：模型页之前直接列出 `/provider` 的 `all`（真实环境 227 个服务商、8401 个模型），其中大部分没有配置凭据；选中后发消息会失败，用户又分不清是应用还是配置问题。
+- **处理**：`listModels()` 只返回 `connected` 里列出的服务商（即已认证、真正可运行的模型）；`connected` 为空时附带一个 base-specific 的 `setupCommand`。
+- **契约调整**：`AgentEngine.listModels()` 的返回值从 `ModelGroup[]` 改为 `ModelCatalog { groups: ModelGroup[]; setupCommand?: string }`；同步改 IPC `engine:listModels`、`modelsCache`、`ModelsPage`、`SessionInfoPage`。过滤与映射抽成纯函数 `opencode/model-catalog.ts` 的 `toModelCatalog`（OpenCode 的 `setupCommand` 固定为 `opencode auth login`）。
+- **UI**：模型页在列表为空且拿到 `setupCommand` 时显示 `models.setupHint`，把命令插进本地化文案（en「Run {{command}} to configure models.」/ zh「运行 {{command}} 配置模型。」），base 只提供命令本身，UI 不写死任何底座的工具名（spec 02 第 9 节）。
+- **与 spec 的出入**：spec 原文说“列出 `engine.listModels()` 返回的服务商和模型”；现在只列出**已认证**的，属于按用户要求收紧，方向一致。
+- **已自动验证**：`npm run check`（72 文件 443 用例，lint 零 warning）、`npm run test:e2e` 31 用例；新增单测 `model-catalog`（只保留 connected、透传 `contextLimit`/`variants`、空 connected 给 `setupCommand`、缺 connected、空响应）、`models-cache` 的 `setupCommand` 透传、`system-menu` 的空列表提示断言。
+- **未完成 / 需要人工验证**：连真实 OpenCode（未认证状态）确认模型页显示 `opencode auth login` 提示。
+
 

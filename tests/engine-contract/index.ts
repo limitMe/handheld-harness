@@ -80,8 +80,8 @@ function assistantText(messages: ChatMessage[]): string {
     .join('\n')
 }
 
-function pickModel(models: Awaited<ReturnType<AgentEngine['listModels']>>): ModelRef | undefined {
-  for (const provider of models) {
+function pickModel(catalog: Awaited<ReturnType<AgentEngine['listModels']>>): ModelRef | undefined {
+  for (const provider of catalog.groups) {
     const model = provider.models[0]
     if (model) return { providerId: provider.providerId, modelId: model.id }
   }
@@ -98,8 +98,8 @@ export async function runEngineContract(
   const expectText = options.expectText ?? DEFAULT_EXPECT
   const capabilities = engine.capabilities()
 
-  const models = await reporter.run('listModels', () => engine.listModels())
-  assert.ok(Array.isArray(models), 'listModels() must return an array')
+  const catalog = await reporter.run('listModels', () => engine.listModels())
+  assert.ok(Array.isArray(catalog.groups), 'listModels() must return model groups')
 
   const session = await reporter.run('createSession', () =>
     engine.createSession({ title: 'contract' }),
@@ -128,7 +128,7 @@ export async function runEngineContract(
     reporter.onStep?.('eventOrder', 0)
     assertEventOrder(events, session.id)
 
-    const model = options.model ?? pickModel(models)
+    const model = options.model ?? pickModel(catalog)
     if (model) {
       await reporter.run('setSessionModel', () => engine.setSessionModel(session.id, model))
       const sessions = await engine.listSessions()
@@ -167,7 +167,7 @@ export async function runEngineContract(
     off()
   }
 
-  return { sessionId: session.id, models: models.length }
+  return { sessionId: session.id, models: catalog.groups.length }
 }
 
 function assertEventOrder(events: EngineEvent[], sessionId: string): void {

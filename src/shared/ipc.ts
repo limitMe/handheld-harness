@@ -24,7 +24,7 @@ import type {
   EngineEventPayload,
   EngineInfo,
   EngineSnapshot,
-  ModelGroup,
+  ModelCatalog,
   ModelRef,
   PermissionReply,
   SessionRef,
@@ -348,7 +348,7 @@ export interface EngineApi {
   replyPermission(ref: SessionRef, requestId: string, reply: PermissionReply): Promise<void>
   replyQuestion(ref: SessionRef, requestId: string, answers: string[][]): Promise<void>
   rejectQuestion(ref: SessionRef, requestId: string): Promise<void>
-  listModels(engineId?: string): Promise<ModelGroup[]>
+  listModels(engineId?: string): Promise<ModelCatalog>
   listCommands(engineId?: string): Promise<CommandInfo[]>
   runCommand(ref: SessionRef, command: string, args?: string): Promise<void>
   list(): Promise<EngineInfo[]>
@@ -394,7 +394,7 @@ export interface InvokeContract {
     response: void
   }
   'engine:rejectQuestion': { request: { ref: SessionRef; requestId: string }; response: void }
-  'engine:listModels': { request: { engineId?: string } | undefined; response: ModelGroup[] }
+  'engine:listModels': { request: { engineId?: string } | undefined; response: ModelCatalog }
   'engine:listCommands': { request: { engineId?: string } | undefined; response: CommandInfo[] }
   'engine:runCommand': {
     request: { ref: SessionRef; command: string; args?: string }

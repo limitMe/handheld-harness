@@ -188,6 +188,7 @@ export const en = {
     loading: 'Loading models…',
     loadError: 'Could not load models from the engine.',
     none: 'The engine reported no models.',
+    setupHint: 'No models are configured. Run {{command}} to configure models.',
     providerNone: 'This provider reported no models.',
     count: '{{value}} models',
     default: 'Default',

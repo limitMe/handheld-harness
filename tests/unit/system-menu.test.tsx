@@ -13,7 +13,7 @@ afterEach(() => {
   delete (window as unknown as { handheld?: unknown }).handheld
 })
 
-function installBridge(groups?: unknown) {
+function installBridge(groups?: unknown, setupCommand?: string) {
   // The catalog is cached across mounts; each test starts from a cold cache.
   clearModelsCache()
   const settings = structuredClone(DEFAULT_SETTINGS)
@@ -41,10 +41,12 @@ function installBridge(groups?: unknown) {
     },
     engine: {
       listModels: vi.fn(
-        async () =>
-          groups ?? [
+        async () => ({
+          groups: groups ?? [
             { providerId: 'fake', name: 'Fake provider', models: [{ id: 'm1', name: 'Model 1' }] },
           ],
+          ...(setupCommand ? { setupCommand } : {}),
+        }),
       ),
       snapshot: vi.fn(async () => ({ status: { state: 'ready' } })),
       onEvent: vi.fn(() => () => undefined),
@@ -216,6 +218,18 @@ describe('SystemMenu', () => {
     // 10,000 models exist but none are rendered until a provider is expanded.
     expect(screen.queryByTestId('model-p0-m0')).toBeNull()
     expect(screen.queryByTestId('model-p39-m249')).toBeNull()
+  })
+
+  it('shows the base login command when no models are available', async () => {
+    installBridge([], 'opencode auth login')
+    renderMenu()
+    await waitFor(() => expect(screen.getByTestId('key-bindings')).not.toBeNull())
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+
+    await waitFor(() => expect(screen.getByTestId('models-setup-hint')).not.toBeNull())
+    expect(screen.getByTestId('models-setup-hint').textContent).toContain('opencode auth login')
   })
 
   it('closes with Escape from the category list', async () => {

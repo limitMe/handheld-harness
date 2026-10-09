@@ -460,5 +460,9 @@ v1 不实现第二种底座，但以下约定要从第一天开始遵守。这�
 
 触发这条路径需要"登记 pid 被回收 + 新进程恰好是 opencode 名字"，概率低但不是零，因此按"宁可留下一个孤儿进程，也绝不误杀用户进程"的原则处理。
 
+### `listModels` 契约调整（2026-10-09，由 spec 15 追加）
+
+第 5 节的 `listModels()` 返回值由 `Promise<Array<{ providerId, name, models }>>` 调整为 `Promise<ModelCatalog>`，`ModelCatalog = { groups: ModelGroup[]; setupCommand?: string }`。原因见 spec 15“模型页只显示已认证模型”：只返回可运行的模型，并在没有可用模型时携带 base-specific 的登录命令（OpenCode 为 `opencode auth login`），UI 用它拼本地化提示而不写死底座工具名。IPC `engine:listModels` 的响应类型同步；Fake 引擎已按新契约返回。其余能力声明、`SessionRef`、按会话设模型等扩展点约定不变。
+
 
 

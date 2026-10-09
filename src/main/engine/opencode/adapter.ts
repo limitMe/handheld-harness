@@ -14,7 +14,7 @@ import type {
   EngineMode,
   EngineSnapshot,
   EngineStatus,
-  ModelGroup,
+  ModelCatalog,
   ModelRef,
   PermissionReply,
   PermissionRequest,
@@ -42,6 +42,7 @@ import {
   toSessionSummary,
 } from './normalize'
 import { resolveSessionModel as resolveModel } from './model-resolution'
+import { toModelCatalog, type ProviderListData } from './model-catalog'
 import {
   effortsPath,
   modelsPath,
@@ -679,36 +680,10 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     return messages
   }
 
-  async listModels(): Promise<ModelGroup[]> {
+  async listModels(): Promise<ModelCatalog> {
     const client = this.requireClient()
-    const data = unwrap<{
-      all?: Array<{
-        id: string
-        name: string
-        models: Record<
-          string,
-          {
-            id: string
-            name: string
-            limit?: { context?: number }
-            variants?: Record<string, unknown>
-          }
-        >
-      }>
-    }>(await client.provider.list({}))
-    const providers = data.all ?? []
-    return providers.map((provider) => ({
-      providerId: provider.id,
-      name: provider.name,
-      models: Object.values(provider.models ?? {}).map((model) => ({
-        id: model.id,
-        name: model.name,
-        ...(typeof model.limit?.context === 'number' ? { contextLimit: model.limit.context } : {}),
-        ...(model.variants && Object.keys(model.variants).length > 0
-          ? { variants: Object.keys(model.variants) }
-          : {}),
-      })),
-    }))
+    const data = unwrap<ProviderListData>(await client.provider.list({}))
+    return toModelCatalog(data)
   }
 
   async listCommands(): Promise<CommandInfo[]> {

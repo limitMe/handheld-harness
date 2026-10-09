@@ -10,7 +10,7 @@ import type {
   EngineSnapshot,
   EngineStatus,
   MessageUsage,
-  ModelGroup,
+  ModelCatalog,
   ModelRef,
   PermissionReply,
   PermissionRequest,
@@ -225,21 +225,23 @@ export class FakeEngine implements AgentEngine {
     this.resolveWaiter(`question:${requestId}`, 'ignore')
   }
 
-  async listModels(): Promise<ModelGroup[]> {
-    return [
-      {
-        providerId: 'fake',
-        name: 'Fake provider',
-        models: [
-          {
-            id: 'fake-model',
-            name: 'Fake model',
-            contextLimit: 128_000,
-            variants: ['default', 'high', 'max'],
-          },
-        ],
-      },
-    ]
+  async listModels(): Promise<ModelCatalog> {
+    return {
+      groups: [
+        {
+          providerId: 'fake',
+          name: 'Fake provider',
+          models: [
+            {
+              id: 'fake-model',
+              name: 'Fake model',
+              contextLimit: 128_000,
+              variants: ['default', 'high', 'max'],
+            },
+          ],
+        },
+      ],
+    }
   }
 
   async listCommands(): Promise<CommandInfo[]> {

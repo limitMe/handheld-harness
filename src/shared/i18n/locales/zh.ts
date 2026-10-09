@@ -186,6 +186,7 @@ export const zh = {
     loading: '正在加载模型…',
     loadError: '无法从引擎加载模型。',
     none: '引擎没有返回任何模型。',
+    setupHint: '没有已配置的模型。运行 {{command}} 配置模型。',
     providerNone: '该服务商没有返回任何模型。',
     count: '{{value}} 个模型',
     default: '默认',

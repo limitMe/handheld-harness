@@ -102,15 +102,15 @@ function SessionInfoBody({ onClose }: { onClose: () => void }) {
   const setPendingEffort = useWorkbenchStore((state) => state.setPendingEffort)
   const setSessionEffort = useWorkbenchStore((state) => state.setSessionEffort)
 
-  const [catalog, setCatalog] = useState<ModelGroup[]>(() => cachedModels() ?? [])
+  const [catalog, setCatalog] = useState<ModelGroup[]>(() => cachedModels()?.groups ?? [])
   const [effortOpen, setEffortOpen] = useState(false)
 
   useEffect(() => {
     if (cachedModels()) return undefined
     let cancelled = false
     loadModels()
-      .then((list) => {
-        if (!cancelled) setCatalog(list)
+      .then((next) => {
+        if (!cancelled) setCatalog(next.groups)
       })
       .catch(() => undefined)
     return () => {
