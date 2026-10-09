@@ -7,6 +7,10 @@ import type { BindingLayer, BindingValue } from './input'
 import {
   DOUBAO_DEFAULT_ENDPOINT,
   DOUBAO_DEFAULT_RESOURCE_ID,
+  FUNASR_DEFAULT_ENDPOINT,
+  FUNASR_DEFAULT_MODEL,
+  OPENAI_DEFAULT_ENDPOINT,
+  OPENAI_DEFAULT_MODEL,
   SPEECH_DEFAULT_LANGUAGE,
   SPEECH_PROVIDER_NONE,
   type SpeechEvent,
@@ -108,7 +112,7 @@ export type ModelSettings = z.infer<typeof ModelSettingsSchema>
 
 /** The settings-selectable speech providers (spec 16). `none` disables dictation;
  * the mock provider is test-only and must never appear here. */
-export const SPEECH_PROVIDER_IDS = [SPEECH_PROVIDER_NONE, 'doubao'] as const
+export const SPEECH_PROVIDER_IDS = [SPEECH_PROVIDER_NONE, 'doubao', 'funasr', 'openai'] as const
 export type SpeechProviderId = (typeof SPEECH_PROVIDER_IDS)[number]
 
 /** Provider-specific options for the Doubao (Volcengine) streaming adapter. */
@@ -117,6 +121,20 @@ export const DoubaoSpeechSettingsSchema = z.object({
   endpoint: z.string().min(1).default(DOUBAO_DEFAULT_ENDPOINT),
 })
 export type DoubaoSpeechSettings = z.infer<typeof DoubaoSpeechSettingsSchema>
+
+/** Provider-specific options for the Fun-ASR-Realtime (Alibaba Cloud) adapter. */
+export const FunAsrSpeechSettingsSchema = z.object({
+  model: z.string().min(1).default(FUNASR_DEFAULT_MODEL),
+  endpoint: z.string().min(1).default(FUNASR_DEFAULT_ENDPOINT),
+})
+export type FunAsrSpeechSettings = z.infer<typeof FunAsrSpeechSettingsSchema>
+
+/** Provider-specific options for the OpenAI realtime transcription adapter. */
+export const OpenAiSpeechSettingsSchema = z.object({
+  model: z.string().min(1).default(OPENAI_DEFAULT_MODEL),
+  endpoint: z.string().min(1).default(OPENAI_DEFAULT_ENDPOINT),
+})
+export type OpenAiSpeechSettings = z.infer<typeof OpenAiSpeechSettingsSchema>
 
 /**
  * Voice-input settings (spec 16). The API key is not here: it is encrypted with
@@ -128,6 +146,14 @@ export const SpeechSettingsSchema = z.object({
   doubao: DoubaoSpeechSettingsSchema.default({
     resourceId: DOUBAO_DEFAULT_RESOURCE_ID,
     endpoint: DOUBAO_DEFAULT_ENDPOINT,
+  }),
+  funasr: FunAsrSpeechSettingsSchema.default({
+    model: FUNASR_DEFAULT_MODEL,
+    endpoint: FUNASR_DEFAULT_ENDPOINT,
+  }),
+  openai: OpenAiSpeechSettingsSchema.default({
+    model: OPENAI_DEFAULT_MODEL,
+    endpoint: OPENAI_DEFAULT_ENDPOINT,
   }),
 })
 export type SpeechSettings = z.infer<typeof SpeechSettingsSchema>
@@ -190,6 +216,8 @@ export const SettingsSchema = z.object({
     provider: SPEECH_PROVIDER_NONE,
     language: SPEECH_DEFAULT_LANGUAGE,
     doubao: { resourceId: DOUBAO_DEFAULT_RESOURCE_ID, endpoint: DOUBAO_DEFAULT_ENDPOINT },
+    funasr: { model: FUNASR_DEFAULT_MODEL, endpoint: FUNASR_DEFAULT_ENDPOINT },
+    openai: { model: OPENAI_DEFAULT_MODEL, endpoint: OPENAI_DEFAULT_ENDPOINT },
   }),
 })
 export type Settings = z.infer<typeof SettingsSchema>
@@ -243,6 +271,18 @@ export const SettingsPatchSchema = z.object({
           endpoint: z.string().min(1).optional(),
         })
         .optional(),
+      funasr: z
+        .object({
+          model: z.string().min(1).optional(),
+          endpoint: z.string().min(1).optional(),
+        })
+        .optional(),
+      openai: z
+        .object({
+          model: z.string().min(1).optional(),
+          endpoint: z.string().min(1).optional(),
+        })
+        .optional(),
     })
     .optional(),
 })
@@ -261,6 +301,8 @@ export const DEFAULT_SETTINGS: Settings = {
     provider: SPEECH_PROVIDER_NONE,
     language: SPEECH_DEFAULT_LANGUAGE,
     doubao: { resourceId: DOUBAO_DEFAULT_RESOURCE_ID, endpoint: DOUBAO_DEFAULT_ENDPOINT },
+    funasr: { model: FUNASR_DEFAULT_MODEL, endpoint: FUNASR_DEFAULT_ENDPOINT },
+    openai: { model: OPENAI_DEFAULT_MODEL, endpoint: OPENAI_DEFAULT_ENDPOINT },
   },
 }
 

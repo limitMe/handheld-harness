@@ -102,6 +102,7 @@ export interface SpeechProvider {
 | 服务商 | 特点 |
 |---|---|
 | OpenAI `gpt-4o-transcribe` / 实时转写 | 中英混说效果较好 |
+| 阿里云百炼 Fun-ASR-Realtime | 中文方言与中英混说，国内低延迟 |
 | ElevenLabs Scribe v2 Realtime | 延迟低 |
 | sherpa-onnx `streaming-zipformer-bilingual-zh-en` | 离线兜底，免费 |
 | Windows 自带 Win+H | 阶段 A 的过渡方案。它没有编程接口，只能作为"系统输入法"继续可用 |
@@ -201,3 +202,48 @@ P-06 的服务商选择留到 MVP 之后；P-21 里的 LLM 润色是可选增强
 
 - **说完立即发送不再残留草稿**：发送时 dictation 可能仍在等 `final`，随后的事件会把文字写回已清空的输入框。`DictationController` 新增 `finish()`：把未确认的 partial 立即收进字段、结束会话并 detach，之后 `partial` / `final` / `ended` 因 `sessionId` 已清空而被忽略；`Composer` 在 `send()` 里于读取草稿前调用它。
 - **启动期间结束会话**：`start()` 在 `await speech.start()` 后检查 `starting` 标志，若期间已 `cancel()` / `finish()` 则直接取消该会话，避免迟到的事件重新写入输入框。
+
+## 实现记录 · 第三阶段（新增 Fun-ASR 与 OpenAI）
+
+实现日期：2026-10-09（主仓库工作区）。
+
+### 本次范围
+
+在豆包之外新增两个真实服务商，用户可在系统菜单 › 语音输入 › 服务商中在三者间切换：
+
+- **Fun-ASR-Realtime（阿里云百炼 / DashScope）**：`wss://dashscope.aliyuncs.com/api-ws/v1/inference`，`Authorization: Bearer` 握手，`run-task` / 二进制音频 / `finish-task` 三段式，`result-generated` 里 `sentence_end` 区分 `partial` / `final`，`heartbeat` 与 `sentence_id=0` 事件忽略。
+- **OpenAI 实时转写**：`wss://api.openai.com/v1/realtime?intent=transcription`，GA 的 `session.update`（`session.type = "transcription"`），`input_audio_buffer.append`（base64 PCM16 24 kHz）+ `input_audio_buffer.commit`，监听 `conversation.item.input_audio_transcription.delta/completed`。
+
+### 交付物
+
+- 协议 `src/shared/speech.ts`：新增 `FUNASR_*` / `OPENAI_*` 常量与模型列表（`FUNASR_MODELS` / `OPENAI_MODELS`），`OPENAI_SAMPLE_RATE = 24000`。
+- 主进程：
+  - `src/main/speech/funasr.ts`：DashScope 适配器，导出可单测的 `readFunAsrResult` / `buildFunAsrRunTask` / `funAsrLanguageHint`。命中 `task-failed` 或在 `task-started` 前关闭会 reject。
+  - `src/main/speech/openai.ts`：GA 实时转写适配器，导出 `buildOpenAiSessionUpdate` / `openAiLanguageCode`。`gpt-live-transcribe` / `gpt-transcribe` 用 `languages` + `keywords`，4o 系模型用 `language` + `prompt`。
+  - `src/main/speech/resample.ts`：线性 16 kHz → 24 kHz 上采样（OpenAI 只接受 24 kHz）。
+  - `src/main/speech/index.ts`：注册表追加 `funasr` / `openai`。
+- 设置（`settings.speech`）：新增 `funasr.{model,endpoint}`（默认 `fun-asr-realtime`）与 `openai.{model,endpoint}`（默认 `gpt-live-transcribe`）。`SPEECH_PROVIDER_IDS` 扩展为 `none | doubao | funasr | openai`。
+- 渲染进程：
+  - `system/VoicePage.tsx`：模型选择行按服务商切换（豆包显示 Resource-Id 档位，Fun-ASR / OpenAI 显示模型列表）；API Key 行保持通用，改用当前服务商。
+  - `debug/SpeechDebug.tsx`：探测页按当前服务商读写对应的 `model` / `endpoint`，不再写死豆包。
+
+### 关键决策
+
+- **凭据天然按服务商隔离**：`speech-credentials.json` 以 provider id 为键加密存储，切换服务商不写 `clearKey`，因此不会清掉其它服务商的 Key（`tests/unit/credentials.test.ts` 覆盖）。
+- **OpenAI 走 GA 接口**：按 2026 文档去掉 `OpenAI-Beta` 头，使用 `session.update` + `session.type = "transcription"`；`turn_detection` 固定为 `null`，停止时手动 `commit`。为兼容只回 `session.created` 的服务端，`session.updated` 未在 1.5 s 内到达也会放行开始（存在超时兜底）。
+- **采样率**：渲染进程固定 16 kHz；OpenAI 适配器在 pushAudio 时上采样到 24 kHz，豆包 / Fun-ASR 沿用 16 kHz。
+- **端点与模型可改**：两个新服务商与豆包一样，`endpoint` / `model` 可在 `settings.speech` 覆盖（探测页可编辑），默认走官方地址。
+
+### 与正文的出入
+
+- 正文「服务商候选」里 OpenAI 一栏原先写 `gpt-4o-transcribe`；文档已推荐 `gpt-live-transcribe`，故默认模型用后者，4o 系仍保留在可选项里。
+
+### 已自动验证
+
+- `npm run check` 通过（typecheck、lint 零 warning、71 个测试文件 432 个用例）；`npm run build` 通过。
+- 新增单测：`speech-resample`、`funasr`（语言映射、partial/final 判定、run-task 载荷）、`openai-speech`（语言映射、session.update 载荷）、`credentials`（按服务商隔离、切换/重载不清 Key）；`settings`、`voice-page`、`ipc-contract` 覆盖新设置切片与模型选择。
+
+### 未完成 / 需要人工验证
+
+- 掌机实测：分别录入阿里云百炼与 OpenAI 的 API Key，在探测页说一句中英混说的话，确认实时出字、松手后最终结果正确、切换服务商后原 Key 仍在。
+

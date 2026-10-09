@@ -21,6 +21,8 @@ function defaults(): Settings {
     speech: {
       ...DEFAULT_SETTINGS.speech,
       doubao: { ...DEFAULT_SETTINGS.speech.doubao },
+      funasr: { ...DEFAULT_SETTINGS.speech.funasr },
+      openai: { ...DEFAULT_SETTINGS.speech.openai },
     },
   }
 }
@@ -114,6 +116,8 @@ export function createSettingsStore(userDataDir: string): SettingsStore {
           ...current.speech,
           ...patch.speech,
           doubao: { ...current.speech.doubao, ...patch.speech?.doubao },
+          funasr: { ...current.speech.funasr, ...patch.speech?.funasr },
+          openai: { ...current.speech.openai, ...patch.speech?.openai },
         },
       })
       persist(next)

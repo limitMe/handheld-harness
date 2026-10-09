@@ -145,4 +145,34 @@ describe('Voice input', () => {
     fireEvent.keyDown(window, { key: 'Enter' })
     await waitFor(() => expect(clearKey).toHaveBeenCalledWith('doubao'))
   })
+
+  it('lists the model picker for Fun-ASR and stores the chosen model', async () => {
+    const { update } = installBridge('funasr')
+    await openVoicePanel()
+
+    focusRow('voice-resource')
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTestId('choice-fun-asr-realtime')).not.toBeNull())
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(update).toHaveBeenCalledWith({
+      speech: { funasr: { model: 'fun-asr-realtime-2025-11-07' } },
+    })
+  })
+
+  it('lists the model picker for OpenAI and stores the chosen model', async () => {
+    const { update } = installBridge('openai')
+    await openVoicePanel()
+
+    focusRow('voice-resource')
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTestId('choice-gpt-live-transcribe')).not.toBeNull())
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(update).toHaveBeenCalledWith({
+      speech: { openai: { model: 'gpt-4o-transcribe' } },
+    })
+  })
 })

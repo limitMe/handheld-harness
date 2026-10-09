@@ -1,10 +1,51 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Settings, SpeechProviderId } from '@shared/ipc'
+import type { Settings, SettingsPatch, SpeechProviderId } from '@shared/ipc'
 import type { SpeechProviderInfo } from '@shared/speech'
 import { useTranslation } from '../i18n'
 import { startMicCapture, type MicCapture } from '../speech/capture'
 import { Button, Overlay } from '../ui'
 import type { DebugOverlayProps } from './types'
+
+/** Reads the selected provider's model + endpoint, if it exposes them. */
+function providerConfig(
+  settings: Settings | undefined,
+  providerId: string,
+): { model: string; endpoint: string } {
+  if (!settings) return { model: '', endpoint: '' }
+  if (providerId === 'doubao') {
+    return {
+      model: settings.speech.doubao.resourceId,
+      endpoint: settings.speech.doubao.endpoint,
+    }
+  }
+  if (providerId === 'funasr') {
+    return { model: settings.speech.funasr.model, endpoint: settings.speech.funasr.endpoint }
+  }
+  if (providerId === 'openai') {
+    return { model: settings.speech.openai.model, endpoint: settings.speech.openai.endpoint }
+  }
+  return { model: '', endpoint: '' }
+}
+
+/** Builds a settings patch for the selected provider's model + endpoint. */
+function configPatch(
+  providerId: string,
+  patch: { model?: string; endpoint?: string },
+): SettingsPatch {
+  if (providerId === 'doubao') {
+    return {
+      speech: {
+        doubao: {
+          ...(patch.model !== undefined ? { resourceId: patch.model } : {}),
+          ...(patch.endpoint !== undefined ? { endpoint: patch.endpoint } : {}),
+        },
+      },
+    }
+  }
+  if (providerId === 'funasr') return { speech: { funasr: patch } }
+  if (providerId === 'openai') return { speech: { openai: patch } }
+  return {}
+}
 
 /**
  * Temporary verification entry point for the speech layer (spec 16, P-06).
@@ -18,7 +59,7 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
   const [settings, setSettings] = useState<Settings>()
   const [keyConfigured, setKeyConfigured] = useState(false)
   const [apiKey, setApiKey] = useState('')
-  const [resourceId, setResourceId] = useState('')
+  const [model, setModel] = useState('')
   const [endpoint, setEndpoint] = useState('')
   const [status, setStatus] = useState('idle')
   const [level, setLevel] = useState(0)
@@ -64,8 +105,9 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
       .then((next) => {
         if (cancelled) return
         setSettings(next)
-        setResourceId(next.speech.doubao.resourceId)
-        setEndpoint(next.speech.doubao.endpoint)
+        const config = providerConfig(next, next.speech.provider)
+        setModel(config.model)
+        setEndpoint(config.endpoint)
         void refreshKeyStatus(next.speech.provider)
       })
       .catch(() => undefined)
@@ -160,6 +202,9 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
       if (!bridge) return
       const next = await bridge.settings.update({ speech: { provider: id as SpeechProviderId } })
       setSettings(next)
+      const config = providerConfig(next, id)
+      setModel(config.model)
+      setEndpoint(config.endpoint)
       await refreshKeyStatus(id)
     },
     [refreshKeyStatus],
@@ -168,26 +213,26 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
   const saveKey = useCallback(async (): Promise<void> => {
     const speech = window.handheld?.speech
     if (!speech || apiKey.trim().length === 0) return
-    await speech.setKey('doubao', apiKey.trim())
+    await speech.setKey(providerId, apiKey.trim())
     setApiKey('')
-    await refreshKeyStatus('doubao')
-  }, [apiKey, refreshKeyStatus])
+    await refreshKeyStatus(providerId)
+  }, [apiKey, providerId, refreshKeyStatus])
 
   const clearKey = useCallback(async (): Promise<void> => {
     const speech = window.handheld?.speech
     if (!speech) return
-    await speech.clearKey('doubao')
-    await refreshKeyStatus('doubao')
-  }, [refreshKeyStatus])
+    await speech.clearKey(providerId)
+    await refreshKeyStatus(providerId)
+  }, [providerId, refreshKeyStatus])
 
-  const commitDoubao = useCallback(
-    async (patch: { resourceId?: string; endpoint?: string }): Promise<void> => {
+  const commitConfig = useCallback(
+    async (patch: { model?: string; endpoint?: string }): Promise<void> => {
       const bridge = window.handheld
-      if (!bridge) return
-      const next = await bridge.settings.update({ speech: { doubao: patch } })
+      if (!bridge || providerId === 'none') return
+      const next = await bridge.settings.update(configPatch(providerId, patch))
       setSettings(next)
     },
-    [],
+    [providerId],
   )
 
   const listening = status === 'listening' || status === 'connecting'
@@ -239,19 +284,19 @@ export default function SpeechDebug({ open, onOpenChange }: DebugOverlayProps) {
         </div>
 
         <div className="grid grid-cols-[8rem_1fr] items-center gap-2 text-base">
-          <span className="text-text-muted">{t('debug.speech.resourceId')}</span>
+          <span className="text-text-muted">{t('debug.speech.model')}</span>
           <input
             className="rounded-md border border-surface-raised bg-card px-3 py-2 text-code text-on-card"
-            value={resourceId}
-            onChange={(event) => setResourceId(event.target.value)}
-            onBlur={() => void commitDoubao({ resourceId })}
+            value={model}
+            onChange={(event) => setModel(event.target.value)}
+            onBlur={() => void commitConfig({ model })}
           />
           <span className="text-text-muted">{t('debug.speech.endpoint')}</span>
           <input
             className="rounded-md border border-surface-raised bg-card px-3 py-2 text-code text-on-card"
             value={endpoint}
             onChange={(event) => setEndpoint(event.target.value)}
-            onBlur={() => void commitDoubao({ endpoint })}
+            onBlur={() => void commitConfig({ endpoint })}
           />
         </div>
 

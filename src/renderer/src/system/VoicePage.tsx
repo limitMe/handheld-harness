@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Settings, SettingsPatch, SpeechProviderId } from '@shared/ipc'
-import { SPEECH_PROVIDER_NONE, type SpeechProviderInfo } from '@shared/speech'
+import {
+  FUNASR_MODELS,
+  OPENAI_MODELS,
+  SPEECH_PROVIDER_NONE,
+  type SpeechProviderInfo,
+} from '@shared/speech'
 import { useTranslation } from '../i18n'
 import { ChoiceDialog, ConfirmDialog, Slider, cn, type ChoiceOption } from '../ui'
 import { MenuGroupLabel, MenuRow } from './MenuRow'
@@ -24,6 +29,10 @@ const RESOURCE_OPTIONS: ResourceOption[] = [
   { id: 'volc.bigasr.sauc.duration', key: 'voice.resource.seedAsr1Duration' },
   { id: 'volc.bigasr.sauc.concurrent', key: 'voice.resource.seedAsr1Concurrent' },
 ]
+
+/** Fun-ASR / OpenAI model ids are shown verbatim, so no i18n key is needed. */
+const PLAIN_OPTIONS = (ids: readonly string[]): ChoiceOption[] =>
+  ids.map((id) => ({ id, label: id }))
 
 async function loadInputDevices(): Promise<InputDevice[]> {
   const all = await navigator.mediaDevices.enumerateDevices()
@@ -64,7 +73,6 @@ export function VoicePage({ settings, update }: VoicePageProps) {
   const frameRef = useRef(0)
 
   const providerId = settings.speech.provider
-  const resourceId = settings.speech.doubao.resourceId
 
   const release = useCallback((): void => {
     cancelAnimationFrame(frameRef.current)
@@ -175,7 +183,6 @@ export function VoicePage({ settings, update }: VoicePageProps) {
 
   const currentDevice = devices.find((device) => device.deviceId === selected)
   const currentProvider = providers.find((provider) => provider.id === providerId)
-  const currentResource = RESOURCE_OPTIONS.find((option) => option.id === resourceId)
 
   const providerLabel = (id: string, displayName?: string): string =>
     id === SPEECH_PROVIDER_NONE ? t('voice.none') : (displayName ?? id)
@@ -186,10 +193,57 @@ export function VoicePage({ settings, update }: VoicePageProps) {
     ...(provider.requiresCredentials ? { description: t('voice.requiresCredentials') } : {}),
   }))
 
-  const resourceOptions: ChoiceOption[] = RESOURCE_OPTIONS.map((option) => ({
-    id: option.id,
-    label: t(option.key),
-  }))
+  // The model picker is provider-specific: Doubao uses its resource ids, the
+  // other adapters expose a model list. The API key rows above stay generic.
+  const modelPicker = (():
+    | {
+        title: string
+        description: string
+        options: ChoiceOption[]
+        current: string
+        currentLabel: string
+        apply: (id: string) => void
+      }
+    | undefined => {
+    if (providerId === 'doubao') {
+      const current = settings.speech.doubao.resourceId
+      const options: ChoiceOption[] = RESOURCE_OPTIONS.map((option) => ({
+        id: option.id,
+        label: t(option.key),
+      }))
+      return {
+        title: t('voice.modelBilling'),
+        description: t('voice.resourceDescription'),
+        options,
+        current,
+        currentLabel: options.find((option) => option.id === current)?.label ?? current,
+        apply: (id) => void update({ speech: { doubao: { resourceId: id } } }),
+      }
+    }
+    if (providerId === 'funasr') {
+      const current = settings.speech.funasr.model
+      return {
+        title: t('voice.model'),
+        description: t('voice.modelDescription'),
+        options: PLAIN_OPTIONS(FUNASR_MODELS),
+        current,
+        currentLabel: current,
+        apply: (id) => void update({ speech: { funasr: { model: id } } }),
+      }
+    }
+    if (providerId === 'openai') {
+      const current = settings.speech.openai.model
+      return {
+        title: t('voice.model'),
+        description: t('voice.modelDescription'),
+        options: PLAIN_OPTIONS(OPENAI_MODELS),
+        current,
+        currentLabel: current,
+        apply: (id) => void update({ speech: { openai: { model: id } } }),
+      }
+    }
+    return undefined
+  })()
 
   return (
     <div data-testid="voice-page">
@@ -253,19 +307,19 @@ export function VoicePage({ settings, update }: VoicePageProps) {
           >
             <span>{t('voice.clearKey')}</span>
           </MenuRow>
-          <MenuRow
-            id="system-menu.voice.resource"
-            order={4}
-            activatable
-            testId="voice-resource"
-            onActivate={() => setResourceOpen(true)}
-            onClick={() => setResourceOpen(true)}
-          >
-            <span>{t('voice.modelBilling')}</span>
-            <span className="text-code text-text-muted">
-              {currentResource ? t(currentResource.key) : resourceId}
-            </span>
-          </MenuRow>
+          {modelPicker ? (
+            <MenuRow
+              id="system-menu.voice.resource"
+              order={4}
+              activatable
+              testId="voice-resource"
+              onActivate={() => setResourceOpen(true)}
+              onClick={() => setResourceOpen(true)}
+            >
+              <span>{modelPicker.title}</span>
+              <span className="text-code text-text-muted">{modelPicker.currentLabel}</span>
+            </MenuRow>
+          ) : null}
         </>
       ) : null}
 
@@ -333,17 +387,17 @@ export function VoicePage({ settings, update }: VoicePageProps) {
         }}
       />
 
-      <ChoiceDialog
-        open={resourceOpen}
-        onOpenChange={setResourceOpen}
-        title={t('voice.modelBilling')}
-        description={t('voice.resourceDescription')}
-        options={resourceOptions}
-        initialId={resourceId}
-        onChoose={(id) => {
-          void update({ speech: { doubao: { resourceId: id } } })
-        }}
-      />
+      {modelPicker ? (
+        <ChoiceDialog
+          open={resourceOpen}
+          onOpenChange={setResourceOpen}
+          title={modelPicker.title}
+          description={modelPicker.description}
+          options={modelPicker.options}
+          initialId={modelPicker.current}
+          onChoose={modelPicker.apply}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={clearOpen}

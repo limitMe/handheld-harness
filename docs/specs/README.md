@@ -168,7 +168,7 @@
 | `hints = { enabled, delayMs }` | 操作提示的开关和等待时间 | 12, 15 |
 | `model.default` | 新任务使用的默认模型 | 15 |
 | `model.recent` | 最近使用的模型（`{ model, slot, name? }[]`，最近在前；`slot` 是模型环扇环位置） | 14 |
-| `speech`（`provider` / `language` / `doubao.{resourceId,endpoint}`） | 语音服务商、语言与豆包参数；默认 provider 为 `none` | 16 |
+| `speech`（`provider` / `language` / `doubao.{resourceId,endpoint}` / `funasr.{model,endpoint}` / `openai.{model,endpoint}`） | 语音服务商、语言与各服务商参数；默认 provider 为 `none` | 16 |
 
 语音服务的 API Key 不进 `settings.json`：用 Electron `safeStorage` 加密后存 profile 私有的 `speech-credentials.json`（spec 16）。
 

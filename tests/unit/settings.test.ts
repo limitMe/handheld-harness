@@ -207,4 +207,18 @@ describe('settings store', () => {
     expect(store.get().input.contexts.global).toEqual({})
     expect(createSettingsStore(target).get().input.contexts.global).toEqual({})
   })
+
+  it('keeps every speech provider slice when the active provider changes', () => {
+    const target = makeDir()
+    const store = createSettingsStore(target)
+
+    store.update({ speech: { doubao: { resourceId: 'res-1' }, funasr: { model: 'fun-asr-x' } } })
+    store.update({ speech: { provider: 'openai', openai: { model: 'gpt-live-transcribe' } } })
+
+    const speech = createSettingsStore(target).get().speech
+    expect(speech.provider).toBe('openai')
+    expect(speech.doubao.resourceId).toBe('res-1')
+    expect(speech.funasr.model).toBe('fun-asr-x')
+    expect(speech.openai.model).toBe('gpt-live-transcribe')
+  })
 })

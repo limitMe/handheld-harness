@@ -21,6 +21,34 @@ export const DOUBAO_DEFAULT_RESOURCE_ID = 'volc.seedasr.sauc.duration'
 export const DOUBAO_DEFAULT_ENDPOINT =
   'wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async'
 
+/** Fun-ASR-Realtime (Alibaba Cloud Model Studio / DashScope) defaults (spec 16). */
+export const FUNASR_PROVIDER_ID = 'funasr'
+export const FUNASR_DEFAULT_MODEL = 'fun-asr-realtime'
+export const FUNASR_DEFAULT_ENDPOINT = 'wss://dashscope.aliyuncs.com/api-ws/v1/inference'
+/** Model aliases offered in the picker; any `fun-asr-*` id can be typed in the probe. */
+export const FUNASR_MODELS = [
+  'fun-asr-realtime',
+  'fun-asr-realtime-2025-11-07',
+  'fun-asr-realtime-2026-02-28',
+  'fun-asr-flash-8k-realtime',
+] as const
+/** Only these Fun-ASR models accept the `context` (hot-word) field. */
+export const FUNASR_CONTEXT_MODELS = new Set(['fun-asr-realtime', 'fun-asr-realtime-2025-11-07'])
+
+/** OpenAI realtime transcription defaults (spec 16). */
+export const OPENAI_PROVIDER_ID = 'openai'
+export const OPENAI_DEFAULT_MODEL = 'gpt-live-transcribe'
+export const OPENAI_DEFAULT_ENDPOINT = 'wss://api.openai.com/v1/realtime?intent=transcription'
+/** Realtime transcription sessions only accept 24 kHz mono PCM input. */
+export const OPENAI_SAMPLE_RATE = 24000
+export const OPENAI_MODELS = [
+  'gpt-live-transcribe',
+  'gpt-4o-transcribe',
+  'gpt-4o-mini-transcribe',
+  'gpt-transcribe',
+  'gpt-realtime-whisper',
+] as const
+
 export type SpeechErrorCode =
   | 'not-configured'
   | 'auth-failed'
