@@ -31,7 +31,7 @@ export const zh = {
     placeholder: '向 Agent 发送消息…',
     send: '发送',
     stop: '停止',
-    emptyHint: '描述你想让 Agent 做什么。Enter 发送，Shift+Enter 换行。',
+    emptyHint: '描述你想让 Agent 做什么。',
   },
   textEdit: {
     empty: '还没有内容',

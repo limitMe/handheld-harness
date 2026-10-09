@@ -483,11 +483,14 @@ test('picks a model from the recent-model ring on the empty task card', async ()
     await releasePad(window, 'Back')
     await expect(window.getByTestId('task-map')).toBeVisible()
     await expect(window.getByTestId('task-card-empty')).toBeVisible()
+    await expect(window.getByTestId('status-title')).toHaveText('Task map')
 
     // Long-press LB opens the ring; the current default is the highlighted sector.
     await pressPad(window, 'LB')
     await window.waitForTimeout(500)
     await expect(window.getByTestId('model-ring')).toBeVisible()
+    // The status bar names the overlay so the user knows what the wheel is.
+    await expect(window.getByTestId('status-title')).toHaveText('Choose model')
     await expect(window.getByTestId('model-ring-slot-0')).toHaveAttribute(
       'data-model',
       'fake/fake-model',
@@ -505,6 +508,7 @@ test('picks a model from the recent-model ring on the empty task card', async ()
     await expect(window.getByTestId('model-ring-slot-0')).toHaveAttribute('data-selected', '')
     await releasePad(window, 'LB')
     await expect(window.getByTestId('model-ring')).toHaveCount(0)
+    await expect(window.getByTestId('status-title')).toHaveText('Task map')
   } finally {
     await app.close()
   }

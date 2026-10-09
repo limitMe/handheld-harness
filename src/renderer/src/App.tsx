@@ -28,6 +28,7 @@ export default function App() {
   const [speechOpen, setSpeechOpen] = useState(false)
   const [focusDebugOpen, setFocusDebugOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
+  const [modelPickerOpen, setModelPickerOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
 
@@ -53,15 +54,17 @@ export default function App() {
     'global',
     useMemo(
       () => ({
-        'map.toggle': onPress(() =>
+        'map.toggle': onPress(() => {
+          // The model ring only lives in the map; a fresh open starts on the map.
+          setModelPickerOpen(false)
           setMapOpen((open) => {
             if (!open) {
               setMenuOpen(false)
               setInfoOpen(false)
             }
             return !open
-          }),
-        ),
+          })
+        }),
         'menu.toggle': onPress(() =>
           setMenuOpen((open) => {
             if (!open) {
@@ -105,7 +108,9 @@ export default function App() {
     : menuOpen
       ? t('app.systemMenu')
       : mapOpen
-        ? t('app.taskMap')
+        ? modelPickerOpen
+          ? t('actions.task.model')
+          : t('app.taskMap')
         : textEditOpen
           ? undefined
           : current
@@ -161,6 +166,7 @@ export default function App() {
       <StatusBar
         title={title}
         onOpenTasks={() => {
+          setModelPickerOpen(false)
           setMenuOpen(false)
           setInfoOpen(false)
           setMapOpen(true)
@@ -171,7 +177,12 @@ export default function App() {
       />
       <div className="relative flex flex-1 overflow-hidden">
         <CurrentWork dimmed={mapOpen || menuOpen || infoOpen} />
-        <TaskMap open={mapOpen} onClose={() => setMapOpen(false)} />
+        <TaskMap
+          open={mapOpen}
+          onClose={() => setMapOpen(false)}
+          modelPickerOpen={modelPickerOpen}
+          onModelPickerChange={setModelPickerOpen}
+        />
         <SessionInfoPage open={infoOpen} onClose={() => setInfoOpen(false)} />
         <SystemMenu
           open={menuOpen}

@@ -48,6 +48,8 @@ function LegendItem({
 export interface TaskMapProps {
   open: boolean
   onClose: () => void
+  modelPickerOpen: boolean
+  onModelPickerChange: (open: boolean) => void
 }
 
 function borderClass(entry: SessionSummary | undefined, isCurrent: boolean): string {
@@ -219,7 +221,15 @@ function TaskMapBindings({
   return null
 }
 
-function TaskMapBody({ onClose }: { onClose: () => void }) {
+function TaskMapBody({
+  onClose,
+  modelPickerOpen,
+  onModelPickerChange,
+}: {
+  onClose: () => void
+  modelPickerOpen: boolean
+  onModelPickerChange: (open: boolean) => void
+}) {
   const { t } = useTranslation()
   const tree = useFocusTree()
   const open = useWorkbenchStore((state) => state.tasks.open)
@@ -235,7 +245,6 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
 
   const [empty, setEmpty] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [modelRingOpen, setModelRingOpen] = useState(false)
   const [confirmRef, setConfirmRef] = useState<SessionRef | null>(null)
   const [rawSelectedId, setSelectedId] = useState(() =>
     initialCardId(buildTaskCards(open, open.length === 0), current),
@@ -379,7 +388,7 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
         </span>
       </div>
 
-      {!historyOpen && !confirmRef && !modelRingOpen ? (
+      {!historyOpen && !confirmRef && !modelPickerOpen ? (
         <TaskMapBindings
           onOpen={() => selectedCard && choose(selectedCard)}
           onExit={onClose}
@@ -408,20 +417,20 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
           }}
           onMove={(delta) => setSelectedId(stepCardId(cards, selectedId, delta))}
           onModel={() => {
-            if (selectedCard?.kind === 'empty') setModelRingOpen(true)
+            if (selectedCard?.kind === 'empty') onModelPickerChange(true)
           }}
         />
       ) : null}
 
-      {modelRingOpen ? (
+      {modelPickerOpen ? (
         <ModelRing
           slots={ring}
           initialSlot={ringInitialSlot}
           onConfirm={(entry) => {
-            setModelRingOpen(false)
+            onModelPickerChange(false)
             void setDefaultModel(entry.model, entry.name)
           }}
-          onCancel={() => setModelRingOpen(false)}
+          onCancel={() => onModelPickerChange(false)}
         />
       ) : null}
 
@@ -450,7 +459,13 @@ function TaskMapBody({ onClose }: { onClose: () => void }) {
 }
 
 /** Mounted only while open, so selection and the empty card reset on every open. */
-export function TaskMap({ open, onClose }: TaskMapProps) {
+export function TaskMap({ open, onClose, modelPickerOpen, onModelPickerChange }: TaskMapProps) {
   if (!open) return null
-  return <TaskMapBody onClose={onClose} />
+  return (
+    <TaskMapBody
+      onClose={onClose}
+      modelPickerOpen={modelPickerOpen}
+      onModelPickerChange={onModelPickerChange}
+    />
+  )
 }

@@ -31,7 +31,7 @@ export const en = {
     placeholder: 'Message the agent…',
     send: 'Send',
     stop: 'Stop',
-    emptyHint: 'Describe what you want the agent to do. Enter sends, Shift+Enter adds a line.',
+    emptyHint: 'Describe what you want the agent to do.',
   },
   textEdit: {
     empty: 'Nothing here yet',

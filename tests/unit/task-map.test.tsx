@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { StrictMode } from 'react'
+import { StrictMode, useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { SessionRef } from '../../src/shared/engine'
@@ -63,12 +63,24 @@ function seed(open: SessionRef[], current: SessionRef | null): void {
   })
 }
 
+function MapHarness({ onClose }: { onClose: () => void }) {
+  const [modelPickerOpen, setModelPickerOpen] = useState(false)
+  return (
+    <TaskMap
+      open
+      onClose={onClose}
+      modelPickerOpen={modelPickerOpen}
+      onModelPickerChange={setModelPickerOpen}
+    />
+  )
+}
+
 function renderMap(onClose: () => void = vi.fn()) {
   return render(
     <StrictMode>
       <InputProvider>
         <FocusProvider>
-          <TaskMap open onClose={onClose} />
+          <MapHarness onClose={onClose} />
         </FocusProvider>
       </InputProvider>
     </StrictMode>,
