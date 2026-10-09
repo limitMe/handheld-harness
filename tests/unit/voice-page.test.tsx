@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { DEFAULT_SETTINGS } from '../../src/shared/ipc'
 import type { SpeechProviderId } from '../../src/shared/ipc'
+import type { SpeechProviderInfo } from '../../src/shared/speech'
 import { FocusProvider } from '../../src/renderer/src/focus'
 import { InputProvider } from '../../src/renderer/src/input'
 import { SystemMenu } from '../../src/renderer/src/system/SystemMenu'
@@ -15,11 +16,42 @@ afterEach(() => {
 function installBridge(provider: SpeechProviderId = 'none'): {
   update: ReturnType<typeof vi.fn>
   clearKey: ReturnType<typeof vi.fn>
+  speech: {
+    providers: ReturnType<typeof vi.fn>
+    keyStatus: ReturnType<typeof vi.fn>
+    setKey: ReturnType<typeof vi.fn>
+    clearKey: ReturnType<typeof vi.fn>
+  }
 } {
   const settings = structuredClone(DEFAULT_SETTINGS)
   settings.speech.provider = provider
   const update = vi.fn(async () => settings)
   const clearKey = vi.fn(async () => undefined)
+  const speech = {
+    providers: vi.fn<() => Promise<SpeechProviderInfo[]>>(async () => [
+      {
+        id: 'none',
+        displayName: 'None',
+        streaming: false,
+        languages: [],
+        offline: true,
+        requiresCredentials: false,
+      },
+      {
+        id: 'doubao',
+        displayName: 'Doubao',
+        streaming: true,
+        languages: ['auto'],
+        offline: false,
+        requiresCredentials: true,
+      },
+    ]),
+    keyStatus: vi.fn<(providerId: string) => Promise<{ configured: boolean }>>(async () => ({
+      configured: true,
+    })),
+    setKey: vi.fn(async () => undefined),
+    clearKey,
+  }
   const bridge = {
     settings: {
       get: vi.fn(async () => settings),
@@ -38,32 +70,10 @@ function installBridge(provider: SpeechProviderId = 'none'): {
     },
     engine: { listModels: vi.fn(async () => []) },
     window: { setZoom: vi.fn(async () => ({ zoom: 1 })) },
-    speech: {
-      providers: vi.fn(async () => [
-        {
-          id: 'none',
-          displayName: 'None',
-          streaming: false,
-          languages: [],
-          offline: true,
-          requiresCredentials: false,
-        },
-        {
-          id: 'doubao',
-          displayName: 'Doubao',
-          streaming: true,
-          languages: ['auto'],
-          offline: false,
-          requiresCredentials: true,
-        },
-      ]),
-      keyStatus: vi.fn(async () => ({ configured: true })),
-      setKey: vi.fn(async () => undefined),
-      clearKey,
-    },
+    speech,
   }
   ;(window as unknown as { handheld: unknown }).handheld = bridge
-  return { update, clearKey }
+  return { update, clearKey, speech }
 }
 
 // Voice input is the third category in the system menu.
@@ -174,5 +184,43 @@ describe('Voice input', () => {
     expect(update).toHaveBeenCalledWith({
       speech: { openai: { model: 'gpt-4o-transcribe' } },
     })
+  })
+
+  it('marks only providers that already have a key as configured', async () => {
+    const { speech } = installBridge()
+    speech.providers.mockResolvedValue([
+      {
+        id: 'none',
+        displayName: 'None',
+        streaming: false,
+        languages: [],
+        offline: true,
+        requiresCredentials: false,
+      },
+      {
+        id: 'doubao',
+        displayName: 'Doubao',
+        streaming: true,
+        languages: ['auto'],
+        offline: false,
+        requiresCredentials: true,
+      },
+      {
+        id: 'funasr',
+        displayName: 'Fun-ASR',
+        streaming: true,
+        languages: ['auto'],
+        offline: false,
+        requiresCredentials: true,
+      },
+    ])
+    speech.keyStatus.mockImplementation(async (id: string) => ({ configured: id === 'doubao' }))
+
+    await openVoicePanel()
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await waitFor(() =>
+      expect(screen.getByTestId('choice-doubao').textContent).toContain('Configured'),
+    )
+    expect(screen.getByTestId('choice-funasr').textContent).toContain('Requires an API key')
   })
 })

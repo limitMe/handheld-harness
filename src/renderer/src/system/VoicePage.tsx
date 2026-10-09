@@ -57,7 +57,7 @@ export function VoicePage({ settings, update }: VoicePageProps) {
   const [providerOpen, setProviderOpen] = useState(false)
   const [resourceOpen, setResourceOpen] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
-  const [keyConfigured, setKeyConfigured] = useState(false)
+  const [keyStatuses, setKeyStatuses] = useState<Record<string, boolean>>({})
   const [apiKey, setApiKey] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const keyInputRef = useRef<HTMLInputElement>(null)
@@ -73,6 +73,25 @@ export function VoicePage({ settings, update }: VoicePageProps) {
   const frameRef = useRef(0)
 
   const providerId = settings.speech.provider
+  const keyConfigured = keyStatuses[providerId] ?? false
+
+  const refreshKeyStatuses = useCallback(async (list: SpeechProviderInfo[]): Promise<void> => {
+    const speech = window.handheld?.speech
+    if (!speech) return
+    const entries = await Promise.all(
+      list
+        .filter((provider) => provider.requiresCredentials)
+        .map(async (provider) => {
+          try {
+            const { configured } = await speech.keyStatus(provider.id)
+            return [provider.id, configured] as const
+          } catch {
+            return [provider.id, false] as const
+          }
+        }),
+    )
+    setKeyStatuses(Object.fromEntries(entries))
+  }, [])
 
   const release = useCallback((): void => {
     cancelAnimationFrame(frameRef.current)
@@ -103,27 +122,19 @@ export function VoicePage({ settings, update }: VoicePageProps) {
       .then((list) => {
         if (cancelled) return
         setProviders(list)
+        void refreshKeyStatuses(list)
       })
       .catch(() => undefined)
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [refreshKeyStatuses])
 
-  useEffect(() => {
-    const speech = window.handheld?.speech
-    if (!speech) return
-    let cancelled = false
-    void speech
-      .keyStatus(providerId)
-      .then(({ configured }) => {
-        if (!cancelled) setKeyConfigured(configured)
-      })
-      .catch(() => undefined)
-    return () => {
-      cancelled = true
-    }
-  }, [providerId])
+  // Refresh the per-provider "configured" badges each time the picker opens.
+  const openProviderPicker = useCallback((): void => {
+    setProviderOpen(true)
+    void refreshKeyStatuses(providers)
+  }, [providers, refreshKeyStatuses])
 
   const start = useCallback(async (): Promise<void> => {
     release()
@@ -169,7 +180,7 @@ export function VoicePage({ settings, update }: VoicePageProps) {
     if (!speech || key.length === 0) return
     await speech.setKey(providerId, key)
     setApiKey('')
-    setKeyConfigured(true)
+    setKeyStatuses((previous) => ({ ...previous, [providerId]: true }))
     setStatus(t('voice.keySaved'))
   }, [apiKey, providerId, t])
 
@@ -177,7 +188,7 @@ export function VoicePage({ settings, update }: VoicePageProps) {
     const speech = window.handheld?.speech
     if (!speech) return
     await speech.clearKey(providerId)
-    setKeyConfigured(false)
+    setKeyStatuses((previous) => ({ ...previous, [providerId]: false }))
     setStatus(t('voice.keyCleared'))
   }, [providerId, t])
 
@@ -187,11 +198,18 @@ export function VoicePage({ settings, update }: VoicePageProps) {
   const providerLabel = (id: string, displayName?: string): string =>
     id === SPEECH_PROVIDER_NONE ? t('voice.none') : (displayName ?? id)
 
-  const providerOptions: ChoiceOption[] = providers.map((provider) => ({
-    id: provider.id,
-    label: providerLabel(provider.id, provider.displayName),
-    ...(provider.requiresCredentials ? { description: t('voice.requiresCredentials') } : {}),
-  }))
+  const providerOptions: ChoiceOption[] = providers.map((provider) => {
+    const description = !provider.requiresCredentials
+      ? undefined
+      : keyStatuses[provider.id]
+        ? t('voice.configured')
+        : t('voice.requiresCredentials')
+    return {
+      id: provider.id,
+      label: providerLabel(provider.id, provider.displayName),
+      ...(description ? { description } : {}),
+    }
+  })
 
   // The model picker is provider-specific: Doubao uses its resource ids, the
   // other adapters expose a model list. The API key rows above stay generic.
@@ -253,8 +271,8 @@ export function VoicePage({ settings, update }: VoicePageProps) {
         order={0}
         activatable
         testId="voice-provider"
-        onActivate={() => setProviderOpen(true)}
-        onClick={() => setProviderOpen(true)}
+        onActivate={openProviderPicker}
+        onClick={openProviderPicker}
       >
         <span>{t('voice.provider')}</span>
         <span className="text-code text-text-muted">

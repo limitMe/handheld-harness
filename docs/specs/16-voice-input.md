@@ -224,7 +224,7 @@ P-06 的服务商选择留到 MVP 之后；P-21 里的 LLM 润色是可选增强
   - `src/main/speech/index.ts`：注册表追加 `funasr` / `openai`。
 - 设置（`settings.speech`）：新增 `funasr.{model,endpoint}`（默认 `fun-asr-realtime`）与 `openai.{model,endpoint}`（默认 `gpt-live-transcribe`）。`SPEECH_PROVIDER_IDS` 扩展为 `none | doubao | funasr | openai`。
 - 渲染进程：
-  - `system/VoicePage.tsx`：模型选择行按服务商切换（豆包显示 Resource-Id 档位，Fun-ASR / OpenAI 显示模型列表）；API Key 行保持通用，改用当前服务商。
+  - `system/VoicePage.tsx`：模型选择行按服务商切换（豆包显示 Resource-Id 档位，Fun-ASR / OpenAI 显示模型列表）；API Key 行保持通用，改用当前服务商；服务商选择对话框按各服务商的 Key 状态显示「已配置 / 需要 API Key」（打开时刷新）。
   - `debug/SpeechDebug.tsx`：探测页按当前服务商读写对应的 `model` / `endpoint`，不再写死豆包。
 
 ### 关键决策
