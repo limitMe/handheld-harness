@@ -165,6 +165,7 @@ tests/
 | `npm run start` | 运行构建产物（electron-vite preview） |
 | `npm run dist` | 构建并打包 Windows NSIS 安装包到 `dist/` |
 | `npm run dist:publish` | 构建、打包并发布 GitHub Release |
+| `npm run release:verify` | 核对已发布 GitHub Release 是否带齐三个更新资产 |
 | `npm run typecheck` | 分别检查 main / preload / renderer 三个 tsconfig |
 | `npm run lint` | ESLint，零 warning |
 | `npm run format` | Prettier 写回 |

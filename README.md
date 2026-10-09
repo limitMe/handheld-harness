@@ -165,6 +165,7 @@ tests/
 | `npm run start` | Run the built output (electron-vite preview) |
 | `npm run dist` | Build and package a Windows NSIS installer into `dist/` |
 | `npm run dist:publish` | Build, package and publish a GitHub Release |
+| `npm run release:verify` | Check the published GitHub Release carries the three update assets |
 | `npm run typecheck` | Type-check the main / preload / renderer tsconfigs |
 | `npm run lint` | ESLint with zero warnings |
 | `npm run format` | Prettier write-back |

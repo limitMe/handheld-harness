@@ -15,6 +15,7 @@
     "build": "electron-vite build",
     "dist": "npm run build && electron-builder --win --x64",
     "dist:publish": "npm run build && electron-builder --win --x64 --publish always",
+    "release:verify": "tsx scripts/verify-release.ts",
     "start": "electron-vite preview",
     "typecheck": "npm run typecheck:main && npm run typecheck:preload && npm run typecheck:renderer",
     "typecheck:main": "tsc --noEmit -p tsconfig.main.json --composite false",

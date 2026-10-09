@@ -17,7 +17,8 @@
 ## 发版步骤
 
 ```powershell
-# 1) 递增版本（package.json 的 "version"，例如 0.1.0 -> 0.2.0）
+# 1) 递增版本：package.json 的 "version" 和 package-lock.json 里的两处
+#    （顶层 "version" 与 packages."".version）。例如 0.1.0 -> 0.2.0。
 #    版本号决定用户是否收到更新，必须是严格变大的 semver
 
 # 2) 确保开发版已关闭，然后安装依赖（首次或 lock 变化时）
@@ -26,9 +27,19 @@ npm install
 # 3) 自检必须通过
 npm run check
 
-# 4) 构建 + 打包 + 发布到 GitHub Releases
+# 4) 先提交并推送版本号，再发布。
+#    GitHub 会用默认分支 HEAD 创建 v<version> tag，bump 未提交/未推送的话，
+#    tag 会指向没有这次 bump 的旧提交
+git add package.json package-lock.json
+git commit -m "chore: release <version>"
+git push origin main
+
+# 5) 构建 + 打包 + 发布到 GitHub Releases
 $env:GH_TOKEN = "<你的 token>"
 npm run dist:publish
+
+# 6) 核对 Release 是否带齐三个资产（见「产物」）
+npm run release:verify
 ```
 
 `dist:publish` 等价于：
@@ -39,7 +50,7 @@ npm run build && electron-builder --win --x64 --publish always
 
 ## 产物
 
-electron-builder 会在 `dist/` 生成并在 GitHub 上创建 release。每个 Release 必须带齐：
+electron-builder 会在 `dist/` 生成并在 GitHub 上创建 release，`npm run release:verify` 用来核对已发布 Release 的资产。每个 Release 必须带齐：
 
 | 资产 | 作用 |
 |---|---|
@@ -48,6 +59,20 @@ electron-builder 会在 `dist/` 生成并在 GitHub 上创建 release。每个 R
 | `latest.yml` | **更新清单**，electron-updater 靠它判断新版本 |
 
 安装包内嵌 `app-update.yml`（记录 `provider/owner/repo`），安装版据此查更新。
+
+## 补救失败或半成品的 Release
+
+如果同名 tag 的 Release 已存在，发布可能报 `422 ... "Published releases must have a valid tag"` 并中断；中断点通常早于 `latest.yml` 的生成与上传，于是留下一个"看起来成功、但自动更新永远看不到"的 Release。修复方式是复用已有 Release 重跑，而不是再次创建：
+
+```powershell
+$env:GH_TOKEN = "<你的 token>"
+$env:EP_GH_IGNORE_TIME = "true"   # 复用已存在的 Release（绕过 2 小时窗口）
+npm run dist:publish
+```
+
+重跑会覆盖 exe，并依据上传的 exe 重新生成 `latest.yml`，所以不要手动编辑/上传 `latest.yml`。若仍然失败，在 GitHub 上删掉该 Release（保留 `v<version>` tag）再 `npm run dist:publish`；tag 已存在时创建不会再冲突。
+
+最后用 `npm run release:verify` 核对。
 
 ## 发布规则（自动更新依赖）
 
@@ -89,5 +114,7 @@ electron-builder 会在 `dist/` 生成并在 GitHub 上创建 release。每个 R
 | 查不到新版本 | Release 是 draft / prerelease；或没传 `latest.yml`；或版本号没有变大 |
 | 首次安装被 SmartScreen 拦 | 未做代码签名，个人使用可接受；点"仍要运行"。签名的证书不是自动更新的前提 |
 | `npm install` 报 EBUSY / EPERM | 开发版在运行，先关掉 |
+| 报 `422 ... "Published releases must have a valid tag"` | 该版本的 Release 已存在；用 `EP_GH_IGNORE_TIME=true` 重跑，或删掉 Release（保留 tag）再重试 |
+| Release 建好了但应用查不到更新 | 发布在传 `latest.yml` 之前中断了；用 `EP_GH_IGNORE_TIME=true` 重跑，再用 `npm run release:verify` 核对 |
 | 发布报 401 / 403 | `GH_TOKEN` 缺失或权限不足（需要 `repo` 或 `Contents: write`） |
 | release note 为空 | Release 正文为空；应用会显示"该版本没有提供更新说明" |
