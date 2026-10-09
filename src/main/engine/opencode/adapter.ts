@@ -730,20 +730,24 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     const effort = this.resolveSessionEffort(sessionId)
     const directory = this.sessionDirectory(sessionId)
     try {
-      await client.session.command({
-        sessionID: sessionId,
-        command: name,
-        ...(args ? { arguments: args } : {}),
-        ...(directory ? { directory } : {}),
-        ...(effort ? { variant: effort } : {}),
-      })
+      unwrap<unknown>(
+        await client.session.command({
+          sessionID: sessionId,
+          command: name,
+          ...(args ? { arguments: args } : {}),
+          ...(directory ? { directory } : {}),
+          ...(effort ? { variant: effort } : {}),
+        }),
+      )
     } catch (error) {
       // `compact` also has a dedicated endpoint the command registry may omit.
       if (name === 'compact') {
-        await client.session.summarize({
-          sessionID: sessionId,
-          ...(directory ? { directory } : {}),
-        })
+        unwrap<unknown>(
+          await client.session.summarize({
+            sessionID: sessionId,
+            ...(directory ? { directory } : {}),
+          }),
+        )
         return
       }
       throw error
@@ -829,13 +833,15 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     const model = this.resolveSessionModel(sessionId)
     const effort = this.resolveSessionEffort(sessionId)
     const directory = this.sessionDirectory(sessionId)
-    await client.session.promptAsync({
-      sessionID: sessionId,
-      parts: [{ type: 'text', text: input.text }],
-      ...(directory ? { directory } : {}),
-      ...(model ? { model: { providerID: model.providerId, modelID: model.modelId } } : {}),
-      ...(effort ? { variant: effort } : {}),
-    })
+    unwrap<unknown>(
+      await client.session.promptAsync({
+        sessionID: sessionId,
+        parts: [{ type: 'text', text: input.text }],
+        ...(directory ? { directory } : {}),
+        ...(model ? { model: { providerID: model.providerId, modelID: model.modelId } } : {}),
+        ...(effort ? { variant: effort } : {}),
+      }),
+    )
   }
 
   async abort(sessionId: string): Promise<void> {

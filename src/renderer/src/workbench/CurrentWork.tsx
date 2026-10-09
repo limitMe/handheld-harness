@@ -33,6 +33,7 @@ export function CurrentWork({ dimmed = false }: CurrentWorkProps) {
   const pendingPermissions = useWorkbenchStore((state) => state.pendingPermissions)
   const pendingQuestions = useWorkbenchStore((state) => state.pendingQuestions)
   const answeredChoices = useWorkbenchStore((state) => state.answeredChoices)
+  const sessionErrors = useWorkbenchStore((state) => state.sessionErrors)
   const drafts = useWorkbenchStore((state) => state.ui.drafts)
   const openSeq = useWorkbenchStore((state) => state.ui.openSeq)
   const setDraft = useWorkbenchStore((state) => state.setDraft)
@@ -51,6 +52,7 @@ export function CurrentWork({ dimmed = false }: CurrentWorkProps) {
   const permissions = current ? (pendingPermissions[key] ?? NO_PERMISSIONS) : NO_PERMISSIONS
   const questions = current ? (pendingQuestions[key] ?? NO_QUESTIONS) : NO_QUESTIONS
   const choices = current ? (answeredChoices[key] ?? NO_CHOICES) : NO_CHOICES
+  const error = current ? sessionErrors[key] : undefined
 
   return (
     <div
@@ -67,6 +69,7 @@ export function CurrentWork({ dimmed = false }: CurrentWorkProps) {
         choices={choices}
         capabilities={engineEntry?.capabilities}
         busy={busy}
+        error={error}
         viewKey={`${key}:${openSeq}`}
         onReplyPermission={(requestId, reply) => void replyPermission(requestId, reply)}
         onReplyQuestion={(requestId, answers) => void replyQuestion(requestId, answers)}

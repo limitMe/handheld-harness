@@ -6,6 +6,7 @@ import type {
   ModelRef,
   PermissionReply,
   SessionRef,
+  SessionSummary,
 } from '@shared/engine'
 import { showToast } from '../ui/Toast'
 import { i18n } from '../i18n'
@@ -42,6 +43,11 @@ async function isKnownCommand(engineId: string, name: string): Promise<boolean> 
     }
   }
   return commands.some((command) => command.name === name)
+}
+
+/** Human-readable text for a failed engine call; IPC rejections are Errors. */
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 export interface WorkbenchStore extends WorkbenchState {
@@ -345,7 +351,14 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
         ...(state.pendingEffort ? { effort: state.pendingEffort } : {}),
         ...(state.pendingDirectory ? { directory: state.pendingDirectory } : {}),
       }
-      const summary = await bridge.createSession(opts, engineId)
+      let summary: SessionSummary
+      try {
+        summary = await bridge.createSession(opts, engineId)
+      } catch (error) {
+        // Nothing to attach the failure to yet, so it surfaces as a toast.
+        showToast(i18n.t('toast.messageFailed'), { description: errorMessage(error) })
+        return
+      }
       const created: SessionRef = { engineId, sessionId: summary.id }
       current = created
       set((next) => ({
@@ -361,13 +374,22 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     }
     if (!current) return
 
-    if (command && (await isKnownCommand(current.engineId, command.name))) {
-      await bridge.runCommand(current, command.name, command.args)
+    try {
+      if (command && (await isKnownCommand(current.engineId, command.name))) {
+        await bridge.runCommand(current, command.name, command.args)
+      } else {
+        await bridge.prompt(current, { text })
+      }
       showToast(i18n.t('toast.sent'))
-      return
+    } catch (error) {
+      // A rejected prompt (missing key, unknown model, ...) has no card and no
+      // event, so report it in the transcript and put the draft back to retry.
+      const key = sessionKey(current)
+      set((next) => ({
+        sessionErrors: { ...next.sessionErrors, [key]: errorMessage(error) },
+        ui: { ...next.ui, drafts: { ...next.ui.drafts, [key]: text } },
+      }))
     }
-    await bridge.prompt(current, { text })
-    showToast(i18n.t('toast.sent'))
   },
 
   async abortCurrent() {

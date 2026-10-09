@@ -61,6 +61,11 @@ export interface WorkbenchState {
   pendingQuestions: Record<string, QuestionRequest[]>
   /** Answered mid-round confirmations, keyed by `sessionKey` (spec 13). */
   answeredChoices: Record<string, AnsweredChoice[]>
+  /**
+   * Last run error per session, keyed by `sessionKey`. Shown in the transcript
+   * so a failed run (e.g. an unconfigured model) never looks like a silent stall.
+   */
+  sessionErrors: Record<string, string>
   tasks: TasksState
   ui: UiState
 }
@@ -84,6 +89,7 @@ export function initialWorkbenchState(): WorkbenchState {
     pendingPermissions: {},
     pendingQuestions: {},
     answeredChoices: {},
+    sessionErrors: {},
     tasks: { open: [], unread: {}, watched: {} },
     ui: { current: null, drafts: {}, openSeq: 0 },
   }

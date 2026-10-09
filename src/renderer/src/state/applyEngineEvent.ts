@@ -41,6 +41,8 @@ export function applyEngineEvent(
       delete pendingQuestions[key]
       const answeredChoices = { ...state.answeredChoices }
       delete answeredChoices[key]
+      const sessionErrors = { ...state.sessionErrors }
+      delete sessionErrors[key]
       const current =
         state.ui.current && sessionKey(state.ui.current) === key ? null : state.ui.current
       return {
@@ -51,6 +53,7 @@ export function applyEngineEvent(
         pendingPermissions,
         pendingQuestions,
         answeredChoices,
+        sessionErrors,
         tasks: {
           ...state.tasks,
           open: state.tasks.open.filter((ref) => sessionKey(ref) !== key),
@@ -66,6 +69,9 @@ export function applyEngineEvent(
       const session = state.sessions[key]
       if (!session) return state
       const sessions = { ...state.sessions, [key]: { ...session, runState: event.runState } }
+      // A new run supersedes the previous failure, so the stale error card goes.
+      const sessionErrors =
+        event.runState === 'busy' ? omitKey(state.sessionErrors, key) : state.sessionErrors
       // A watched task finishing while you are elsewhere earns a red dot (spec 14).
       const currentKey = state.ui.current ? sessionKey(state.ui.current) : null
       if (
@@ -77,10 +83,11 @@ export function applyEngineEvent(
         return {
           ...state,
           sessions,
+          sessionErrors,
           tasks: { ...state.tasks, unread: { ...state.tasks.unread, [key]: true } },
         }
       }
-      return { ...state, sessions }
+      return { ...state, sessions, sessionErrors }
     }
 
     case 'session.error': {
@@ -91,6 +98,7 @@ export function applyEngineEvent(
       return {
         ...state,
         sessions: { ...state.sessions, [key]: { ...session, runState: 'error' } },
+        sessionErrors: { ...state.sessionErrors, [key]: event.message },
       }
     }
 

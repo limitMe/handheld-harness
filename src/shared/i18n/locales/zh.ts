@@ -41,6 +41,7 @@ export const zh = {
   messageList: {
     agentWorking: 'Agent 正在工作…',
     scrollLatest: '↓ 最新',
+    sessionError: 'Agent 运行出错',
   },
   agentCard: {
     intermediate: '思考与操作',
@@ -121,6 +122,7 @@ export const zh = {
   toast: {
     sent: '已发送',
     engineReconnected: '引擎已重新连接',
+    messageFailed: '消息未发送',
   },
   listInput: {
     noCommands: '没有可用命令。',

@@ -182,4 +182,38 @@ describe('applyEngineEvent', () => {
     expect(next.tasks.unread).toEqual({})
     expect(next.tasks.watched).toEqual({})
   })
+
+  it('records a session error message and marks the session failed', () => {
+    const key = sessionKey({ engineId, sessionId: 's1' })
+    const next = applyEngineEvent(
+      loadedState(),
+      payload({ type: 'session.error', sessionId: 's1', message: 'Provider is not configured' }),
+    )
+    expect(next.sessions[key]?.runState).toBe('error')
+    expect(next.sessionErrors[key]).toBe('Provider is not configured')
+  })
+
+  it('clears a previous error when a new run starts', () => {
+    const key = sessionKey({ engineId, sessionId: 's1' })
+    let state = applyEngineEvent(
+      loadedState(),
+      payload({ type: 'session.error', sessionId: 's1', message: 'boom' }),
+    )
+    expect(state.sessionErrors[key]).toBe('boom')
+    state = applyEngineEvent(
+      state,
+      payload({ type: 'session.runState', sessionId: 's1', runState: 'busy' }),
+    )
+    expect(state.sessionErrors[key]).toBeUndefined()
+  })
+
+  it('drops the stored error when the session is deleted', () => {
+    const key = sessionKey({ engineId, sessionId: 's1' })
+    let state = applyEngineEvent(
+      loadedState(),
+      payload({ type: 'session.error', sessionId: 's1', message: 'boom' }),
+    )
+    state = applyEngineEvent(state, payload({ type: 'session.deleted', sessionId: 's1' }))
+    expect(state.sessionErrors[key]).toBeUndefined()
+  })
 })

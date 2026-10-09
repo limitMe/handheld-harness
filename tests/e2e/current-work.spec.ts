@@ -213,6 +213,26 @@ test('auto-activates the permission card and shows its action hints', async () =
   }
 })
 
+test('surfaces a failed run and clears the error on the next message', async () => {
+  const { app, window } = await launch('e2e-cw-error')
+  try {
+    await send(window, '/fake error')
+
+    const card = window.getByTestId('session-error')
+    await expect(card).toBeVisible({ timeout: 30_000 })
+    await expect(card).toContainText('Fake engine error: this session failed on purpose.')
+
+    // A fresh run supersedes the failure, so the stale card disappears.
+    await send(window, '/fake long')
+    await expect(card).toHaveCount(0)
+    await expect(window.getByTestId('message-list')).toContainText('End of the long reply.', {
+      timeout: 30_000,
+    })
+  } finally {
+    await app.close()
+  }
+})
+
 test('keeps a short user message expanded at the top', async () => {
   const { app, window } = await launch('e2e-cw-short')
   try {

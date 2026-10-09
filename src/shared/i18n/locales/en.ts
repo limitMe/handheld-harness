@@ -41,6 +41,7 @@ export const en = {
   messageList: {
     agentWorking: 'Agent is working…',
     scrollLatest: '↓ Latest',
+    sessionError: 'The agent stopped with an error',
   },
   agentCard: {
     intermediate: 'Thinking & actions',
@@ -122,6 +123,7 @@ export const en = {
   toast: {
     sent: 'Sent',
     engineReconnected: 'Engine reconnected',
+    messageFailed: 'Message not sent',
   },
   listInput: {
     noCommands: 'No commands.',

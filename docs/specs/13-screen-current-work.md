@@ -201,3 +201,27 @@ P-13（卡片键位）、P-14（滚动与中止的按键）、P-18（粘滞折�
 - **问题**：用手柄滚动时焦点会落到某条用户消息上，但这一轮仍被判定为“粘住”，于是消息保持折叠——用户看着聚焦的高亮却读不到内容。
 - **处理**：`StickyUserMessage.tsx` 新增 `showCollapsed = collapsed && !focus.focused`，聚焦时按展开态渲染（用已有的 `useFocusable` 返回的 `focused`，不改 `findStuckRound`）。焦点移走后若这一轮仍粘住就重新折叠，与原来的滚动逻辑一致。折叠态对应的“点击回到原位”仍在。
 - 新增单测 `tests/unit/sticky-user-message.test.tsx`：聚焦时展开、焦点移开后重新折叠、未粘住时保持展开。
+
+### 运行失败不再无提示（2026-10-09，试用反馈）
+
+用户把模型设成没有配置 API key 的提供商后发消息：既没有失败提示，也没有后续卡片，看起来像应用卡死，无法区分是应用出错还是模型没配好。
+
+**根因**（两条路径都会静默）：
+
+1. `session.error` 事件本身带 `message`，但 `applyEngineEvent` 只把会话置为 `runState: 'error'`，把 `message` 丢掉了；当前工作页对 error 状态没有任何渲染，所以界面上什么都不出现。
+2. OpenCode 适配层的 `prompt()` 调了 `session.promptAsync` 却丢弃了 SDK 的 `{ data, error }` 返回值（`promptAsync` 默认 `throwOnError: false`）。凭据/模型错误若在请求阶段立刻返回，既不抛错也不发事件，等于被吞掉；`runCommand` / `summarize` 同样没 `unwrap`。
+
+**修复**：
+
+- **状态**：`state/types.ts` 新增 `sessionErrors: Record<string, string>`（按 `sessionKey`）。
+- **reducer**（`applyEngineEvent.ts`）：`session.error` 保存 `message` 并置 error 状态；新的运行进入 `busy` 时清掉旧错误；会话删除时一并清理。
+- **渲染**：`CurrentWork.tsx` 读取当前会话的错误并传给 `MessageList.tsx`；后者在消息流末尾渲染一张 `session-error` 卡片（`role="alert"`，danger 边框 + 引擎原文），有错误时不再显示空状态提示。
+- **发送兜底**（`store.ts` 的 `sendCurrent`）：`createSession` / `prompt` / `runCommand` 的失败被捕获。发消息失败时把错误写进该会话的 `sessionErrors` 并把草稿放回输入框（便于配好 key 后重试）；连会话都没建起来时用 `toast.messageFailed` 提示。
+- **适配层**（`opencode/adapter.ts`）：`promptAsync`、`command`、`summarize` 的返回值都过 `unwrap`，让立刻返回的错误向上抛出。
+- **文案**：新增 `messageList.sessionError`、`toast.messageFailed`（中英）。
+
+spec 03 的错误横幅只覆盖引擎 `down` / `reconnecting`；这里补的是**单次运行失败**（会话级），两者不冲突。
+
+**已自动验证**：`npm run check` 通过（71 个测试文件 436 个用例，lint 零 warning）；`npm run test:e2e` 31 个用例通过，新增 `current-work.spec.ts` 的“surfaces a failed run and clears the error on the next message”（`/fake error` 出现错误卡片，下一条消息开始时卡片消失）与 `apply-engine-event` 的三条错误用例。
+
+**未完成 / 需要人工验证**：用真实 OpenCode 选一个未配置 key 的提供商发消息，确认错误卡片能显示底座返回的原文（文案由底座决定，未在本仓库固定）。

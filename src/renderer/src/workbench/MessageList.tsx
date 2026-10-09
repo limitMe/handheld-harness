@@ -26,6 +26,8 @@ export interface MessageListProps {
   choices: AnsweredChoice[]
   capabilities?: EngineCapabilities
   busy: boolean
+  /** Last run error for this session; shown as a card so failures never look silent. */
+  error?: string
   /** Changes whenever a task is opened; the transcript jumps back to the latest. */
   viewKey: string
   onReplyPermission: (requestId: string, reply: PermissionReply) => void
@@ -68,6 +70,7 @@ export function MessageList({
   choices,
   capabilities,
   busy,
+  error,
   viewKey,
   onReplyPermission,
   onReplyQuestion,
@@ -155,7 +158,8 @@ export function MessageList({
     updateStuck()
     // `cardMax` is measured after the first paint and re-caps the cards, which
     // changes the content height; re-anchor so the newest content stays visible.
-  }, [blocksByRound, atBottom, cardMax, scrollToBottom, updateStuck])
+    // `error` appends a card below the rounds, so it must re-anchor too.
+  }, [blocksByRound, atBottom, cardMax, error, scrollToBottom, updateStuck])
 
   // One-screen cap for the agent cards: the transcript area above the composer.
   useLayoutEffect(() => {
@@ -244,7 +248,7 @@ export function MessageList({
         }}
         className="relative flex h-full flex-col gap-4 overflow-y-auto px-4 py-4 pb-28 scroll-pb-28"
       >
-        {messages.length === 0 && !busy ? (
+        {messages.length === 0 && !busy && !error ? (
           <p className="m-auto max-w-[36rem] text-center text-text-muted">
             {t('composer.emptyHint')}
           </p>
@@ -326,6 +330,17 @@ export function MessageList({
           >
             {t('messageList.agentWorking')}
           </p>
+        ) : null}
+
+        {error ? (
+          <div
+            data-testid="session-error"
+            role="alert"
+            className="rounded-card border border-danger bg-card px-4 py-3 text-text"
+          >
+            <p className="font-semibold text-danger">{t('messageList.sessionError')}</p>
+            <p className="mt-1 whitespace-pre-wrap break-words">{error}</p>
+          </div>
         ) : null}
       </div>
 
