@@ -1,8 +1,8 @@
 > Archived Chinese original · English index: [docs/specs/README.md](../../specs/README.md)
 
-# HANDHELD.AI Specs 总览
+# Handheld Harness Specs 总览
 
-本目录是 HANDHELD.AI 的 SDD（Spec-Driven Development）源头 specs。产品定义见 `../../HANDHELD.AI.md`，技术调研见 `../../handheld-ai-tech-selection.zh-CN.html`。
+本目录是 Handheld Harness 的 SDD（Spec-Driven Development）源头 specs。产品定义见 `../../HandheldHarness.md`，技术调研见 `../../handheld-harness-tech-selection.zh-CN.html`。
 
 ## 阶段划分
 

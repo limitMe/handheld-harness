@@ -1,6 +1,6 @@
-# HANDHELD.AI Specs
+# Handheld Harness Specs
 
-This directory holds the **English spec summaries** for HANDHELD.AI, plus this index. The full, authoritative specs are in Chinese under [`../zh-CN/specs/`](../zh-CN/specs/); each summary links to its Chinese source. The product definition is `docs/HANDHELD.AI.md` (local, Chinese; not tracked in git).
+This directory holds the **English spec summaries** for Handheld Harness, plus this index. The full, authoritative specs are in Chinese under [`../zh-CN/specs/`](../zh-CN/specs/); each summary links to its Chinese source. The product definition is `docs/HandheldHarness.md` (local, Chinese; not tracked in git).
 
 This project follows SDD (Spec-Driven Development): the specs are the source of requirements, and the bootstrap loop lets the app drive the development of itself (see [spec 04](04-dogfooding-loop.md)).
 

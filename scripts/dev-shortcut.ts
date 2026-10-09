@@ -3,7 +3,7 @@ import path from 'node:path'
 import { createWindowsShortcuts } from './lib/shortcut'
 import { APP_ICON_RELATIVE, REPO_ROOT, launcherDir } from './lib/stable'
 
-const SHORTCUT_NAME = 'HANDHELD.AI (dev)'
+const SHORTCUT_NAME = 'Handheld Harness (dev)'
 
 /** A launcher that runs the electron-vite dev server (HMR) from the repository root. */
 function writeLauncher(repoRoot: string): string {
@@ -31,7 +31,7 @@ function resolveShortcutIcon(repoRoot: string): string | null {
 }
 
 /**
- * Creates "HANDHELD.AI (dev)" shortcuts on the desktop and start menu; they run
+ * Creates "Handheld Harness (dev)" shortcuts on the desktop and start menu; they run
  * the development instance with HMR from this repository.
  *
  * Usage: npm run dev:shortcut

@@ -11,5 +11,5 @@ export function appDataDir(): string {
 }
 
 export function serversDir(): string {
-  return path.join(appDataDir(), 'handheld-ai', 'servers')
+  return path.join(appDataDir(), 'handheld-harness', 'servers')
 }

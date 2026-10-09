@@ -1,6 +1,6 @@
 # Releasing and auto-update (spec 19)
 
-Package HANDHELD.AI as an NSIS installer and distribute updates through GitHub Releases. In-app, "Settings → About & Diagnostics → Software update → Check for updates" checks manually, downloads after confirmation, and shows "Restart now / Later" when the download completes.
+Package Handheld Harness as an NSIS installer and distribute updates through GitHub Releases. In-app, "Settings → About & Diagnostics → Software update → Check for updates" checks manually, downloads after confirmation, and shows "Restart now / Later" when the download completes.
 
 Repository: `https://github.com/limitMe/handheld-harness` (public). At runtime it reads Releases anonymously; **the app carries no token**. The token is used only at release time to upload.
 
@@ -41,8 +41,8 @@ electron-builder produces the files in `dist/` and creates a GitHub release. Eve
 
 | Asset | Purpose |
 |---|---|
-| `HANDHELD.AI-<version>-setup.exe` | NSIS installer (x64) |
-| `HANDHELD.AI-<version>-setup.exe.blockmap` | for differential updates |
+| `handheld-harness-<version>-setup.exe` | NSIS installer (x64) |
+| `handheld-harness-<version>-setup.exe.blockmap` | for differential updates |
 | `latest.yml` | the **update manifest**; electron-updater relies on it to detect new versions |
 
 The installer embeds `app-update.yml` (recording `provider/owner/repo`); installed builds use it to check for updates.

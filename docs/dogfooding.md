@@ -1,6 +1,6 @@
 # Daily dogfooding workflow (spec 04)
 
-"Develop HANDHELD.AI with HANDHELD.AI": the user requests changes from the Agent in the stable build, the Agent edits the main repository, the user sees the result immediately in the dev build, commits when satisfied, and periodically upgrades the stable build.
+"Develop Handheld Harness with Handheld Harness": the user requests changes from the Agent in the stable build, the Agent edits the main repository, the user sees the result immediately in the dev build, commits when satisfied, and periodically upgrades the stable build.
 
 ## Topology
 
@@ -41,6 +41,6 @@ C:\Apps\handheld-harness          main repository (main / feature branches)
 |---|---|
 | `npm run stable:setup` | Create the stable branch / worktree for the first time, `npm ci`, and build |
 | `npm run stable:start` | Start the stable build with `profile=stable`, shared server, fullscreen |
-| `npm run stable:shortcut` | Create the "HANDHELD.AI (stable)" shortcuts on the desktop and Start menu |
+| `npm run stable:shortcut` | Create the "Handheld Harness (stable)" shortcuts on the desktop and Start menu |
 | `npm run stable:update` | Fast-forward stable to main, tag, `npm ci` if needed, rebuild |
 | `npm run stable:rollback` | Roll back to the previous `stable-*` tag and rebuild |

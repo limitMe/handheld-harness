@@ -328,17 +328,17 @@ describe('SystemMenu', () => {
     expect(screen.getByTestId('menu-category-quit').hasAttribute('data-focused')).toBe(true)
 
     fireEvent.keyDown(window, { key: 'Enter' })
-    expect(await screen.findByText('Quit HANDHELD.AI?')).not.toBeNull()
+    expect(await screen.findByText('Quit Handheld Harness?')).not.toBeNull()
     expect(bridge.app.quit).not.toHaveBeenCalled()
 
     // The dialog starts on Cancel, so a plain Enter there dismisses it.
     fireEvent.keyDown(window, { key: 'Enter' })
-    await waitFor(() => expect(screen.queryByText('Quit HANDHELD.AI?')).toBeNull())
+    await waitFor(() => expect(screen.queryByText('Quit Handheld Harness?')).toBeNull())
     expect(bridge.app.quit).not.toHaveBeenCalled()
 
     // Reopen and accept: move right to the confirm button and activate it.
     fireEvent.keyDown(window, { key: 'Enter' })
-    await screen.findByText('Quit HANDHELD.AI?')
+    await screen.findByText('Quit Handheld Harness?')
     fireEvent.keyDown(window, { key: 'ArrowRight' })
     fireEvent.keyDown(window, { key: 'Enter' })
     await waitFor(() => expect(bridge.app.quit).toHaveBeenCalledTimes(1))

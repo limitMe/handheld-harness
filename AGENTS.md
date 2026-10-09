@@ -1,6 +1,6 @@
-# HANDHELD.AI
+# Handheld Harness
 
-An AI agent harness for handheld gaming PCs (Windows 11): an Electron shell plus a React UI that drives AI coding sessions from a gamepad, in the living room or on a handheld. The product definition is `docs/HANDHELD.AI.md` (local, Chinese; not tracked in git). Requirements live in [`docs/specs/README.md`](docs/specs/README.md) (English summaries); the full Chinese originals are under [`docs/zh-CN/specs/`](docs/zh-CN/specs/).
+An AI agent harness for handheld gaming PCs (Windows 11): an Electron shell plus a React UI that drives AI coding sessions from a gamepad, in the living room or on a handheld. The product definition is `docs/HandheldHarness.md` (local, Chinese; not tracked in git). Requirements live in [`docs/specs/README.md`](docs/specs/README.md) (English summaries); the full Chinese originals are under [`docs/zh-CN/specs/`](docs/zh-CN/specs/).
 
 ## Common commands
 
@@ -46,7 +46,7 @@ Responsibilities:
 
 ## Runtime data (per-profile)
 
-Settings live in `%APPDATA%\handheld-ai\<profile>\settings.json` (defaults are written on first launch), and logs in `<profile>\logs\main.log`. The dev profile is `dev`, the built app uses `default`; override with `HANDHELD_PROFILE`. State shared across profiles is defined by spec 02.
+Settings live in `%APPDATA%\handheld-harness\<profile>\settings.json` (defaults are written on first launch), and logs in `<profile>\logs\main.log`. The dev profile is `dev`, the built app uses `default`; override with `HANDHELD_PROFILE`. State shared across profiles is defined by spec 02.
 
 ## Platform conventions (Windows first)
 

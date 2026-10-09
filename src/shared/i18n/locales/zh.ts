@@ -271,7 +271,7 @@ export const zh = {
     unknown: '未知',
   },
   quit: {
-    title: '退出 HANDHELD.AI？',
+    title: '退出 Handheld Harness？',
     description: '应用将关闭，并停止 Agent 引擎。',
     confirm: '退出',
   },

@@ -2,7 +2,7 @@
 
 # 发版与自动更新（spec 19）
 
-把 HANDHELD.AI 打包成 NSIS 安装包，并通过 GitHub Releases 分发更新。应用内「设置 → 关于与诊断 → 软件更新 → 检查更新」手动检查，确认后下载，下载完成弹「立即重启 / 稍后」。
+把 Handheld Harness 打包成 NSIS 安装包，并通过 GitHub Releases 分发更新。应用内「设置 → 关于与诊断 → 软件更新 → 检查更新」手动检查，确认后下载，下载完成弹「立即重启 / 稍后」。
 
 仓库：`https://github.com/limitMe/handheld-harness`（公开）。运行时匿名读取 Releases，**应用内不携带任何 token**；token 只在发版时用于上传。
 
@@ -43,8 +43,8 @@ electron-builder 会在 `dist/` 生成并在 GitHub 上创建 release。每个 R
 
 | 资产 | 作用 |
 |---|---|
-| `HANDHELD.AI-<version>-setup.exe` | NSIS 安装包（x64） |
-| `HANDHELD.AI-<version>-setup.exe.blockmap` | 差量更新用 |
+| `handheld-harness-<version>-setup.exe` | NSIS 安装包（x64） |
+| `handheld-harness-<version>-setup.exe.blockmap` | 差量更新用 |
 | `latest.yml` | **更新清单**，electron-updater 靠它判断新版本 |
 
 安装包内嵌 `app-update.yml`（记录 `provider/owner/repo`），安装版据此查更新。

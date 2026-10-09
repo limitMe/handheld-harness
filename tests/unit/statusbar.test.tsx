@@ -33,9 +33,9 @@ describe('engineDotClass', () => {
 
 describe('StatusBar', () => {
   it('renders the title, a HH:mm clock and the network state', () => {
-    render(<StatusBar title="HANDHELD.AI" />)
+    render(<StatusBar title="Handheld Harness" />)
 
-    expect(screen.getByTestId('status-title').textContent).toBe('HANDHELD.AI')
+    expect(screen.getByTestId('status-title').textContent).toBe('Handheld Harness')
     expect(screen.getByTestId('status-time').textContent).toMatch(/^\d{2}:\d{2}$/)
     const network = screen.getByTestId('status-network')
     expect(network.getAttribute('data-status')).toMatch(/^(offline|wifi|cellular|ethernet)$/)
@@ -61,7 +61,7 @@ describe('StatusBar', () => {
       },
     }
     try {
-      render(<StatusBar title="HANDHELD.AI" />)
+      render(<StatusBar title="Handheld Harness" />)
       expect((await screen.findByTestId('profile-badge')).textContent).toBe('STABLE')
     } finally {
       scope.handheld = previous

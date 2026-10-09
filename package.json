@@ -1,9 +1,10 @@
 {
-  "name": "handheld-ai",
+  "name": "handheld-harness",
   "version": "0.1.0",
   "private": true,
-  "description": "HANDHELD.AI - an AI agent harness for handheld gaming PCs",
-  "author": "HANDHELD.AI",
+  "description": "Handheld Harness - an AI agent harness for handheld gaming PCs",
+  "author": "Handheld Harness",
+  "license": "MIT",
   "main": "out/main/index.js",
   "engines": {
     "node": ">=24 <25"
@@ -25,6 +26,7 @@
     "test:e2e": "npm run build && playwright test",
     "clean": "node scripts/clean.mjs",
     "icons": "node scripts/generate-icons.mjs",
+    "notices": "node scripts/generate-notices.mjs",
     "engine:smoke": "tsx scripts/engine-smoke.ts",
     "engine:record": "tsx scripts/engine-record.ts",
     "server:status": "tsx scripts/server-status.ts",

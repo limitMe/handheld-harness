@@ -232,7 +232,7 @@ export function createFunAsrProvider(
         const socket = new WebSocket(config.endpoint, {
           headers: {
             Authorization: `Bearer ${config.apiKey}`,
-            'user-agent': 'handheld-ai',
+            'user-agent': 'handheld-harness',
           },
         })
         const conn: FunAsrConnection = {

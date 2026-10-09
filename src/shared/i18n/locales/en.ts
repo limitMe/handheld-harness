@@ -273,7 +273,7 @@ export const en = {
     unknown: 'unknown',
   },
   quit: {
-    title: 'Quit HANDHELD.AI?',
+    title: 'Quit Handheld Harness?',
     description: 'The app closes and the agent engine stops.',
     confirm: 'Quit',
   },

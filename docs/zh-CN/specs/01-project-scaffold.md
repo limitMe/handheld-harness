@@ -2,7 +2,7 @@
 
 ## 目标
 
-在 `C:\dev\handheld-ai` 建立一个 Electron + React + TypeScript 工程，满足以下要求：
+在 `C:\dev\handheld-harness` 建立一个 Electron + React + TypeScript 工程，满足以下要求：
 
 - 在掌机上 `npm run dev` 能启动应用，并支持热更新（HMR）；
 - 类型检查、lint、单元测试、端到端冒烟测试都能运行；
@@ -45,7 +45,7 @@
 ### 2. 目录结构（必须）
 
 ```
-handheld-ai/
+handheld-harness/
 ├─ AGENTS.md                 # 给 AI Agent 的工程说明（见第 9 节）
 ├─ CLAUDE.md                 # 只有一行：@AGENTS.md
 ├─ specs/                    # 把本 specs 目录拷进来，后续在仓库内维护
@@ -106,7 +106,7 @@ handheld-ai/
 
 ### 4. 主进程（必须）
 
-- **Profile**：启动时读取环境变量 `HANDHELD_PROFILE`。开发模式默认 `dev`，构建产物默认 `default`。在 `app.whenReady()` **之前**把 `userData` 设为 `<appData>/handheld-ai/<profile>`。单实例锁按 profile 生效，这样稳定版和开发版两个实例可以同时运行（spec 04 会用到）。
+- **Profile**：启动时读取环境变量 `HANDHELD_PROFILE`。开发模式默认 `dev`，构建产物默认 `default`。在 `app.whenReady()` **之前**把 `userData` 设为 `<appData>/handheld-harness/<profile>`。单实例锁按 profile 生效，这样稳定版和开发版两个实例可以同时运行（spec 04 会用到）。
 - **单实例**：`app.requestSingleInstanceLock()`。第二个实例启动时，把已有窗口带到前台后退出。
 - **窗口**：
   - 无边框，背景色与主题一致，避免白屏闪烁；等 `ready-to-show` 之后再显示。
@@ -139,7 +139,7 @@ handheld-ai/
 
 - `App.tsx` 的布局是：顶部 `StatusBar`，下方是主区域（本 spec 只放一个占位欢迎页）。
 - `StatusBar`：
-  - 居中显示标题（本 spec 固定为 `HANDHELD.AI`）；
+  - 居中显示标题（本 spec 固定为 `Handheld Harness`）；
   - 右侧依次是听写指示图标（占位，默认隐藏）、网络状态（`navigator.onLine` 加 `online` / `offline` 事件）、电量（`navigator.getBattery()`，拿不到时隐藏）、时间（`HH:mm`，每分钟对齐刷新）。
 - **主题与 token 分离**（P-08：视觉主题要独立，MVP 之后方便整体替换）：
   - `tokens.css` 在 Tailwind 4 的 `@theme` 中声明**语义 token** 的名字，让它们同时成为 CSS 变量和 Tailwind 工具类。例如 `surface`、`surface-raised`、`card`、`on-card`、`text`、`text-muted`、`accent`、`focus-ring`、`danger`，以及动效的 `duration-ui`、`ease-standard`。
@@ -184,7 +184,7 @@ handheld-ai/
   - IPC 契约的类型推导：用一个类型测试或运行时 smoke 测试保证每个通道在 preload 中都有暴露。
 - `tests/e2e/smoke.spec.ts`（Playwright `_electron`）：
   1. 用 `HANDHELD_PROFILE=e2e`、`HANDHELD_WINDOW=windowed` 启动构建产物；
-  2. 断言窗口出现、StatusBar 标题是 `HANDHELD.AI`、时间文本符合 `HH:mm`；
+  2. 断言窗口出现、StatusBar 标题是 `Handheld Harness`、时间文本符合 `HH:mm`；
   3. 截图保存到 `tests/e2e/artifacts/`（该目录加入 `.gitignore`）；
   4. 关闭应用。
 - e2e 测试会打开 GUI，只在本地掌机上运行，不放进 `check`。
@@ -228,7 +228,7 @@ handheld-ai/
 | 11 | 手柄调试页 | 按 `Ctrl+Shift+G`，掌机自带手柄的每个按键和摇杆都有实时反馈；震动测试有结果（成功或明确的失败原因） |
 | 12 | 手柄风险记录 | 分别在 ① Steam 未运行、② Steam 运行且开启 Steam 输入、③ 打开 Game Bar 叠层这三种情况下用调试页测试，把结果追加到本 spec 末尾的"实现记录" |
 | 13 | 麦克风调试页 | 按 `Ctrl+Shift+M`，选择内置麦克风后说话，电平表有变化 |
-| 14 | 日志 | `<appData>\handheld-ai\dev\logs\main.log` 中有启动信息，以及渲染进程转发来的日志 |
+| 14 | 日志 | `<appData>\handheld-harness\dev\logs\main.log` 中有启动信息，以及渲染进程转发来的日志 |
 | 15 | Agent 说明 | 仓库根目录有 `AGENTS.md` 和 `CLAUDE.md`，内容符合第 9 节 |
 | 16 | UI 基建 | 调试页基于 `ui/Overlay`，打开和关闭有 tokens 定义的过渡效果；dev 模式下修改 `styles/theme/default.css` 中的颜色，界面通过 HMR 立即变化；在组件里写死一个十六进制颜色或 Tailwind 调色板类名，lint 会报错（可用 `no-restricted-syntax` 或 Tailwind 的 lint 插件实现，做不到时在 AGENTS.md 里作为人工规则）；在 `components/` 下临时写一个直接 import `@base-ui/react` 的文件，`npm run lint` 会报错 |
 
@@ -248,7 +248,7 @@ handheld-ai/
 
 ### 与 spec 的偏差
 
-- **工作目录**：按仓库 `AGENTS.md` 的约定，工程建在仓库根目录 `C:\Apps\handheld-harness`，不使用 spec 里的示例路径 `C:\dev\handheld-ai`。
+- **工作目录**：按仓库 `AGENTS.md` 的约定，工程建在仓库根目录 `C:\Apps\handheld-harness`，不使用 spec 里的示例路径 `C:\dev\handheld-harness`。
 - **specs 位置**：specs 保留在 `docs/specs/`（经用户确认未新建顶层 `specs/`），`AGENTS.md` 指向 `docs/specs/README.md`；`.gitignore` 改为忽略 `docs/*` 但跟踪 `docs/specs/`。
 - **依赖版本修正**（均按锁定版本的实际 peer 元数据选定）：
   - TypeScript `6.0.3`：`typescript-eslint@8.71.1` 的 peer 为 `>=4.8.4 <6.1.0`，6.0 是官方支持的最新 major（7.x 尚不支持）。
@@ -257,7 +257,7 @@ handheld-ai/
 - **`duration-*` token**：Tailwind 4 没有 transition-duration 的 theme 命名空间，`duration-fast / duration-ui / duration-scene` 以 `@utility` 定义在 `tokens.css`；颜色、字号、圆角、阴影、缓动、字体等通过 `@theme inline` 引用 `theme/default.css` 中的 `--theme-*` 变量。
 - **新增 `npm run clean`**（不在 spec 的脚本表内），清理 `out/` 与 e2e 截图。
 - **`dev` 脚本加了 `--watch`**：electron-vite 默认只对渲染进程做 HMR，不监视 main / preload；必须 `electron-vite dev --watch` 才能满足验收 4（改 `src/main/log.ts` 自动重启 Electron）。
-- **`settings.json` 首次启动即写入默认值**：设置存储只被 `app:getInfo` 之外的 `settings.get/update` 懒加载，启动时无人调用，会导致验收 10 无文件可改。现在 `registerIpc()` 启动时即实例化存储并落盘默认值。路径为 `<userData>/settings.json`，dev profile 即 `%APPDATA%\handheld-ai\dev\settings.json`，构建产物为 `%APPDATA%\handheld-ai\default\settings.json`。
+- **`settings.json` 首次启动即写入默认值**：设置存储只被 `app:getInfo` 之外的 `settings.get/update` 懒加载，启动时无人调用，会导致验收 10 无文件可改。现在 `registerIpc()` 启动时即实例化存储并落盘默认值。路径为 `<userData>/settings.json`，dev profile 即 `%APPDATA%\handheld-harness\dev\settings.json`，构建产物为 `%APPDATA%\handheld-harness\default\settings.json`。
 - **开发 / 构建产物的默认值判定**：用 `ELECTRON_RENDERER_URL` 是否存在（`src/main/env.ts`）而不是 `app.isPackaged`。因为 `npm run start` 运行的是**未打包**的构建产物，`app.isPackaged` 为 false，用它会让验收 5 的默认全屏失效。现在 `npm run dev` 默认 `dev` + `windowed`，`npm run start` / 打包产物默认 `default` + `fullscreen`。
 - **e2e 冒烟测试**在 spec 第 8 节四步之外，额外断言 `typeof require === 'undefined'`、`window.handheld` 存在，并调用 `app.getInfo()` 验证 IPC（覆盖验收 8 的自动化部分）。
 
@@ -268,7 +268,7 @@ handheld-ai/
 - 验收 6：`npm run check` 退出码 0，lint 零 warning。
 - 验收 7：`npm run test:e2e` 通过并生成截图。
 - 验收 10：非法 JSON / schema 违规的备份与回退由 `tests/unit/settings.test.ts` 覆盖；并在 dev profile 实测：首次启动生成 `settings.json`，改成非法 JSON 后再次启动生成 `settings.invalid-<时间戳>.json` 且应用正常运行。
-- 验收 14：`<appData>\handheld-ai\dev\logs\main.log` 写入启动信息与渲染进程加载记录。
+- 验收 14：`<appData>\handheld-harness\dev\logs\main.log` 写入启动信息与渲染进程加载记录。
 - 验收 16：调试页基于 `ui/Overlay`；在 `components/` 下写死十六进制色、Tailwind 调色板类名或直接 import `@base-ui/react` 时 `npm run lint` 均报错（已实测）。
 - 开发模式：`npm run dev` 能启动、renderer 经 `http://localhost:5173/` 加载。
 

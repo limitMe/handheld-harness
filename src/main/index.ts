@@ -9,7 +9,7 @@ import { createMainWindow, resolveWindowMode } from './window'
 import { THEME_SURFACE_COLOR } from '../shared/theme'
 
 const profile = resolveProfile()
-app.setPath('userData', path.join(app.getPath('appData'), 'handheld-ai', profile))
+app.setPath('userData', path.join(app.getPath('appData'), 'handheld-harness', profile))
 
 let mainWindow: BrowserWindow | null = null
 

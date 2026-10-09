@@ -4,7 +4,7 @@
 
 让 Windows 11 掌机具备以下能力：
 
-1. 能克隆、安装、运行和测试 HANDHELD.AI 仓库；
+1. 能克隆、安装、运行和测试 Handheld Harness 仓库；
 2. 能运行一个 AI 编码 Agent，用来执行后续 specs；
 3. OpenCode 能调用至少一个 LLM 服务商；
 4. 麦克风、手柄和系统语音输入（Win+H）都已确认可用。
@@ -71,7 +71,7 @@ gh auth login                                 # 可选
 New-Item -ItemType Directory -Force C:\dev
 ```
 
-- 仓库放在 `C:\dev\handheld-ai`，路径短，能避开很多 Windows 工具链的问题。**不要**放进 OneDrive 同步目录。
+- 仓库放在 `C:\dev\handheld-harness`，路径短，能避开很多 Windows 工具链的问题。**不要**放进 OneDrive 同步目录。
 - 可选（管理员）：把 `C:\dev` 加进 Defender 排除项，`npm install` 和构建会明显变快：`Add-MpPreference -ExclusionPath C:\dev`。代价是这个目录不再被实时扫描，请自行权衡。
 
 ### 5. OpenCode CLI 与 LLM 凭据

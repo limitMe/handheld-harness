@@ -74,7 +74,7 @@
 
 **detached 模式下复用已有进程**：
 
-- **登记文件**：server 启动后写入 `<appData>/handheld-ai/servers/<engineKind>/<key>.json`（v1 中 `engineKind` 固定为 `opencode`），内容为 `{ pid, url, password, version, workspaceDir, startedAt }`。
+- **登记文件**：server 启动后写入 `<appData>/handheld-harness/servers/<engineKind>/<key>.json`（v1 中 `engineKind` 固定为 `opencode`），内容为 `{ pid, url, password, version, workspaceDir, startedAt }`。
   - `<key>` = `sha1(规范化后的 workspaceDir（转小写、统一分隔符）+ "|" + opencodeVersion)`。
   - 登记文件**不按 profile 区分**。这样不同 profile（spec 04 的稳定版和开发版）只要工作区和版本相同，就共享同一个 server，看到同样的会话。
   - 用 Windows ACL 把登记文件限制为只有当前用户可读，例如通过 `icacls` 去掉继承权限、只授权当前用户。密码以明文保存在这个文件里。原因是 `safeStorage` 的密钥按应用身份区分，Node 脚本和不同 profile 不一定能解密。
@@ -261,7 +261,7 @@ export interface AgentEngine {
 - `listCommands()`：OpenCode 的 SDK 里有 `command.list`，但它返回的是服务端注册的命令。`/clear` 这类命令在 OpenCode 里属于 TUI 自己的内置命令，不一定出现在这个列表里。实现时先核实实际返回内容，缺少的常用命令由适配层补上，并映射到服务端接口：例如 `/compact` → `session.summarize`，`/clear` → 新建会话。执行这些命令需要在 `AgentEngine` 里增加 `runCommand`，这在阶段 B 的 12 里扩展，届时同步更新引擎契约测试；v1 阶段 A 只要求 `listCommands()` 能返回列表。适配层维护的这份命令表是该引擎自己的，其他底座各有各的（P-12）。
 - `capabilities()`：OpenCode 返回的能力除 `forkSession` 外都是 `true`（`forkSession` v1 不使用，先返回 `false`，实现时核实后再改）。
 - `setSessionModel`：OpenCode 是在每次 `promptAsync` 时指定模型的，所以由适配层自己维护一张"会话 → 模型"表。
-  - 这张表存成 `<appData>/handheld-ai/servers/<engineKind>/<key>.models.json`，和登记文件同目录、同 key，保证跨 profile 共享。
+  - 这张表存成 `<appData>/handheld-harness/servers/<engineKind>/<key>.models.json`，和登记文件同目录、同 key，保证跨 profile 共享。
   - `prompt` 时把表里的模型带上。
   - 表里没有记录时，依次退回到该会话最后一条 assistant 消息用的模型，再退回到默认模型。
   - `SessionSummary.model` 也按同样的顺序计算。
@@ -440,7 +440,7 @@ v1 不实现第二种底座，但以下约定要从第一天开始遵守。这�
 
 ### 未完成 / 需要人工验证
 
-- 验收 4b（跨 profile 共享）：登记文件按设计不区分 profile（`<appData>/handheld-ai/servers/opencode/<key>.json`），不同 profile 只要工作区和版本相同就共享；需要在掌机上按标准步骤用两个 profile 实测。
+- 验收 4b（跨 profile 共享）：登记文件按设计不区分 profile（`<appData>/handheld-harness/servers/opencode/<key>.json`），不同 profile 只要工作区和版本相同就共享；需要在掌机上按标准步骤用两个 profile 实测。
 - 验收 5（生产模式清理）：`attached` 在 `before-quit` 调用 `taskkill /T /F`；需要实际运行 `npm run build; npm run start` 后正常退出应用确认无残留（未用 GUI 退出流程实测）。
 - 验收 6（崩溃恢复）：attached 子进程退出后 60 秒内最多重启 3 次；detached 每 10 秒健康检查。逻辑已实现，用 `npm run server:kill -- --all` 在掌机上实测状态点由黄转绿。
 - 验收 9（调试页交互）：`Ctrl+Shift+E` 的界面逻辑已实现并通过类型检查，需要在掌机 GUI 中实际点击验证。

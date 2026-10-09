@@ -1,8 +1,8 @@
 > Archived Chinese original · English: [AGENTS.md](../../AGENTS.md)
 
-# HANDHELD.AI
+# Handheld Harness
 
-掌机（Windows 11 掌上游戏机）上的 AI Agent harness：Electron 外壳 + React UI，用游戏手柄在客厅 / 掌机场景里驱动 AI 编码会话。产品定义见 `../HANDHELD.AI.md`，规格源头见 [`specs/README.md`](specs/README.md)。
+掌机（Windows 11 掌上游戏机）上的 AI Agent harness：Electron 外壳 + React UI，用游戏手柄在客厅 / 掌机场景里驱动 AI 编码会话。产品定义见 `../HandheldHarness.md`，规格源头见 [`specs/README.md`](specs/README.md)。
 
 ## 常用命令
 
@@ -48,7 +48,7 @@ tests/
 
 ## 运行时数据（profile 私有）
 
-设置在 `%APPDATA%\handheld-ai\<profile>\settings.json`（首次启动写入默认值），日志在 `<profile>\logs\main.log`。dev 模式的 profile 是 `dev`，构建产物是 `default`，可用 `HANDHELD_PROFILE` 覆盖；跨 profile 共享的状态由 spec 02 定义。
+设置在 `%APPDATA%\handheld-harness\<profile>\settings.json`（首次启动写入默认值），日志在 `<profile>\logs\main.log`。dev 模式的 profile 是 `dev`，构建产物是 `default`，可用 `HANDHELD_PROFILE` 覆盖；跨 profile 共享的状态由 spec 02 定义。
 
 ## 平台约定（Windows 优先）
 

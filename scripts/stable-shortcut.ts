@@ -44,7 +44,7 @@ function resolveShortcutIcon(stableDir: string): string | null {
 }
 
 /**
- * Creates "HANDHELD.AI (stable)" shortcuts on the desktop and start menu.
+ * Creates "Handheld Harness (stable)" shortcuts on the desktop and start menu.
  *
  * Usage: npm run stable:shortcut
  */

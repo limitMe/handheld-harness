@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { BrowserWindow } from 'electron'
-import appIconIco from '../../resources/icons/handheld-ai.ico?asset'
+import appIconIco from '../../resources/icons/handheld-harness.ico?asset'
 import appIconPng from '../../resources/icons/icon-256.png?asset'
 import type { WindowMode } from '../shared/ipc'
 import { isDevMode } from './env'

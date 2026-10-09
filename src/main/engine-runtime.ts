@@ -27,7 +27,7 @@ function readSdkVersion(): string {
 }
 
 function serversDir(): string {
-  return path.join(app.getPath('appData'), 'handheld-ai', 'servers')
+  return path.join(app.getPath('appData'), 'handheld-harness', 'servers')
 }
 
 export function getEngineManager(): EngineManager {

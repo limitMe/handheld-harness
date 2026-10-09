@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process'
 
 /**
  * Registry of running OpenCode servers. Files live under
- * `<appData>/handheld-ai/servers/<engineKind>/<key>.json` and are intentionally
+ * `<appData>/handheld-harness/servers/<engineKind>/<key>.json` and are intentionally
  * not profile-scoped: two profiles sharing a workspace and a version reuse one
  * server so they see the same sessions.
  */

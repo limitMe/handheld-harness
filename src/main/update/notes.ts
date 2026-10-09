@@ -44,7 +44,7 @@ export async function fetchReleaseNotes(
   const response = await fetchImpl(releaseApiUrl(version), {
     headers: {
       Accept: 'application/vnd.github+json',
-      'User-Agent': 'HANDHELD.AI',
+      'User-Agent': 'Handheld Harness',
     },
     signal: AbortSignal.timeout(10_000),
   })

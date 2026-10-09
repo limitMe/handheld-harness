@@ -1,8 +1,8 @@
-# Packaging and installer config for HANDHELD.AI (spec 19).
+# Packaging and installer config for Handheld Harness (spec 19).
 # Run `npm run dist`. Signing is not configured, so SmartScreen will warn on the
 # first install of an unsigned build; that is acceptable for personal use.
-appId: ai.handheld.app
-productName: HANDHELD.AI
+appId: io.github.limitme.handheldharness
+productName: Handheld Harness
 
 directories:
   buildResources: resources
@@ -22,7 +22,7 @@ extraResources:
     to: opencode/opencode.exe
 
 win:
-  icon: icons/handheld-ai.ico
+  icon: icons/handheld-harness.ico
   target:
     - target: nsis
       arch:
@@ -34,8 +34,8 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: HANDHELD.AI
-  artifactName: ${productName}-${version}-setup.${ext}
+  shortcutName: Handheld Harness
+  artifactName: ${name}-${version}-setup.${ext}
 
 npmRebuild: false
 

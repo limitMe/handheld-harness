@@ -2,7 +2,7 @@
 
 ## 目标
 
-建立"**用 HANDHELD.AI 开发 HANDHELD.AI**"的工作流：
+建立"**用 Handheld Harness 开发 Handheld Harness**"的工作流：
 
 - 用户在掌机上通过应用向 Agent 提需求；
 - Agent 修改本仓库，用户马上在应用里看到效果，验证后提交；
@@ -24,14 +24,14 @@
 ### 1. 拓扑：稳定版驱动 + 开发版预览（必须）
 
 ```
-C:\dev\handheld-ai-stable   (git worktree，分支 stable，已构建)
+C:\dev\handheld-harness-stable   (git worktree，分支 stable，已构建)
    └─ 稳定版实例  profile=stable  全屏  ←── 用户在这里和 Agent 对话
-            │  workspace = C:\dev\handheld-ai
+            │  workspace = C:\dev\handheld-harness
             ▼
-   OpenCode server（detached，按 工作区+版本 共享）── Agent 修改 C:\dev\handheld-ai
+   OpenCode server（detached，按 工作区+版本 共享）── Agent 修改 C:\dev\handheld-harness
             ▲
    └─ 开发版实例  profile=dev  窗口化  npm run dev  ←── 用户在这里看修改效果（HMR）
-C:\dev\handheld-ai          (主仓库，分支 main)
+C:\dev\handheld-harness          (主仓库，分支 main)
 ```
 
 - **稳定版**跑的是上一个确认可用的构建产物，Agent 修改代码不会影响它。所以就算开发版改坏了，用户也总能通过稳定版继续指挥 Agent。
@@ -51,11 +51,11 @@ C:\dev\handheld-ai          (主仓库，分支 main)
 
 | 脚本 | 行为 |
 |---|---|
-| `npm run stable:setup` | 如果没有 `stable` 分支，就从当前 `main` 创建；然后 `git worktree add ..\handheld-ai-stable stable`，进入该目录运行 `npm ci` 和 `npm run build` |
+| `npm run stable:setup` | 如果没有 `stable` 分支，就从当前 `main` 创建；然后 `git worktree add ..\handheld-harness-stable stable`，进入该目录运行 `npm ci` 和 `npm run build` |
 | `npm run stable:update` | 要求主仓库工作区干净，并且 `npm run check` 通过；把 `stable` 分支 fast-forward 到 `main`，打上标签 `stable-YYYYMMDD-N`；在稳定版目录里运行 `npm ci`（仅当 lock 文件有变化时）和 `npm run build`；最后提示用户重启稳定版 |
 | `npm run stable:rollback` | 把 `stable` 分支回退到上一个 `stable-*` 标签，然后重新构建 |
 | `npm run stable:start` | 用 `HANDHELD_PROFILE=stable`、`HANDHELD_WORKSPACE=<主仓库>`、`HANDHELD_ENGINE_MODE=detached`，以全屏模式运行稳定版目录中的构建产物 |
-| `npm run stable:shortcut` | 在桌面和开始菜单创建"HANDHELD.AI (stable)"快捷方式，效果等同于 `stable:start`，方便在没有键盘时用触屏或手柄启动 |
+| `npm run stable:shortcut` | 在桌面和开始菜单创建"Handheld Harness (stable)"快捷方式，效果等同于 `stable:start`，方便在没有键盘时用触屏或手柄启动 |
 
 - 稳定版窗口的状态栏要显示一个 `STABLE` 小标记，开发版显示 `DEV`，避免用户分不清。标记根据 `app.getInfo().profile` 决定：profile 为 `stable` 显示 `STABLE`，为 `dev` 显示 `DEV`，为 `default`（正式发布）时不显示。这个组件放在 01 的 StatusBar 里实现。
 - `stable:start` 显式指定 `detached` 只是自举开发的需要：开发版和稳定版共享同一个 server，任何一边关闭都不应该中断任务。正式发布版的默认值仍是 `attached`，退出时任务一起结束（P-11）。
@@ -67,7 +67,7 @@ C:\dev\handheld-ai          (主仓库，分支 main)
 
 1. **你可能正运行在你要修改的这个应用里。** 不得结束 opencode、electron、node 进程；不得运行 `server:stop`；不得运行 `taskkill`、`Stop-Process` 这类命令。
 2. **不要自己启动 GUI。** 不得运行 `npm run dev`、`npm run start` 或 `stable:*`，用户已经开着这些实例。可以运行 `npm run test:e2e`，它使用独立的 e2e profile 和 fake 引擎，不会干扰正在运行的实例。
-3. **只修改主仓库**（`C:\dev\handheld-ai`），**不得修改** `handheld-ai-stable` 目录。
+3. **只修改主仓库**（`C:\dev\handheld-harness`），**不得修改** `handheld-harness-stable` 目录。
 4. 每次修改完成后运行 `npm run check`，然后告诉用户：
    - 改了什么，应该去看哪里；
    - 这个修改走 HMR 立即生效（渲染进程），还是会触发开发版自动重启（main / preload）。
@@ -134,19 +134,19 @@ C:\dev\handheld-ai          (主仓库，分支 main)
 
 ### 与 spec 的偏差 / 以实际为准的修正
 
-- **路径**：沿用 01 的偏差，主仓库是 `C:\Apps\handheld-harness`，稳定版 worktree 是同级 `C:\Apps\handheld-harness-stable`（而不是 spec 示例里的 `handheld-ai-stable`）。新增 `HANDHELD_STABLE_DIR` 覆盖。
+- **路径**：沿用 01 的偏差，主仓库是 `C:\Apps\handheld-harness`，稳定版 worktree 是同级 `C:\Apps\handheld-harness-stable`（而不是 spec 示例里的 `handheld-harness-stable`）。新增 `HANDHELD_STABLE_DIR` 覆盖。
 - **脚本运行时**：用 `tsx` 运行 TypeScript 脚本，与既有 `server:*` 脚本一致，便于复用类型并给纯函数写单测。
 - **Electron 44.5.1 没有 `postinstall`**：`npm ci` **不会**下载 Electron 二进制（`node_modules/electron/package.json` 无 `scripts`，只有 `install-electron` bin）。因此 `stable:setup` / `stable:update` / `stable:rollback` 在 `npm ci` 之后会补跑一次 `node node_modules/electron/install.js`（幂等，已安装时立即退出）。这是 spec 第 3 节"`npm ci` 和 `npm run build`"的必要补充；否则 `stable:start` 会因缺少 `electron.exe` 失败。
 - **"先构建到临时目录"**：`stable:update` / `stable:rollback` 用 `electron-vite build --outDir .stable-out-tmp` 构建到暂存目录，成功后再把旧 `out/` 改名为 `out.stable-backup/`、把暂存目录改名成 `out/`。构建失败或替换失败时旧 `out/` 保持不动（替换失败会回滚改名），不会留下半成品。
 - **`stable:start`**：用 `electron-vite preview --skipBuild` 运行已有构建，不触发重新构建；显式设置 `HANDHELD_PROFILE=stable`、`HANDHELD_WORKSPACE=<主仓库>`、`HANDHELD_ENGINE_MODE=detached`、`HANDHELD_WINDOW=fullscreen`，并清掉可能残留的 `ELECTRON_RENDERER_URL`。
-- **`stable:shortcut`**：生成 `%LOCALAPPDATA%\handheld-ai\stable-launch.cmd`（绝对 `node` + `electron-vite.js` 路径，避免依赖 PATH），再用 PowerShell `WScript.Shell` 在桌面和开始菜单创建 "HANDHELD.AI (stable)" 快捷方式（目标 `cmd /c <launcher>`，图标用 Electron 可执行文件）。仅 Windows 支持。
+- **`stable:shortcut`**：生成 `%LOCALAPPDATA%\handheld-harness\stable-launch.cmd`（绝对 `node` + `electron-vite.js` 路径，避免依赖 PATH），再用 PowerShell `WScript.Shell` 在桌面和开始菜单创建 "Handheld Harness (stable)" 快捷方式（目标 `cmd /c <launcher>`，图标用 Electron 可执行文件）。仅 Windows 支持。
 - **`stable:update` 顺序**：先检查主仓库工作区干净 → 跑 `npm run check` → `git merge --ff-only <main>` → 打 `stable-YYYYMMDD-N` 标签 → 仅当 `package-lock.json` 在两个 commit 间有变化时 `npm ci` → 构建。`stable:rollback` 用同一套构建/安装步骤回退到上一个 `stable-*` 标签。
 - **进程规则**：未运行 `npm run dev` / `npm run start` / `stable:start`，没有启动任何 GUI；也没有结束任何 opencode / electron / node 进程。
 
 ### 已自动验证
 
 - `npm run stable:setup` 成功且幂等（连跑两次）：创建 `stable` 分支（从 `main`）与 worktree，`npm ci`，补装 Electron 二进制，构建到 `out/`。已验证 `out/main/index.js` 与 `node_modules/electron/dist/electron.exe` 存在，`electron --version` 输出 `v44.5.1`。
-- `npm run stable:shortcut` 成功：桌面与开始菜单出现 "HANDHELD.AI (stable)" 快捷方式；实测 lnk 的 Target 为 `cmd.exe`、Arguments 为 `/c "<launcher>"`、WorkingDirectory 为稳定版目录、图标为 Electron。
+- `npm run stable:shortcut` 成功：桌面与开始菜单出现 "Handheld Harness (stable)" 快捷方式；实测 lnk 的 Target 为 `cmd.exe`、Arguments 为 `/c "<launcher>"`、WorkingDirectory 为稳定版目录、图标为 Electron。
 - `--outDir .stable-out-tmp` 的产物结构正确（`main/`、`preload/`、`renderer/`），可被改名成 `out/`。
 - 守卫路径：`stable:start` / `stable:update` 在 worktree 缺失时、`stable:rollback` 在没有 `stable-*` 标签时、`stable:update` 在主仓库不干净时，都输出明确错误并以退出码 1 结束。
 - `npm run check` 通过（typecheck、lint 零 warning、18 个测试文件 94 个用例）。
@@ -162,8 +162,8 @@ C:\dev\handheld-ai          (主仓库，分支 main)
 
 > 该节写于 04 交付之后，记录后加入的应用图标。上面"图标用 Electron 可执行文件"的描述据此作废。
 
-- 素材是 `resources/icons/source.png`：1024 正方形，深色面板上下留透明（Windows 自带的终端类图标就是这个风格），面板顶部那条灰带是刻意的命令行风格包边。`npm run icons`（`scripts/generate-icons.mjs`，纯 Node、无新依赖）按原样缩放出 16–512 的 PNG 与多尺寸 `handheld-ai.ico`；缩放用预乘 alpha 重采样，透明区不会在地块边缘渗出亮边。
+- 素材是 `resources/icons/source.png`：1024 正方形，深色面板上下留透明（Windows 自带的终端类图标就是这个风格），面板顶部那条灰带是刻意的命令行风格包边。`npm run icons`（`scripts/generate-icons.mjs`，纯 Node、无新依赖）按原样缩放出 16–512 的 PNG 与多尺寸 `handheld-harness.ico`；缩放用预乘 alpha 重采样，透明区不会在地块边缘渗出亮边。
 - 主窗口通过 `BrowserWindow.icon` 使用该图标：Windows 用 `.ico`（让系统自己挑尺寸），其他平台用 `icon-256.png`。
-- `stable:shortcut` 的 `IconLocation` 改成 `resources/icons/handheld-ai.ico`；该文件不存在时（例如稳定版还没更新到这一版）仍回退到 Electron 可执行文件。
+- `stable:shortcut` 的 `IconLocation` 改成 `resources/icons/handheld-harness.ico`；该文件不存在时（例如稳定版还没更新到这一版）仍回退到 Electron 可执行文件。
 - 渲染进程没有引用图标：窗口无边框且默认全屏，没有 favicon 场景；界面上也没有品牌位。
 

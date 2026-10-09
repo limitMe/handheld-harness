@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Renders the HANDHELD.AI app icon into `resources/icons/`.
+ * Renders the Handheld Harness app icon into `resources/icons/`.
  *
  * Input is `resources/icons/source.png`: the 1:1 artboard as drawn, with the dark panel
  * (its command-line style edge strip on top and the "H3" mark) centred on a transparent
@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const ASSET_DIR = path.join(ROOT, 'resources', 'icons')
 const SOURCE_FILE = path.join(ASSET_DIR, 'source.png')
-const ICO_FILE = path.join(ASSET_DIR, 'handheld-ai.ico')
+const ICO_FILE = path.join(ASSET_DIR, 'handheld-harness.ico')
 
 /** Sizes written as standalone PNGs. `source.png` is the 1024 master. */
 const PNG_SIZES = [16, 24, 32, 48, 64, 128, 256, 512]

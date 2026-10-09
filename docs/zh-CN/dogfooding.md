@@ -2,7 +2,7 @@
 
 # 日常自举工作流（spec 04）
 
-"用 HANDHELD.AI 开发 HANDHELD.AI"：用户在稳定版里向 Agent 提需求，Agent 修改主仓库，用户在开发版里立刻看到效果，满意后提交，定期升级稳定版。
+"用 Handheld Harness 开发 Handheld Harness"：用户在稳定版里向 Agent 提需求，Agent 修改主仓库，用户在开发版里立刻看到效果，满意后提交，定期升级稳定版。
 
 ## 拓扑
 
@@ -43,6 +43,6 @@ C:\Apps\handheld-harness          主仓库（main / 功能分支）
 |---|---|
 | `npm run stable:setup` | 首次创建 stable 分支 / worktree，`npm ci` 并构建 |
 | `npm run stable:start` | 以 `profile=stable`、共享 server、全屏启动稳定版 |
-| `npm run stable:shortcut` | 在桌面和开始菜单创建 "HANDHELD.AI (stable)" 快捷方式 |
+| `npm run stable:shortcut` | 在桌面和开始菜单创建 "Handheld Harness (stable)" 快捷方式 |
 | `npm run stable:update` | 把 stable fast-forward 到 main、打标签、必要时 `npm ci`、重新构建 |
 | `npm run stable:rollback` | 回退到上一个 `stable-*` 标签并重新构建 |

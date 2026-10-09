@@ -4,7 +4,7 @@
 
 ## 目标
 
-把 HANDHELD.AI 做成可以安装、可以更新、像主机应用一样启动的 Windows 应用，并补上 Web API 覆盖不到的设备能力。
+把 Handheld Harness 做成可以安装、可以更新、像主机应用一样启动的 Windows 应用，并补上 Web API 覆盖不到的设备能力。
 
 ## 依赖
 
@@ -56,7 +56,7 @@ P-19：是否需要自动更新、开机自启、Steam Input 模板，以及有�
 
 - **发布版默认工作区**：`src/main/engine/mode.ts` 的 `resolveWorkspaceDir` 新增可选 `defaultWorkspaceDir` 与来源 `release-default`，插在"开发模式仓库根目录"之后；`engine-runtime.ts` 传 `app.getPath('documents')`，并在该来源下递归创建目录。已同步 spec 02 第 4 节与实现记录。
 - **打包态二进制定位**：`src/main/engine/binary.ts` 新增 `resourcesDir` 查找档（`<process.resourcesPath>/opencode/opencode.exe`，来源 `bundled resources`），排在 `node_modules` 与 PATH 之间；`OpenCodeEngine` 新增 `resourcesDir` 选项，`engine-runtime.ts` 传 `process.resourcesPath`。
-- **打包配置**：新增 `electron-builder.yml`（NSIS、x64、`oneClick: false`、可改安装目录、桌面 / 开始菜单快捷方式、`artifactName: HANDHELD.AI-<version>-setup.exe`）。`extraResources` 把 `node_modules/opencode-windows-x64/bin/opencode.exe` 复制到 `resources/opencode/opencode.exe`；`files` 排除 `node_modules/opencode-*/**` 与 `node_modules/opencode-ai/bin/**`，避免把不能执行的二进制塞进 asar。图标复用 `resources/icons/handheld-ai.ico`。未配置代码签名（SmartScreen 会警告，个人使用可接受）；未配置 `publish`（自动更新待 `P-19`）。
+- **打包配置**：新增 `electron-builder.yml`（NSIS、x64、`oneClick: false`、可改安装目录、桌面 / 开始菜单快捷方式、`artifactName: handheld-harness-<version>-setup.exe`）。`extraResources` 把 `node_modules/opencode-windows-x64/bin/opencode.exe` 复制到 `resources/opencode/opencode.exe`；`files` 排除 `node_modules/opencode-*/**` 与 `node_modules/opencode-ai/bin/**`，避免把不能执行的二进制塞进 asar。图标复用 `resources/icons/handheld-harness.ico`。未配置代码签名（SmartScreen 会警告，个人使用可接受）；未配置 `publish`（自动更新待 `P-19`）。
 - **脚本**：`package.json` 新增 `"dist": "npm run build && electron-builder --win --x64"`。
 - **自举解耦**：`stable:*` 脚本、`HANDHELD_STABLE_DIR`、`STABLE`/`DEV` 徽标都只存在于仓库或开发 profile，安装包不包含；本轮无需改动。`README` 里 04 的状态修正为"已完成"。
 

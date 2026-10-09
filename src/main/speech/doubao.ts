@@ -138,7 +138,7 @@ export function createDoubaoProvider(
       }
     }
     return {
-      user: { uid: 'handheld-ai' },
+      user: { uid: 'handheld-harness' },
       audio: {
         format: 'pcm',
         codec: 'raw',

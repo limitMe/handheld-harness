@@ -11,10 +11,10 @@ import {
 
 describe('stable path helpers', () => {
   it('places the stable worktree next to the repository', () => {
-    const repoRoot = path.join('C:', 'dev', 'handheld-ai')
+    const repoRoot = path.join('C:', 'dev', 'handheld-harness')
     const stableDir = resolveStableDir(repoRoot)
     expect(path.dirname(stableDir)).toBe(path.join('C:', 'dev'))
-    expect(path.basename(stableDir)).toBe('handheld-ai-stable')
+    expect(path.basename(stableDir)).toBe('handheld-harness-stable')
   })
 
   it('honours an explicit override', () => {

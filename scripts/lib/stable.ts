@@ -17,7 +17,7 @@ export const BUILD_BACKUP_DIR = 'out.stable-backup'
 
 export const STABLE_ENTRY_RELATIVE = path.join('out', 'main', 'index.js')
 /** Multi-size Windows icon used by the desktop and start-menu shortcuts. */
-export const APP_ICON_RELATIVE = path.join('resources', 'icons', 'handheld-ai.ico')
+export const APP_ICON_RELATIVE = path.join('resources', 'icons', 'handheld-harness.ico')
 export const ELECTRON_VITE_RELATIVE = path.join(
   'node_modules',
   'electron-vite',
@@ -26,7 +26,7 @@ export const ELECTRON_VITE_RELATIVE = path.join(
 )
 
 export const STABLE_PROFILE = 'stable'
-export const SHORTCUT_NAME = 'HANDHELD.AI (stable)'
+export const SHORTCUT_NAME = 'Handheld Harness (stable)'
 
 export interface StablePaths {
   repoRoot: string
@@ -189,8 +189,8 @@ export function installStableDependencies(stableDir: string): void {
 }
 
 export function launcherDir(): string {
-  const base = process.env.LOCALAPPDATA ?? path.join(os.homedir(), '.handheld-ai')
-  return path.join(base, 'handheld-ai')
+  const base = process.env.LOCALAPPDATA ?? path.join(os.homedir(), '.handheld-harness')
+  return path.join(base, 'handheld-harness')
 }
 
 /** Builds to a staging directory and only then swaps it into `out/`. */
