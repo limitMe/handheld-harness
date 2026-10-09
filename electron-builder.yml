@@ -38,3 +38,12 @@ nsis:
   artifactName: ${productName}-${version}-setup.${ext}
 
 npmRebuild: false
+
+# Auto-update feed (spec 19). Baked into the app as `app-update.yml`; the repo is
+# public, so the running app reads releases anonymously (no token shipped).
+publish:
+  provider: github
+  owner: limitMe
+  repo: handheld-harness
+  # electron-updater ignores draft / prerelease releases.
+  releaseType: release

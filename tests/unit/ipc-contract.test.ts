@@ -36,6 +36,10 @@ describe('IPC contract', () => {
     await api.app.showOnScreenKeyboard()
     await api.app.pickDirectory()
     await api.app.quit()
+    await api.update.getStatus()
+    await api.update.check()
+    await api.update.download()
+    await api.update.install()
     await api.window.setZoom(1)
     await api.settings.get()
     await api.settings.update({})
@@ -82,6 +86,7 @@ describe('IPC contract', () => {
     }
     api.engine.onEvent(() => undefined)
     api.speech.onEvent(() => undefined)
+    api.update.onEvent(() => undefined)
 
     expect(new Set(subscribed)).toEqual(new Set(EVENT_CHANNELS))
   })

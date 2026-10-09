@@ -25,7 +25,7 @@
 | 16 | [语音输入协议与实现](16-voice-input.md) | B | 已实现（协议层 + 豆包适配器 + 长按 Y 听写 + 设置页；自动化通过，待掌机实测；离线兜底未做） |
 | 17 | [界面：文本编辑](17-screen-text-edit.md) | B | 已实现（无撤销；含单句键盘编辑与屏幕键盘；自动化通过，待掌机实测） |
 | 18 | [动效与视觉系统](18-motion-and-visual.md) | B | 部分实现（主题系统 + 任务地图卡片动效；减少动效 / 省电模式未做） |
-| 19 | [打包、原生辅助进程与设备集成](19-packaging-and-native.md) | B | 部分实现（release 基础：electron-builder 脚本 + 发布版默认工作区；设备集成 / 自动更新 / 原生进程未做；待装包验证） |
+| 19 | [打包、原生辅助进程与设备集成](19-packaging-and-native.md) | B | 部分实现（release 基础 + 手动检查更新 / GitHub Release 自动更新；开机自启 / Steam Input / 退出确认 / 原生进程未做；待装包验证） |
 | 20 | [国际化（i18n）](20-i18n.md) | B | 已实现（中英两套文案覆盖渲染层 UI，可在系统菜单切换；引擎诊断文案待后续） |
 | 21 | [界面：会话信息](21-screen-session-info.md) | B | 已实现（自动化通过；每会话目录跨 project 列表、真实 server 的 variant/directory 行为待掌机实测） |
 

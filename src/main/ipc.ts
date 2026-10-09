@@ -22,6 +22,7 @@ import { log, writeLog } from './log'
 import { showOnScreenKeyboard } from './on-screen-keyboard'
 import { resolveProfile } from './profile'
 import { getEngineManager, startEngineRuntime } from './engine-runtime'
+import { startUpdateRuntime, updateService } from './update'
 import {
   createCredentialStore,
   createSpeechService,
@@ -164,8 +165,19 @@ export function registerIpc(): void {
 
   registerEngineIpc()
   registerSpeechIpc()
+  registerUpdateIpc()
 
   startEngineRuntime(() => settingsStore().get())
+}
+
+function registerUpdateIpc(): void {
+  handle('update:getStatus', () => updateService.getStatus())
+  handle('update:check', () => updateService.check())
+  handle('update:download', () => updateService.download())
+  handle('update:install', () => {
+    updateService.install()
+  })
+  startUpdateRuntime()
 }
 
 function registerSpeechIpc(): void {

@@ -69,5 +69,29 @@ P-19：是否需要自动更新、开机自启、Steam Input 模板，以及有�
 
 - 运行 `npm run dist` 生成安装包，安装后确认：应用全屏启动；状态栏无 `STABLE`/`DEV` 标记；引擎状态为 ready，工作区为"文档"目录；新建任务能正常对话；退出后 `npm run server:status` 无残留（`attached` 模式）。
 - 掌机上不同分辨率 / 高 DPI 的图标与安装目录表现。
-- `P-19` 的自动更新、开机自启、Steam Input 模板、退出确认，以及原生辅助进程，均未实现，留待后续。
+- `P-19` 的开机自启、Steam Input 模板、退出确认，以及原生辅助进程，均未实现，留待后续。
+
+### 自动更新（2026-10-09）
+
+用户已确认：**仅手动检查**（关于页按钮，启动时不自动检查）；发现新版本后弹 release note，确认后下载，**下载完成弹"立即重启 / 稍后"**；发布方式采用 `electron-builder --publish always` 自动发布到 GitHub Releases。
+
+- **仓库**：`limitMe/handheld-harness`，公开仓库，因此运行时匿名读取 release，**应用内不携带任何 token**。
+- **打包配置**：`electron-builder.yml` 新增 `publish: { provider: github, owner: limitMe, repo: handheld-harness, releaseType: release }`，构建时生成 `latest.yml`（并在应用里嵌入 `app-update.yml`）。`releaseType: release` 是必须的：electron-builder 默认建 draft，而 electron-updater 会忽略 draft。
+- **脚本**：`package.json` 新增 `"dist:publish": "npm run build && electron-builder --win --x64 --publish always"`；发布需在环境变量 `GH_TOKEN` 提供有 `repo`（或 fine-grained `Contents: write`）权限的 token。
+- **主进程**（`src/main/update/`）：
+  - `service.ts`：与 Electron 无关的更新状态机（check / download / install + 订阅），未打包时返回 `unavailable`；
+  - `notes.ts`：`normalizeReleaseNotes`（string / 数组）与 `fetchReleaseNotes`（GitHub Releases API，作为 latest.yml 未带 release note 时的兜底）；
+  - `updater-loader.ts`：用变量 specifier 懒加载 `electron-updater`（避免 `npm install` 前类型检查失败，同时让主进程在缺依赖时优雅报错）；
+  - `index.ts`：主进程单例 + 向所有窗口广播 `update:event`。
+- **依赖**：新增运行时依赖 `electron-updater@6.8.9`（精确版本）。
+- **IPC / preload**：`update:getStatus` / `update:check` / `update:download` / `update:install` 与事件 `update:event`；`window.handheld.update`。
+- **界面**：关于与诊断新增"软件更新 › 检查更新"行；新组件 `ui/UpdateDialog.tsx` 覆盖检查中 / 已是最新 / 有新版本（可滚动 release note）/ 下载中 / 已下载 / 失败 / 仅安装版可用各状态；中英文案。
+- **测试**：`update-service.test.ts`、`update-notes.test.ts`，`ipc-contract.test.ts` 覆盖新通道。
+
+### 自动更新：未完成 / 需要用户验证
+
+- `npm install` 安装 `electron-updater` 后运行 `npm run dist:publish`（带 `GH_TOKEN`）：确认生成 `latest.yml`、Release 带齐 3 个资产、已安装的旧版本能检测到并更新。
+- `updateInfo.releaseNotes` 是否随 `latest.yml` 下发尚未实测；代码已加 GitHub API 兜底，但需在真实 Release 上确认弹窗能显示正文。
+- 未实现进度条的取消下载（关闭弹窗不影响后台下载）。
+
 

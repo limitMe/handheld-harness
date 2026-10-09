@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
-import type { AppInfo } from '@shared/ipc'
+import type { AppInfo, UpdateStatus } from '@shared/ipc'
 import { useEngineStatus } from '../engine/useEngineStatus'
 import { useTranslation } from '../i18n'
+import { UpdateDialog } from '../ui'
 import { MenuGroupLabel, MenuRow } from './MenuRow'
 
 export interface AboutPageProps {
   onOpenDebug: (page: 'gamepad' | 'mic' | 'engine' | 'speech') => void
 }
 
-/** About & diagnostics (spec 15): versions, engine state and debug entry points. */
+/** About & diagnostics (spec 15): versions, engine state, updates and debug entries. */
 export function AboutPage({ onOpenDebug }: AboutPageProps) {
   const { t } = useTranslation()
   const [info, setInfo] = useState<AppInfo>()
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' })
+  const [updateOpen, setUpdateOpen] = useState(false)
   const status = useEngineStatus()
 
   useEffect(() => {
@@ -28,6 +31,28 @@ export function AboutPage({ onOpenDebug }: AboutPageProps) {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    const update = window.handheld?.update
+    if (!update) return
+    let cancelled = false
+    update
+      .getStatus()
+      .then((next) => {
+        if (!cancelled) setUpdateStatus(next)
+      })
+      .catch(() => undefined)
+    const unsubscribe = update.onEvent(setUpdateStatus)
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [])
+
+  const checkForUpdates = (): void => {
+    setUpdateOpen(true)
+    void window.handheld?.update.check()
+  }
 
   return (
     <div data-testid="about-page">
@@ -79,6 +104,17 @@ export function AboutPage({ onOpenDebug }: AboutPageProps) {
         <span>{t('about.speechProbe')}</span>
       </MenuRow>
 
+      <MenuGroupLabel>{t('menu.groups.update')}</MenuGroupLabel>
+      <MenuRow
+        id="system-menu.about.update"
+        order={5}
+        testId="about-check-update"
+        onActivate={checkForUpdates}
+        onClick={checkForUpdates}
+      >
+        <span>{t('about.checkUpdate')}</span>
+      </MenuRow>
+
       <MenuGroupLabel>{t('menu.groups.build')}</MenuGroupLabel>
       <dl
         data-testid="about-info"
@@ -97,6 +133,14 @@ export function AboutPage({ onOpenDebug }: AboutPageProps) {
         <dt className="text-text-muted">{t('about.workspace')}</dt>
         <dd className="truncate">{status?.state === 'ready' ? status.workspaceDir || '—' : '—'}</dd>
       </dl>
+
+      <UpdateDialog
+        open={updateOpen}
+        onOpenChange={setUpdateOpen}
+        status={updateStatus}
+        onDownload={() => void window.handheld?.update.download()}
+        onInstall={() => void window.handheld?.update.install()}
+      />
     </div>
   )
 }

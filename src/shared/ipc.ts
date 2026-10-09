@@ -56,6 +56,21 @@ export const AppInfoSchema = z.object({
 })
 export type AppInfo = z.infer<typeof AppInfoSchema>
 
+/**
+ * Auto-update state (spec 19). Pushed from the main process both as the return
+ * value of the update commands and through the `update:event` channel.
+ */
+export type UpdateStatus =
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | { state: 'up-to-date'; version: string }
+  | { state: 'available'; version: string; notes?: string }
+  | { state: 'downloading'; percent: number }
+  | { state: 'downloaded'; version: string }
+  | { state: 'error'; message: string }
+  /** Dev / unpackaged builds cannot self-update. */
+  | { state: 'unavailable' }
+
 export const SessionRefSchema = z.object({
   engineId: z.string().min(1),
   sessionId: z.string().min(1),
@@ -365,6 +380,11 @@ export interface InvokeContract {
   'app:pickDirectory': { request: undefined; response: { path: string | null } }
   /** Quits the app after the user confirms from the system menu (spec 15). */
   'app:quit': { request: undefined; response: void }
+  /** Auto-update from GitHub Releases (spec 19). */
+  'update:getStatus': { request: undefined; response: UpdateStatus }
+  'update:check': { request: undefined; response: UpdateStatus }
+  'update:download': { request: undefined; response: UpdateStatus }
+  'update:install': { request: undefined; response: void }
   'window:setZoom': { request: { factor: number }; response: { zoom: number } }
   'log:write': { request: LogWriteRequest; response: void }
   'settings:get': { request: undefined; response: Settings }
@@ -419,6 +439,7 @@ export interface EventContract {
   'settings:changed': { payload: Settings }
   'engine:event': { payload: EngineEventPayload }
   'speech:event': { payload: SpeechEvent }
+  'update:event': { payload: UpdateStatus }
 }
 
 export type InvokeChannel = keyof InvokeContract
@@ -431,6 +452,10 @@ export const INVOKE_CHANNELS = [
   'app:showOnScreenKeyboard',
   'app:pickDirectory',
   'app:quit',
+  'update:getStatus',
+  'update:check',
+  'update:download',
+  'update:install',
   'window:setZoom',
   'log:write',
   'settings:get',
@@ -467,6 +492,7 @@ export const EVENT_CHANNELS = [
   'settings:changed',
   'engine:event',
   'speech:event',
+  'update:event',
 ] as const satisfies readonly EventChannel[]
 
 export const IPC_INVOKE_SCHEMAS = {
@@ -476,6 +502,10 @@ export const IPC_INVOKE_SCHEMAS = {
   'app:showOnScreenKeyboard': z.undefined(),
   'app:pickDirectory': z.undefined(),
   'app:quit': z.undefined(),
+  'update:getStatus': z.undefined(),
+  'update:check': z.undefined(),
+  'update:download': z.undefined(),
+  'update:install': z.undefined(),
   'window:setZoom': z.object({ factor: z.number() }),
   'log:write': LogWriteRequestSchema,
   'settings:get': z.undefined(),
@@ -546,6 +576,13 @@ export interface HandheldApi {
     update(patch: SettingsPatch): Promise<Settings>
   }
   engine: EngineApi
+  update: {
+    getStatus(): Promise<UpdateStatus>
+    check(): Promise<UpdateStatus>
+    download(): Promise<UpdateStatus>
+    install(): Promise<void>
+    onEvent(listener: (status: UpdateStatus) => void): () => void
+  }
   speech: {
     providers(): Promise<SpeechProviderInfo[]>
     keyStatus(providerId: string): Promise<{ configured: boolean }>

@@ -4,6 +4,7 @@ import type {
   HandheldApi,
   InvokeChannel,
   InvokeContract,
+  UpdateStatus,
 } from '../shared/ipc'
 import type { EngineEventPayload } from '../shared/engine'
 import type { SpeechEvent } from '../shared/speech'
@@ -44,8 +45,7 @@ export function createHandheldApi(bridge: IpcBridge): HandheldApi {
       update: (patch) => invoke('settings:update', patch),
     },
     engine: {
-      capabilities: (engineId) => invoke('engine:capabilities', { engineId }),
-      snapshot: (engineId) => invoke('engine:snapshot', { engineId }),
+      capabilities: (engineId) => invoke('engine:capabilities', { engineId }),      snapshot: (engineId) => invoke('engine:snapshot', { engineId }),
       listSessions: (engineId) => invoke('engine:listSessions', { engineId }),
       createSession: (opts, engineId) => invoke('engine:createSession', { opts, engineId }),
       deleteSession: (ref) => invoke('engine:deleteSession', { ref }),
@@ -66,6 +66,14 @@ export function createHandheldApi(bridge: IpcBridge): HandheldApi {
       restart: (engineId) => invoke('engine:restart', { engineId }),
       onEvent: (listener) =>
         bridge.on('engine:event', (payload) => listener(payload as EngineEventPayload)),
+    },
+    update: {
+      getStatus: () => invoke('update:getStatus'),
+      check: () => invoke('update:check'),
+      download: () => invoke('update:download'),
+      install: () => invoke('update:install'),
+      onEvent: (listener) =>
+        bridge.on('update:event', (payload) => listener(payload as UpdateStatus)),
     },
     speech: {
       providers: () => invoke('speech:providers'),

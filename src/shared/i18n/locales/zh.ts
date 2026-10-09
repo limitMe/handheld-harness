@@ -151,6 +151,7 @@ export const zh = {
       language: '语言',
       diagnostics: '诊断',
       build: '构建',
+      update: '软件更新',
     },
   },
   keys: {
@@ -256,6 +257,7 @@ export const zh = {
   },
   about: {
     openLogs: '打开日志目录',
+    checkUpdate: '检查更新',
     gamepadProbe: '手柄探测',
     micProbe: '麦克风探测',
     engineProbe: '引擎探测',
@@ -272,6 +274,23 @@ export const zh = {
     title: '退出 HANDHELD.AI？',
     description: '应用将关闭，并停止 Agent 引擎。',
     confirm: '退出',
+  },
+  update: {
+    title: '软件更新',
+    checking: '正在检查更新…',
+    upToDate: '已是最新版本（v{{version}}）。',
+    availableTitle: '发现新版本 {{version}}',
+    noNotes: '该版本没有提供更新说明。',
+    update: '更新',
+    cancel: '取消',
+    close: '关闭',
+    downloading: '正在下载更新… {{percent}}%',
+    downloadedTitle: '更新已下载',
+    downloadedBody: '版本 {{version}} 已就绪，重启即可安装。',
+    restart: '立即重启',
+    later: '稍后',
+    errorTitle: '检查更新失败',
+    unavailable: '自动更新仅在安装版中可用。',
   },
   debug: {
     gamepad: {

@@ -152,6 +152,7 @@ export const en = {
       language: 'Language',
       diagnostics: 'Diagnostics',
       build: 'Build',
+      update: 'Software update',
     },
   },
   keys: {
@@ -258,6 +259,7 @@ export const en = {
   },
   about: {
     openLogs: 'Open log folder',
+    checkUpdate: 'Check for updates',
     gamepadProbe: 'Gamepad probe',
     micProbe: 'Microphone probe',
     engineProbe: 'Engine probe',
@@ -274,6 +276,23 @@ export const en = {
     title: 'Quit HANDHELD.AI?',
     description: 'The app closes and the agent engine stops.',
     confirm: 'Quit',
+  },
+  update: {
+    title: 'Software update',
+    checking: 'Checking for updates…',
+    upToDate: 'You are on the latest version (v{{version}}).',
+    availableTitle: 'Version {{version}} is available',
+    noNotes: 'No release notes were provided for this version.',
+    update: 'Update',
+    cancel: 'Cancel',
+    close: 'Close',
+    downloading: 'Downloading update… {{percent}}%',
+    downloadedTitle: 'Update downloaded',
+    downloadedBody: 'Version {{version}} is ready. Restart to install it.',
+    restart: 'Restart now',
+    later: 'Later',
+    errorTitle: 'Update check failed',
+    unavailable: 'Automatic updates are available in the installed build only.',
   },
   debug: {
     gamepad: {
