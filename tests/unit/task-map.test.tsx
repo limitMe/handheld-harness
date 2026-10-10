@@ -111,6 +111,18 @@ describe('TaskMap empty card', () => {
     expect(screen.getByTestId('task-card').hasAttribute('data-activated')).toBe(false)
   })
 
+  it('shows and focuses the empty card when a new task has no session yet', async () => {
+    installBridge()
+    seed([ref('s1')], null)
+    renderMap()
+
+    await waitFor(() => expect(screen.getByTestId('task-card-empty')).not.toBeNull())
+    const empty = screen.getByTestId('task-card-empty')
+    expect(empty.hasAttribute('data-selected')).toBe(true)
+    expect(empty.hasAttribute('data-focused')).toBe(true)
+    expect(screen.getByTestId('task-card').hasAttribute('data-focused')).toBe(false)
+  })
+
   it('puts the two button hints inside the empty card, not the bottom legend', async () => {
     installBridge()
     seed([], null)

@@ -32,8 +32,11 @@ export function initialCardId(cards: TaskCard[], current: SessionRef | null): st
   if (current) {
     const key = sessionKey(current)
     if (cards.some((card) => card.id === key)) return key
+    return cards[0]?.id ?? ''
   }
-  return cards[0]?.id ?? ''
+  // A brand-new, unsent task has no session ref (`current === null`); it is the
+  // empty card at the far right, so open the map focused there (spec 14).
+  return cards.find((card) => card.kind === 'empty')?.id ?? cards[0]?.id ?? ''
 }
 
 /** Steps selection with wrap-around, so the row reads as a carousel. */

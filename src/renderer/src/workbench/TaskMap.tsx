@@ -247,11 +247,11 @@ function TaskMapBody({
   const [historyOpen, setHistoryOpen] = useState(false)
   const [confirmRef, setConfirmRef] = useState<SessionRef | null>(null)
   const [rawSelectedId, setSelectedId] = useState(() =>
-    initialCardId(buildTaskCards(open, open.length === 0), current),
+    initialCardId(buildTaskCards(open, open.length === 0 || current === null), current),
   )
   const emptyRef = useRef<HTMLButtonElement>(null)
 
-  const showEmpty = empty || open.length === 0
+  const showEmpty = empty || open.length === 0 || current === null
   const cards = useMemo(() => buildTaskCards(open, showEmpty), [open, showEmpty])
   // Fall back to the first card if the stored selection no longer exists, without
   // an effect: the invalid id is simply not used.

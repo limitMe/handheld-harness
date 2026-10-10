@@ -42,6 +42,13 @@ describe('task map cards', () => {
     expect(initialCardId(cards, null)).toBe('fake:a')
   })
 
+  it('selects the empty card for a new unsent task', () => {
+    const cards = buildTaskCards([ref('a'), ref('b')], true)
+    expect(initialCardId(cards, null)).toBe(EMPTY_CARD_ID)
+    // A still-valid current task keeps the selection.
+    expect(initialCardId(cards, ref('a'))).toBe('fake:a')
+  })
+
   it('steps with wrap-around so the row reads as a carousel', () => {
     const cards = buildTaskCards([ref('a'), ref('b')], true)
     expect(stepCardId(cards, 'fake:a', 1)).toBe('fake:b')
