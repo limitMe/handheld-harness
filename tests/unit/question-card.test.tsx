@@ -22,14 +22,19 @@ function Harness({ children }: { children: ReactNode }) {
   )
 }
 
-function renderCard(request: QuestionRequest) {
+function renderCard(request: QuestionRequest, interactive = true) {
   const onReply = vi.fn()
   const onReject = vi.fn()
   render(
     <InputProvider>
       <FocusProvider>
         <Harness>
-          <QuestionCard request={request} onReply={onReply} onReject={onReject} />
+          <QuestionCard
+            request={request}
+            interactive={interactive}
+            onReply={onReply}
+            onReject={onReject}
+          />
         </Harness>
       </FocusProvider>
     </InputProvider>,
@@ -66,9 +71,15 @@ function multi(): QuestionRequest {
 }
 
 describe('QuestionCard', () => {
-  it('confirms a single-choice question in one press', () => {
+  it('records a single choice, moves the highlight to Submit, and waits for it', () => {
     const { onReply } = renderCard(single())
     fireEvent.click(screen.getByTestId('question-option-0-Option A'))
+    expect(onReply).not.toHaveBeenCalled()
+    expect(document.querySelector('[data-highlighted]')?.getAttribute('data-testid')).toBe(
+      'question-submit',
+    )
+
+    fireEvent.click(screen.getByTestId('question-submit'))
     expect(onReply).toHaveBeenCalledWith([['Option A']])
   })
 
@@ -97,6 +108,31 @@ describe('QuestionCard', () => {
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     expect(highlighted()).toBe('question-option-0-Option B')
     fireEvent.keyDown(window, { key: 'ArrowUp' })
+    expect(highlighted()).toBe('question-option-0-Option A')
+  })
+
+  it('ignores scroll-induced hover and follows real pointer movement', () => {
+    renderCard(single())
+    const highlighted = () =>
+      document.querySelector('[data-highlighted]')?.getAttribute('data-testid')
+
+    // Scrolling can fire `mouseenter`/zero-movement `mousemove` on the option
+    // now under a resting cursor; that must not steal the D-pad highlight.
+    fireEvent.mouseEnter(screen.getByTestId('question-option-0-Option B'))
+    fireEvent.mouseMove(screen.getByTestId('question-option-0-Option B'))
+    expect(highlighted()).toBe('question-option-0-Option A')
+
+    fireEvent.mouseMove(screen.getByTestId('question-option-0-Option B'), { movementX: 5 })
+    expect(highlighted()).toBe('question-option-0-Option B')
+  })
+
+  it('does not consume navigation while inactive (behind an overlay)', () => {
+    renderCard(single(), false)
+    const highlighted = () =>
+      document.querySelector('[data-highlighted]')?.getAttribute('data-testid')
+
+    expect(highlighted()).toBe('question-option-0-Option A')
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
     expect(highlighted()).toBe('question-option-0-Option A')
   })
 })

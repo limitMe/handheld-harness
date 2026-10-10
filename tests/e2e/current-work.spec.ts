@@ -187,6 +187,9 @@ test('auto-activates the question card and confirms with gamepad A', async () =>
 
     await pressPad(window, 'A')
     await releasePad(window, 'A')
+    // Selecting only highlights Submit; a second press confirms.
+    await pressPad(window, 'A')
+    await releasePad(window, 'A')
 
     await expect(window.getByTestId('question-card')).toHaveCount(0)
     await expect(window.getByTestId('message-list')).toContainText('Answer received: Option A', {

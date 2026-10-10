@@ -4,6 +4,7 @@ import { useScrollHighlighted } from '../hooks/useScrollHighlighted'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { useTranslation } from '../i18n'
 import { AnchoredPanel, cn } from '../ui'
+import { isPointerMoved } from './hover'
 import type { HistoryEntry } from './taskCards'
 import { formatRelativeTime } from './time'
 
@@ -71,7 +72,9 @@ export function HistoryList({ anchor, entries, onChoose, onCancel }: HistoryList
               type="button"
               data-testid={`task-history-${entry.summary.id}`}
               data-highlighted={index === active ? '' : undefined}
-              onMouseEnter={() => setHighlighted(index)}
+              onMouseMove={(event) => {
+                if (isPointerMoved(event)) setHighlighted(index)
+              }}
               onClick={() => choose(index)}
               className={cn(
                 // `bg-surface` reads against the raised panel in both themes.

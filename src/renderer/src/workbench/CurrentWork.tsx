@@ -70,6 +70,7 @@ export function CurrentWork({ dimmed = false }: CurrentWorkProps) {
         capabilities={engineEntry?.capabilities}
         busy={busy}
         error={error}
+        interactive={!dimmed}
         viewKey={`${key}:${openSeq}`}
         onReplyPermission={(requestId, reply) => void replyPermission(requestId, reply)}
         onReplyQuestion={(requestId, answers) => void replyQuestion(requestId, answers)}

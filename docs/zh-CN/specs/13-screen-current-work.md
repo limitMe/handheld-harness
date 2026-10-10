@@ -225,3 +225,28 @@ spec 03 的错误横幅只覆盖引擎 `down` / `reconnecting`；这里补的是
 **已自动验证**：`npm run check` 通过（71 个测试文件 436 个用例，lint 零 warning）；`npm run test:e2e` 31 个用例通过，新增 `current-work.spec.ts` 的“surfaces a failed run and clears the error on the next message”（`/fake error` 出现错误卡片，下一条消息开始时卡片消失）与 `apply-engine-event` 的三条错误用例。
 
 **未完成 / 需要人工验证**：用真实 OpenCode 选一个未配置 key 的提供商发消息，确认错误卡片能显示底座返回的原文（文案由底座决定，未在本仓库固定）。
+
+### 单选不再「选中即提交」（2026-10-10，试用反馈）
+
+用户多次反馈：面对多个问题，选到某个单选选项后卡片**立即提交**，来不及复核 / 修改其他问题，且「确认」按钮形同虚设。这推翻了 P-13 原来的「A 单选即确认」决策（本节记录优先于上文 P-13 实现记录）。
+
+**改为**（`QuestionCard.tsx` 的 `selectOption`）：
+
+- **选择一律不提交**。单选题选中后只记录答案，不再 `onReply`。
+- **选完自动高亮到 Submit**：当某次单选使所有问题都有答案时（`!multiple && every(answered)`），把本地高亮 `setHighlight(targets.length - 2)` 移到 Submit，用户再按一次 A 才提交；期间可上下移回任何选项修改。
+- 多选仍维持原样：切换勾选后需显式移到 Submit 提交（不自动跳转，避免打断连续多选）。
+- 提交 / 忽略逻辑不变（`confirm` 处理 Submit / Ignore）。
+
+**已自动验证**：`npm run check` 通过；更新单测 `question-card.test.tsx`（单选后不提交、高亮落到 `question-submit`、再点提交才 `onReply`），更新 e2e `current-work.spec.ts`「auto-activates the question card and confirms with gamepad A」为按两次 A。
+
+### 提问卡片两条交互修复（2026-10-10，试用反馈）
+
+**问题一：多问题向下导航时高亮回跳。** 十字键从问题一的最后一个选项移到问题二时，卡片会滚动（`useScrollHighlighted` / 分组滚动），滚动把新的一行带到**静止的鼠标光标**下，浏览器因此补发 `mouseenter` / 零位移 `mousemove`，原来的 `onMouseEnter` 把它当成悬停，覆盖了 D-pad 高亮。
+
+- 修复：高亮只跟随**真实指针移动**。新增 `workbench/hover.ts` 的 `isPointerMoved`（`movementX/Y !== 0`），`QuestionCard`、`ListInput`、`HistoryList` 的 `onMouseEnter` 改为带此判断的 `onMouseMove`；滚动产生的零位移事件被忽略。触摸 / 点击路径不受影响。
+
+**问题二：提问卡片未提交时，进入菜单后上下导航失效。** `CurrentWork` 在任务地图 / 系统菜单 / 会话信息页打开时只是 `dimmed`、并未卸载，`currentWork.question`（以及 `currentWork.permission`）上下文仍挂在 `CONTEXT_ORDER.overlay`，而菜单的聚焦导航走 `CONTEXT_ORDER.focus`（更低）；高优先级的卡片上下文吞掉了 `nav.up` / `nav.down`，于是菜单里方向键、摇杆、滚轮都不动了。
+
+- 修复：`useInputContext` 新增 `enabled` 参数（为 false 时不入栈）。`CurrentWork` 把 `interactive={!dimmed}` 传给 `MessageList`；`MessageList` 据此禁用待处理卡片的输入上下文、并把 `interactive` 透传给 `QuestionCard`，同时让「待处理卡片抢焦点」的 effect 在 dimmed 期间跳过。菜单 / 地图聚焦恢复，关掉覆盖层后卡片重新接管。
+
+**已自动验证**：`npm run check` 通过（473 用例）；新增单测：高亮忽略 `mouseEnter` 与零位移 `mouseMove`、只响应带位移的 `mouseMove`；`interactive={false}` 时方向键不改变高亮。e2e `current-work` 提问用例仍通过。

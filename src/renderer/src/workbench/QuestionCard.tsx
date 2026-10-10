@@ -1,12 +1,16 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { QuestionRequest } from '@shared/engine'
 import { useFocusable, FOCUS_ORDER } from '../focus'
+import { useScrollHighlighted } from '../hooks/useScrollHighlighted'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { useTranslation } from '../i18n'
 import { Button, cn } from '../ui'
+import { isPointerMoved } from './hover'
 
 export interface QuestionCardProps {
   request: QuestionRequest
+  /** When false the card is behind a higher overlay and must not consume input. */
+  interactive?: boolean
   onReply: (answers: string[][]) => void
   onReject: () => void
 }
@@ -19,7 +23,12 @@ type QuestionTarget =
  * D-pad highlight over options + submit + ignore (spec 13, P-13): A selects
  * (multi-select toggles), B ignores. Buttons stay for touch and keyboard.
  */
-export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) {
+export function QuestionCard({
+  request,
+  interactive = true,
+  onReply,
+  onReject,
+}: QuestionCardProps) {
   const { t } = useTranslation()
   const cardRef = useRef<HTMLDivElement>(null)
   const [selections, setSelections] = useState<string[][]>(() => request.questions.map(() => []))
@@ -48,6 +57,23 @@ export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) 
   const active = Math.min(highlight, Math.max(0, targets.length - 1))
   const canSubmit = selections.every((value) => value.length > 0)
 
+  // The question owns its highlight instead of registering each option with the
+  // focus tree, so it must scroll the highlighted option into view itself.
+  useScrollHighlighted(cardRef, active)
+
+  // The question prompt above the first option is not a highlight target, so
+  // scrolling to the option alone leaves the prompt off-screen when the first
+  // option is reached. Pull the whole question block into view in that case.
+  useEffect(() => {
+    const target = targets[active]
+    if (target?.kind !== 'option') return
+    const question = request.questions[target.questionIndex]
+    if (question?.options[0]?.label !== target.label) return
+    cardRef.current
+      ?.querySelector<HTMLElement>(`[data-question-group="${target.questionIndex}"]`)
+      ?.scrollIntoView?.({ block: 'nearest' })
+  }, [active, targets, request])
+
   const selectOption = useCallback(
     (questionIndex: number, label: string, multiple: boolean) => {
       const next = selections.map((value) => [...value])
@@ -60,10 +86,14 @@ export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) 
         next[questionIndex] = [label]
       }
       setSelections(next)
-      // Single-choice confirms in one press; multi-choice waits for Submit.
-      if (!multiple && next.every((value) => value.length > 0)) onReply(next)
+      // Selecting never submits. Once every question has an answer, nudge the
+      // highlight onto Submit so A confirms, but the user can still move back up
+      // and revise before pressing it. Multi-select waits for Submit explicitly.
+      if (!multiple && next.every((value) => value.length > 0)) {
+        setHighlight(targets.length - 2)
+      }
     },
-    [selections, onReply],
+    [selections, targets.length],
   )
 
   const confirm = useCallback(() => {
@@ -90,6 +120,7 @@ export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) 
       'question.ignore': onPress(onReject),
     },
     CONTEXT_ORDER.overlay,
+    interactive,
   )
 
   const focus = useFocusable({
@@ -109,7 +140,11 @@ export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) 
       className="flex flex-col gap-4 rounded-card border border-accent bg-card p-4 text-on-card"
     >
       {request.questions.map((question, questionIndex) => (
-        <div key={question.question} className="flex flex-col gap-2">
+        <div
+          key={question.question}
+          data-question-group={questionIndex}
+          className="flex flex-col gap-2"
+        >
           {question.header ? (
             <span className="text-code text-text-muted">{question.header}</span>
           ) : null}
@@ -129,7 +164,9 @@ export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) 
                     selected ? highlightClass : '',
                     index === active ? 'ring-2 ring-focus-ring' : '',
                   )}
-                  onMouseEnter={() => setHighlight(index)}
+                  onMouseMove={(event) => {
+                    if (isPointerMoved(event)) setHighlight(index)
+                  }}
                   onClick={() =>
                     selectOption(questionIndex, option.label, question.multiple === true)
                   }
@@ -155,7 +192,9 @@ export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) 
           data-highlighted={active === targets.length - 2 ? '' : undefined}
           disabled={!canSubmit}
           className={cn('min-h-11', active === targets.length - 2 ? 'ring-2 ring-focus-ring' : '')}
-          onMouseEnter={() => setHighlight(targets.length - 2)}
+          onMouseMove={(event) => {
+            if (isPointerMoved(event)) setHighlight(targets.length - 2)
+          }}
           onClick={() => {
             if (canSubmit) onReply(selections)
           }}
@@ -166,7 +205,9 @@ export function QuestionCard({ request, onReply, onReject }: QuestionCardProps) 
           data-testid="question-reject"
           data-highlighted={active === targets.length - 1 ? '' : undefined}
           className={cn('min-h-11', active === targets.length - 1 ? 'ring-2 ring-focus-ring' : '')}
-          onMouseEnter={() => setHighlight(targets.length - 1)}
+          onMouseMove={(event) => {
+            if (isPointerMoved(event)) setHighlight(targets.length - 1)
+          }}
           onClick={onReject}
         >
           {t('question.ignore')}

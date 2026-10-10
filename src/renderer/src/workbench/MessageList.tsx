@@ -28,6 +28,8 @@ export interface MessageListProps {
   busy: boolean
   /** Last run error for this session; shown as a card so failures never look silent. */
   error?: string
+  /** When false a higher overlay is on top; pending cards must not consume input. */
+  interactive?: boolean
   /** Changes whenever a task is opened; the transcript jumps back to the latest. */
   viewKey: string
   onReplyPermission: (requestId: string, reply: PermissionReply) => void
@@ -71,6 +73,7 @@ export function MessageList({
   capabilities,
   busy,
   error,
+  interactive = true,
   viewKey,
   onReplyPermission,
   onReplyQuestion,
@@ -208,7 +211,7 @@ export function MessageList({
   const pendingRef = useRef(false)
 
   useEffect(() => {
-    if (!tree || viewerId) return
+    if (!tree || viewerId || !interactive) return
     if (pendingCardFocusId) {
       if (!pendingRef.current) {
         pendingRef.current = true
@@ -225,7 +228,7 @@ export function MessageList({
       roundRestore.current = null
       if (restore && tree.getElement(restore)) tree.setFocus(restore)
     }
-  }, [pendingCardFocusId, tree, viewerId])
+  }, [pendingCardFocusId, tree, viewerId, interactive])
 
   return (
     <div className="relative flex-1 overflow-hidden">
@@ -297,7 +300,7 @@ export function MessageList({
           </div>
         ))}
 
-        {firstPermission ? (
+        {interactive && firstPermission ? (
           <PermissionInputContext
             permissionAlways={capabilities?.permissionAlways ?? false}
             onReply={(reply) => onReplyPermission(firstPermission.id, reply)}
@@ -317,6 +320,7 @@ export function MessageList({
           <QuestionCard
             key={request.id}
             request={request}
+            interactive={interactive}
             onReply={(answers) => onReplyQuestion(request.id, answers)}
             onReject={() => onRejectQuestion(request.id)}
           />

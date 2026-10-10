@@ -5,6 +5,7 @@ import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { useTranslation } from '../i18n'
 import { AnchoredPanel, cn } from '../ui'
 import { orderCommands } from './commands'
+import { isPointerMoved } from './hover'
 import { useListInputStore } from './listInputStore'
 
 const EMPTY_RECENT: string[] = []
@@ -92,7 +93,9 @@ export function ListInput({ anchor, engineId, onChoose, onCancel }: ListInputPro
               type="button"
               data-testid={`list-input-${command.name}`}
               data-highlighted={index === active ? '' : undefined}
-              onMouseEnter={() => setHighlighted(index)}
+              onMouseMove={(event) => {
+                if (isPointerMoved(event)) setHighlighted(index)
+              }}
               onClick={() => choose(index)}
               className={cn(
                 // `bg-surface` reads against the raised panel in both themes;
