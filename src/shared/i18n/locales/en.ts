@@ -255,6 +255,13 @@ export const en = {
       systemDescription: 'Match the operating system language.',
       en: 'English',
       zh: '简体中文',
+      'zh-Hant': '繁體中文',
+      ja: '日本語',
+      ko: '한국어',
+      es: 'Español',
+      fr: 'Français',
+      de: 'Deutsch',
+      ru: 'Русский',
     },
   },
   about: {

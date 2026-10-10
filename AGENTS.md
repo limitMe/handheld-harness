@@ -79,6 +79,13 @@ Settings live in `%APPDATA%\handheld-harness\<profile>\settings.json` (defaults 
 - Theme values live only under `src/renderer/src/styles/theme/`; swapping the whole theme means replacing that directory.
 - Before adding a component, check `ui/` for an existing one to reuse.
 
+## Localization (i18n)
+
+- User-visible copy lives in the shared catalogs under `src/shared/i18n/locales/`. The language set is **open-ended**: `en` (source of truth and fallback), `zh` (Simplified Chinese), `zh-Hant` (Traditional Chinese), `ja`, `ko`, `es`, `fr`, `de`, `ru`. Add a language by extending `RESOURCE_LANGUAGES` and `resolveLanguage` in `src/shared/i18n/index.ts` and adding its catalog.
+- **Feature work updates only `en` and `zh`.** Add every new key to both catalogs in the same change; `npm test` enforces exact `en`/`zh` key parity and matching interpolation placeholders.
+- **The other languages are filled in later, in a dedicated "i18n alignment" commit.** Secondary catalogs may lag behind `en`/`zh`; missing keys fall back to English at runtime. An alignment commit updates `zh-Hant`, `ja`, `ko`, `es`, `fr`, `de`, `ru` together for the keys added since the previous alignment.
+- Keep language names as endonyms (e.g. `日本語`, `Español`) in every catalog's `display.languageModes`, so the picker reads the same regardless of the active language.
+
 ## Networking
 
 - When accessing foreign resources or hitting network timeouts, set the proxy and retry:

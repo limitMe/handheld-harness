@@ -114,15 +114,11 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
     { id: 'dark', label: t('display.themeModes.dark') },
     { id: 'light', label: t('display.themeModes.light') },
   ]
-  const languageOptions: ChoiceOption[] = [
-    {
-      id: 'system',
-      label: t('display.languageModes.system'),
-      description: t('display.languageModes.systemDescription'),
-    },
-    { id: 'en', label: t('display.languageModes.en') },
-    { id: 'zh', label: t('display.languageModes.zh') },
-  ]
+  const languageOptions: ChoiceOption[] = LANGUAGE_MODES.map((id) => ({
+    id,
+    label: t(`display.languageModes.${id}`),
+    description: id === 'system' ? t('display.languageModes.systemDescription') : undefined,
+  }))
 
   const setZoom = (next: number): void => {
     const factor = Math.round(clamp(next, ZOOM_MIN, ZOOM_MAX) * 100) / 100

@@ -27,6 +27,10 @@ void i18next.use(initReactI18next).init({
   lng: resolveLanguage('system', systemLanguage()),
   fallbackLng: FALLBACK_LANGUAGE,
   supportedLngs: [...RESOURCE_LANGUAGES],
+  // Only the selected catalog plus the English fallback; without this i18next
+  // would fall `zh-Hant` back through `zh`, so a lagging secondary catalog
+  // would surface Simplified Chinese instead of English (see AGENTS.md).
+  load: 'currentOnly',
   interpolation: { escapeValue: false },
   initAsync: false,
   returnNull: false,

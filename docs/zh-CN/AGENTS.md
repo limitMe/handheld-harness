@@ -81,6 +81,13 @@ tests/
 - 主题的具体取值只放在 `src/renderer/src/styles/theme/` 下；整体换主题只替换该目录。
 - 新组件先在 `ui/` 里找有没有可以复用的。
 
+## 多语言（i18n）
+
+- 用户可见文案放在 `src/shared/i18n/locales/` 下的共享目录（catalog）。语言集合是**开放**的：`en`（源头与回退）、`zh`（简体中文）、`zh-Hant`（繁体中文）、`ja`、`ko`、`es`、`fr`、`de`、`ru`。新增语言时扩展 `src/shared/i18n/index.ts` 里的 `RESOURCE_LANGUAGES` 与 `resolveLanguage`，并添加对应目录。
+- **开发新功能时只更新 `en` 与 `zh`。** 新 key 必须在同一次改动里同时加到这两个目录；`npm test` 会强制 `en`/`zh` 的 key 完全一致，且插值占位符匹配。
+- **其他语言留到之后专门的「多语言对齐」commit 再补。** 次级目录允许落后于 `en`/`zh`，缺 key 时运行时回退英文。对齐 commit 会针对自上次对齐以来新增的 key，一次性更新 `zh-Hant`、`ja`、`ko`、`es`、`fr`、`de`、`ru`。
+- 每个目录的 `display.languageModes` 里，语言名一律用其本名（endonym，如 `日本語`、`Español`），这样无论当前语言是什么，语言选择器读起来都一致。
+
 ## 网络
 
 - 需要访问外文资源或遇到网络超时时，先设置代理再重试：

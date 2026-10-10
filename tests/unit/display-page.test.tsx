@@ -154,6 +154,8 @@ describe('Display & hints', () => {
 
     fireEvent.keyDown(window, { key: 'Enter' })
     await waitFor(() => expect(screen.getByTestId('choice-zh')).not.toBeNull())
+    expect(screen.getByTestId('choice-ja')).not.toBeNull()
+    expect(screen.getByTestId('choice-ru')).not.toBeNull()
 
     // The first option (Follow system) is focused; step down to 简体中文 and confirm.
     fireEvent.keyDown(window, { key: 'ArrowDown' })
