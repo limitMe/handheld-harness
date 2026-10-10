@@ -97,6 +97,17 @@ describe('settings store', () => {
     expect(store.get().hints).toEqual({ enabled: false, delayMs: 3000 })
   })
 
+  it('keeps button sounds off by default and persists the toggle', () => {
+    const target = makeDir()
+    const store = createSettingsStore(target)
+
+    expect(store.get().sound).toEqual({ enabled: false })
+
+    store.update({ sound: { enabled: true } })
+    expect(store.get().sound).toEqual({ enabled: true })
+    expect(createSettingsStore(target).get().sound).toEqual({ enabled: true })
+  })
+
   it('persists the task map slice and replaces arrays wholesale', () => {
     const target = makeDir()
     const store = createSettingsStore(target)

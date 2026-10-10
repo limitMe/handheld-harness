@@ -244,6 +244,7 @@ export const zh = {
     themeSystemDescription: '与操作系统的深色/浅色偏好保持一致。',
     stickScrollSpeed: '摇杆滚动速度',
     showActionHints: '显示操作提示',
+    buttonSound: '按键音效',
     waitBeforeShowing: '显示前等待',
     reducedMotion: '减少动效与省电模式将随 spec 18 提供。',
     language: '语言',

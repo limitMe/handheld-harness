@@ -5,6 +5,7 @@ import { FocusProvider } from './focus'
 import { HintsProvider } from './hints'
 import { i18n } from './i18n'
 import { InputProvider } from './input'
+import { SoundProvider } from './sound'
 import { ToastProvider } from './ui'
 import './styles/app.css'
 
@@ -66,11 +67,13 @@ createRoot(container).render(
     <ErrorBoundary>
       <ToastProvider>
         <InputProvider>
-          <FocusProvider>
-            <HintsProvider>
-              <App />
-            </HintsProvider>
-          </FocusProvider>
+          <SoundProvider>
+            <FocusProvider>
+              <HintsProvider>
+                <App />
+              </HintsProvider>
+            </FocusProvider>
+          </SoundProvider>
         </InputProvider>
       </ToastProvider>
     </ErrorBoundary>

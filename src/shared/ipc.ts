@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { ACTION_IDS, type ActionId } from './actions'
 import { DEFAULT_HINTS } from './hints'
 import { DEFAULT_LANGUAGE, LANGUAGE_MODES } from './i18n'
+import { DEFAULT_SOUND } from './sound'
 import { RING_SLOTS } from './model-recents'
 import type { BindingLayer, BindingValue } from './input'
 import {
@@ -180,6 +181,12 @@ export const HintsSettingsSchema = z.object({
 })
 export type { HintsSettings } from './hints'
 
+/** Short controller-button sound effects, off by default (spec 15). */
+export const SoundSettingsSchema = z.object({
+  enabled: z.boolean().default(DEFAULT_SOUND.enabled),
+})
+export type { SoundSettings } from './sound'
+
 /**
  * Task map state (spec 14). `open` is the ordered set of tasks shown on the map
  * (creation-time order); `unread` holds the sessions whose "finished while you
@@ -224,6 +231,7 @@ export const SettingsSchema = z.object({
     language: DEFAULT_LANGUAGE,
   }),
   hints: HintsSettingsSchema.default({ ...DEFAULT_HINTS }),
+  sound: SoundSettingsSchema.default({ ...DEFAULT_SOUND }),
   tasks: TasksSettingsSchema.default({ open: [], unread: [] }),
   model: ModelSettingsSchema.default({ recent: [] }),
   input: BindingLayerSchema.default({ contexts: {}, keyboard: {} }),
@@ -261,6 +269,11 @@ export const SettingsPatchSchema = z.object({
     .object({
       enabled: z.boolean().optional(),
       delayMs: z.number().int().min(0).max(60_000).optional(),
+    })
+    .optional(),
+  sound: z
+    .object({
+      enabled: z.boolean().optional(),
     })
     .optional(),
   tasks: z
@@ -309,6 +322,7 @@ export const DEFAULT_SETTINGS: Settings = {
   engine: {},
   ui: { zoom: 1, scrollSpeed: 1, theme: 'system', language: DEFAULT_LANGUAGE },
   hints: { ...DEFAULT_HINTS },
+  sound: { ...DEFAULT_SOUND },
   tasks: { open: [], unread: [] },
   model: { recent: [] },
   input: { contexts: {}, keyboard: {} },

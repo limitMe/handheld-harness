@@ -1,0 +1,14 @@
+Button sound effects, all by Kenney (https://kenney.nl), released under
+CC0 1.0 (public domain): https://creativecommons.org/publicdomain/zero/1.0/
+
+Currently bundled:
+  delete.ogg  <- "Interface Sounds" pack, tick_001.ogg
+
+The sound layer also looks for the clip names below. Drop a matching `.ogg`
+(your own, or another CC0 file) into this folder to enable that cue, with no
+code change needed:
+  select.ogg  open / send / confirm
+  back.ogg    exit / cancel
+  scroll.ogg  move between cards and menu items
+
+CC0 requires no attribution; this note is kept for provenance only.

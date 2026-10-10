@@ -179,6 +179,7 @@ export function InputProvider({ children }: { children: ReactNode }) {
           controlListenersRef.current.delete(listener)
         }
       },
+      subscribeDispatch: (listener) => router.subscribe(listener),
     }),
     [router],
   )

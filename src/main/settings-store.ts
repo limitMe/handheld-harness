@@ -15,6 +15,7 @@ function defaults(): Settings {
     engine: { ...DEFAULT_SETTINGS.engine },
     ui: { ...DEFAULT_SETTINGS.ui },
     hints: { ...DEFAULT_SETTINGS.hints },
+    sound: { ...DEFAULT_SETTINGS.sound },
     tasks: { open: [], unread: [] },
     model: { recent: [] },
     input: { contexts: {}, keyboard: {} },
@@ -106,6 +107,7 @@ export function createSettingsStore(userDataDir: string): SettingsStore {
         engine: { ...current.engine, ...patch.engine },
         ui: { ...current.ui, ...patch.ui },
         hints: { ...current.hints, ...patch.hints },
+        sound: { ...current.sound, ...patch.sound },
         tasks: {
           open: patch.tasks?.open ?? current.tasks.open,
           unread: patch.tasks?.unread ?? current.tasks.unread,

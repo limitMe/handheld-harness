@@ -191,9 +191,19 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
         <span>{t('display.showActionHints')}</span>
         <Switch checked={settings.hints.enabled} />
       </MenuRow>
+      <MenuRow
+        id="system-menu.display.sound"
+        order={4}
+        testId="display-button-sound"
+        onActivate={() => void update({ sound: { enabled: !settings.sound.enabled } })}
+        onClick={() => void update({ sound: { enabled: !settings.sound.enabled } })}
+      >
+        <span>{t('display.buttonSound')}</span>
+        <Switch checked={settings.sound.enabled} />
+      </MenuRow>
       <ValueRow
         id="system-menu.display.delay"
-        order={4}
+        order={5}
         testId="display-hints-delay"
         label={t('display.waitBeforeShowing')}
         display={`${(delayMs / 1000).toFixed(1)}s`}
@@ -214,7 +224,7 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
       <MenuGroupLabel>{t('menu.groups.language')}</MenuGroupLabel>
       <MenuRow
         id="system-menu.display.language"
-        order={5}
+        order={6}
         activatable
         testId="display-language"
         onActivate={() => setLanguageOpen(true)}

@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { ActionMap } from '@shared/input'
-import type { ActionHandlers } from './router'
+import type { ActionHandlers, DispatchRecord } from './router'
 import type { CapturedControl, ControlChange } from './types'
 
 export interface InputApi {
@@ -16,6 +16,8 @@ export interface InputApi {
   subscribeContexts(listener: (ids: string[]) => void): () => void
   /** Raw control edges; used by hints to reset idleness and track holds. */
   subscribeControls(listener: (change: ControlChange) => void): () => void
+  /** Every routed action, handled or not; used for global feedback such as sounds. */
+  subscribeDispatch(listener: (record: DispatchRecord) => void): () => void
 }
 
 export const InputContext = createContext<InputApi | null>(null)

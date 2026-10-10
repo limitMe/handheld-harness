@@ -246,6 +246,7 @@ export const en = {
     themeSystemDescription: 'Match the OS light/dark preference.',
     stickScrollSpeed: 'Stick scroll speed',
     showActionHints: 'Show action hints',
+    buttonSound: 'Button sound effects',
     waitBeforeShowing: 'Wait before showing',
     reducedMotion: 'Reduced motion and power saving arrive with spec 18.',
     language: 'Language',
