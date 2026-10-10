@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import type { SessionRef } from '@shared/engine'
+import { useScrollHighlighted } from '../hooks/useScrollHighlighted'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { useTranslation } from '../i18n'
 import { AnchoredPanel, cn } from '../ui'
@@ -42,6 +43,7 @@ export function HistoryList({ anchor, entries, onChoose, onCancel }: HistoryList
   )
 
   const active = Math.min(highlighted, Math.max(0, entries.length - 1))
+  useScrollHighlighted(containerRef, active)
 
   // Take DOM focus so the list's context owns the keyboard arrows.
   useEffect(() => {

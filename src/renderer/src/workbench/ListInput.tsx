@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import type { CommandInfo } from '@shared/engine'
+import { useScrollHighlighted } from '../hooks/useScrollHighlighted'
 import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
 import { useTranslation } from '../i18n'
 import { AnchoredPanel, cn } from '../ui'
@@ -45,6 +46,7 @@ export function ListInput({ anchor, engineId, onChoose, onCancel }: ListInputPro
 
   const ordered = useMemo(() => orderCommands(commands, recent), [commands, recent])
   const active = Math.min(highlighted, Math.max(0, ordered.length - 1))
+  useScrollHighlighted(containerRef, active)
 
   const choose = useCallback(
     (index: number) => {
