@@ -57,6 +57,10 @@ function aggregate(messages: ChatMessage[]): { contextUsed: number; cost: number
   let cost = 0
   for (const message of messages) {
     if (message.role !== 'assistant' || !message.usage) continue
+    // While a turn streams the backend reports a zeroed usage that is not its
+    // final numbers yet. Skip it so the page keeps showing the previous
+    // completed turn instead of blinking to zero (spec 21).
+    if (message.completedAt === undefined && message.usage.total === 0) continue
     cost += message.usage.cost
     if (message.createdAt >= latest) {
       latest = message.createdAt

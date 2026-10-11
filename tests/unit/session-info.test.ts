@@ -63,6 +63,22 @@ describe('buildSessionInfo', () => {
     expect(info.updatedAt).toBe(200)
   })
 
+  it('keeps the previous turn while the next turn streams zeroed usage', () => {
+    const info = buildSessionInfo({
+      summary: SUMMARY,
+      messages: [
+        { ...assistant('m1', 10, 1000, 0.001), completedAt: 15 },
+        { ...assistant('m2', 30, 5000, 0.002), completedAt: 35 },
+        // In-progress turn: the backend reports 0 until it finishes.
+        assistant('m3', 40, 0, 0),
+      ],
+      catalog: CATALOG,
+    })
+    expect(info.contextUsed).toBe(5000)
+    expect(info.contextPercent).toBeCloseTo(5000 / 128_000)
+    expect(info.cost).toBeCloseTo(0.003)
+  })
+
   it('falls back to the new-task inputs when there is no session', () => {
     const info = buildSessionInfo({
       model: { providerId: 'deepseek', modelId: 'deepseek-v4-pro' },

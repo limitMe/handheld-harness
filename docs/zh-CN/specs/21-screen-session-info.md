@@ -111,3 +111,10 @@
 ### 后续补充（2026-10-08）：INFO 按钮改为开关
 
 - INFO 按钮原来是"只打开"（`onOpenInfo` 恒为 `setInfoOpen(true)`），信息页打开后再点它不会返回。改为开关（`App.tsx`：`setInfoOpen((open) => !open)`），信息页打开时再点一下即回退到原来的"当前工作"页；`e2e/focus.spec.ts` 增加断言覆盖。
+
+### 回复过程中保留上一次用量（2026-10-11，用户反馈）
+
+- **现象**：Agent 正在回复时打开信息页，上下文使用量和百分比显示为 0，回复结束后才变成正确值。
+- **根因**：OpenCode 正在流式输出的那条 assistant 消息已经带 `tokens`（值为 0），`aggregate`（`workbench/sessionInfo.ts`）按 `createdAt` 取最新一条 assistant 的 `usage.total`，于是取到了这条未完成的 0。
+- **决策**：聚合时跳过"未完成且 `usage.total === 0`"的回合（`completedAt === undefined && usage.total === 0`），这样回复期间仍显示上一次已完成回合的用量与上下文比例；`completedAt` 已写入但总量为 0 的真实回合仍照常计入。对 spec 第 41 行"取最近一条 assistant 消息"是有意细化。
+- **已自动验证**：`npm run check` 通过（477 用例）。`tests/unit/session-info.test.ts` 新增「回复中保留上一回合」用例。
