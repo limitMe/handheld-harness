@@ -135,9 +135,11 @@ export function MessageList({
   }, [])
 
   // Agent cards can grow after their first paint (Markdown, syntax highlight),
-  // so re-anchor the transcript while the user is at the bottom.
+  // so re-anchor the transcript while the user is at the bottom. Layout effect,
+  // not passive: a scroll handler updates the ref synchronously and must not be
+  // overwritten by a stale commit before the browser dispatches the event.
   const atBottomRef = useRef(atBottom)
-  useEffect(() => {
+  useLayoutEffect(() => {
     atBottomRef.current = atBottom
   })
   const reanchorIfAtBottom = useCallback(() => {
@@ -244,8 +246,16 @@ export function MessageList({
             element.scrollHeight - top - element.clientHeight <= BOTTOM_THRESHOLD
           // Only an upward move means the user scrolled away from the latest;
           // content growing under a parked viewport must not unpin the view.
-          if (nearBottom) setAtBottom(true)
-          else if (top < lastScrollTop.current) setAtBottom(false)
+          // Update the ref synchronously too: a card's ResizeObserver can fire
+          // before the state has re-rendered and must not re-anchor from a stale
+          // value once the user has scrolled away.
+          if (nearBottom) {
+            atBottomRef.current = true
+            setAtBottom(true)
+          } else if (top < lastScrollTop.current) {
+            atBottomRef.current = false
+            setAtBottom(false)
+          }
           lastScrollTop.current = top
           updateStuck()
         }}
