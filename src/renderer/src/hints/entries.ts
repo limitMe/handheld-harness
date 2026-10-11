@@ -26,8 +26,10 @@ const HIDDEN_ACTIONS = new Set<ActionId>([
   'scroll',
   'menu.toggle',
   'map.toggle',
-  // Shown by the task map's own legend on the empty card only, not as a hint
-  // anchored to every card (spec 14).
+  // The task map's empty-card actions: history and model only work while an
+  // empty card is selected, so a hint anchored to a task card would lie
+  // (spec 14). The map's own legend carries them instead.
+  'task.history',
   'task.model',
 ])
 

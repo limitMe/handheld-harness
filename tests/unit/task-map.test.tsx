@@ -154,14 +154,15 @@ describe('TaskMap empty card', () => {
     )
   })
 
-  it('keeps the history hint and no card hints on a selected task card', async () => {
+  it('hides the history hint on a selected task card', async () => {
     installBridge()
     seed([ref('s1')], ref('s1'))
     renderMap()
 
     await waitFor(() => expect(screen.getByTestId('task-card')).not.toBeNull())
     expect(screen.queryByTestId('task-card-empty-hints')).toBeNull()
-    expect(screen.getByText('history')).not.toBeNull()
+    // X only opens history from the empty card, so its legend entry is hidden.
+    expect(screen.queryByText('history')).toBeNull()
   })
 
   it('starts a new task when Y is pressed on the empty card', async () => {

@@ -379,7 +379,9 @@ function TaskMapBody({
         </span>
         <LegendItem control="A" label={t('taskMap.hints.open')} />
         <LegendItem control="Y" label={t('taskMap.hints.new')} />
-        <LegendItem control="X" label={t('taskMap.hints.history')} />
+        {selectedCard?.kind === 'empty' ? (
+          <LegendItem control="X" label={t('taskMap.hints.history')} />
+        ) : null}
         <LegendItem control="B" label={t('taskMap.hints.exit')} />
         <span className="inline-flex items-center gap-1">
           <span className="uppercase tracking-wide">{t('part.hold')}</span>

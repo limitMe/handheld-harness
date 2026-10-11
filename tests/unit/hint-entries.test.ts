@@ -41,6 +41,16 @@ describe('buildHintEntries', () => {
     expect(actions).not.toContain('map.toggle')
   })
 
+  it('hides task-map actions that only apply to the empty card', () => {
+    const map = mergeActionMaps([DEFAULT_BINDINGS])
+    const actions = buildHintEntries(map, ['taskMap', 'global']).map((entry) => entry.action)
+    expect(actions).not.toContain('task.history')
+    expect(actions).not.toContain('task.model')
+    // The actions that do work from any card stay.
+    expect(actions).toContain('task.open')
+    expect(actions).toContain('task.new')
+  })
+
   it('hides dictation unless the activated element is a text field', () => {
     const map = mergeActionMaps([DEFAULT_BINDINGS])
     const actions = buildHintEntries(map, stack, { editable: false }).map((entry) => entry.action)
