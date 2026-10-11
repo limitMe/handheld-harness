@@ -126,6 +126,14 @@ export function MessageList({
     return { orders, agentCards }
   }, [blocksByRound])
 
+  // The focus order of the newest transcript card; anything below it is "the
+  // live tail" the transcript follows while the agent streams.
+  const newestOrder = useMemo(() => {
+    let max: number = FOCUS_ORDER.messages
+    for (const order of orders.values()) if (order > max) max = order
+    return max
+  }, [orders])
+
   const lastMessageId = messages[messages.length - 1]?.id
   const viewerCard = viewerId ? agentCards.get(viewerId) : undefined
 
@@ -139,12 +147,36 @@ export function MessageList({
   // not passive: a scroll handler updates the ref synchronously and must not be
   // overwritten by a stale commit before the browser dispatches the event.
   const atBottomRef = useRef(atBottom)
+  const ordersRef = useRef(orders)
+  const newestOrderRef = useRef(newestOrder)
+  const lastFocusedRef = useRef<string | null>(null)
   useLayoutEffect(() => {
     atBottomRef.current = atBottom
+    ordersRef.current = orders
+    newestOrderRef.current = newestOrder
   })
   const reanchorIfAtBottom = useCallback(() => {
     if (atBottomRef.current) scrollToBottom()
   }, [scrollToBottom])
+
+  // Focusing any transcript card but the newest means the user is reading back
+  // through the transcript. Unpin the live tail synchronously here: a streaming
+  // card's ResizeObserver can otherwise re-anchor from a still-true atBottomRef
+  // before the focus scroll is dispatched, yanking the viewport to the bottom.
+  useEffect(() => {
+    if (!tree) return
+    return tree.subscribe(() => {
+      const id = tree.getFocusedId()
+      if (id === lastFocusedRef.current) return
+      lastFocusedRef.current = id
+      const order = id ? ordersRef.current.get(id) : undefined
+      if (order === undefined) return
+      if (order < newestOrderRef.current) {
+        atBottomRef.current = false
+        setAtBottom(false)
+      }
+    })
+  }, [tree])
 
   const updateStuck = useCallback(() => {
     const element = container.current
@@ -244,17 +276,19 @@ export function MessageList({
           const top = element.scrollTop
           const nearBottom =
             element.scrollHeight - top - element.clientHeight <= BOTTOM_THRESHOLD
-          // Only an upward move means the user scrolled away from the latest;
-          // content growing under a parked viewport must not unpin the view.
-          // Update the ref synchronously too: a card's ResizeObserver can fire
-          // before the state has re-rendered and must not re-anchor from a stale
-          // value once the user has scrolled away.
-          if (nearBottom) {
-            atBottomRef.current = true
-            setAtBottom(true)
-          } else if (top < lastScrollTop.current) {
+          // An upward move means the user is leaving the latest, even if still
+          // inside the bottom threshold — otherwise the threshold plus the
+          // streaming card's re-anchor would keep pinning the view and small
+          // scrolls could never escape it. Content growing under a parked
+          // viewport leaves `top` unchanged, so it must not unpin. Update the
+          // ref synchronously too: a card's ResizeObserver can fire before the
+          // state has re-rendered and must not re-anchor from a stale value.
+          if (top < lastScrollTop.current) {
             atBottomRef.current = false
             setAtBottom(false)
+          } else if (nearBottom) {
+            atBottomRef.current = true
+            setAtBottom(true)
           }
           lastScrollTop.current = top
           updateStuck()
