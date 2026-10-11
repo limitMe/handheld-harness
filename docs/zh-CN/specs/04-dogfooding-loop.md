@@ -167,3 +167,15 @@ C:\dev\handheld-harness          (主仓库，分支 main)
 - `stable:shortcut` 的 `IconLocation` 改成 `resources/icons/handheld-harness.ico`；该文件不存在时（例如稳定版还没更新到这一版）仍回退到 Electron 可执行文件。
 - 渲染进程没有引用图标：窗口无边框且默认全屏，没有 favicon 场景；界面上也没有品牌位。
 
+### 后续变更：`stable:update` 可续跑（2026-10-11）
+
+> 修复一次真实故障：某次 `stable:update` 已经 fast-forward 并打好标签，但随后的 `npm ci` 被中断（运行中的稳定版实例锁住了 stable worktree 的 `node_modules`），`out/` 仍是旧构建。之后重跑时脚本因 `stable == main` 直接打印 "nothing to update" 并返回，既不重装也不重建，稳定版就此卡在旧版本上。上面"`stable:update` 顺序"的描述据此修正。
+
+- **顺序改为：构建成功后再打标签。** 失败不再提前消耗 `stable-YYYYMMDD-N` 标签。
+- **引入构建标记 `out/.stable-build`**：`buildStable` 在成功替换 `out/` 后写入 stable 当前 HEAD。`stable:update` 用它判断 `out/` 是否对应当前目标 commit。
+- **不再以 `stable == main` 作为唯一的"无事可做"条件**：只有在 `stable == main`、`node_modules` 健康、构建标记等于目标、且目标已有 `stable-*` 标签时才提前返回；否则继续补装依赖 / 重建 / 补标签，因此被中断的更新可以重跑完成。
+- **`node_modules` 健康检查**：`isStableDependenciesHealthy` 检查 `node_modules/electron-vite/bin/electron-vite.js` 与 `node_modules/electron/package.json`；被 `npm ci` 截断的目录会被识别并触发重装。
+- **运行中的稳定版会锁住自己的 `node_modules`**：涉及 lock 变化的更新前必须先关闭稳定版实例，否则 `npm ci` 会 EBUSY；新逻辑在失败后仍可重跑，不会留下无法恢复的状态。
+- 新增单测：`readBuildCommit`、`isStableDependenciesHealthy`（`tests/unit/stable.test.ts`）。
+
+

@@ -1,10 +1,14 @@
+import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import {
   chooseRollbackTag,
   formatStableTag,
+  isStableDependenciesHealthy,
   nextStableTag,
   parseStableTag,
+  readBuildCommit,
   resolveStableDir,
   sortStableTagsDesc,
 } from '../../scripts/lib/stable'
@@ -65,5 +69,38 @@ describe('stable tags', () => {
     expect(chooseRollbackTag(tags, null)).toBe('stable-20261006-2')
     expect(chooseRollbackTag(tags, 'stable-20260101-1')).toBeNull()
     expect(chooseRollbackTag([], null)).toBeNull()
+  })
+})
+
+describe('stable build state', () => {
+  const dirs: string[] = []
+
+  function tempDir(): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stable-state-'))
+    dirs.push(dir)
+    return dir
+  }
+
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('reads the commit recorded by the last build', () => {
+    const dir = tempDir()
+    expect(readBuildCommit(dir)).toBeNull()
+    fs.mkdirSync(path.join(dir, 'out'), { recursive: true })
+    fs.writeFileSync(path.join(dir, 'out', '.stable-build'), 'abc123\n')
+    expect(readBuildCommit(dir)).toBe('abc123')
+  })
+
+  it('treats a truncated node_modules as unhealthy', () => {
+    const dir = tempDir()
+    expect(isStableDependenciesHealthy(dir)).toBe(false)
+    fs.mkdirSync(path.join(dir, 'node_modules', 'electron-vite', 'bin'), { recursive: true })
+    fs.writeFileSync(path.join(dir, 'node_modules', 'electron-vite', 'bin', 'electron-vite.js'), '')
+    expect(isStableDependenciesHealthy(dir)).toBe(false)
+    fs.mkdirSync(path.join(dir, 'node_modules', 'electron'), { recursive: true })
+    fs.writeFileSync(path.join(dir, 'node_modules', 'electron', 'package.json'), '{}')
+    expect(isStableDependenciesHealthy(dir)).toBe(true)
   })
 })

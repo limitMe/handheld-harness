@@ -16,6 +16,11 @@ export const BUILD_TMP_DIR = '.stable-out-tmp'
 export const BUILD_BACKUP_DIR = 'out.stable-backup'
 
 export const STABLE_ENTRY_RELATIVE = path.join('out', 'main', 'index.js')
+/**
+ * Records the commit the current `out/` build was produced from. It lives inside
+ * `out/` (gitignored) so a rebuild regenerates it and a rollback discards it.
+ */
+export const BUILD_MARKER_RELATIVE = path.join('out', '.stable-build')
 /** Multi-size Windows icon used by the desktop and start-menu shortcuts. */
 export const APP_ICON_RELATIVE = path.join('resources', 'icons', 'handheld-harness.ico')
 export const ELECTRON_VITE_RELATIVE = path.join(
@@ -168,6 +173,41 @@ export function isStableBuildPresent(stableDir: string): boolean {
   return fs.existsSync(path.join(stableDir, STABLE_ENTRY_RELATIVE))
 }
 
+/** Reads the commit recorded by the last successful build, if any. */
+export function readBuildCommit(stableDir: string): string | null {
+  try {
+    const value = fs.readFileSync(path.join(stableDir, BUILD_MARKER_RELATIVE), 'utf8').trim()
+    return value.length > 0 ? value : null
+  } catch {
+    return null
+  }
+}
+
+function writeBuildCommit(stableDir: string, commit: string): void {
+  fs.writeFileSync(path.join(stableDir, BUILD_MARKER_RELATIVE), `${commit}\n`)
+}
+
+/**
+ * An interrupted `npm ci` can leave a half-populated `node_modules`. Checking a
+ * couple of files that `npm ci` always installs detects that state so an update
+ * can reinstall instead of failing during the build.
+ */
+export function isStableDependenciesHealthy(stableDir: string): boolean {
+  return (
+    fs.existsSync(electronViteBin(stableDir)) &&
+    fs.existsSync(path.join(stableDir, 'node_modules', 'electron', 'package.json'))
+  )
+}
+
+/** Whether any `stable-*` tag points at the given commit. */
+export function hasStableTagAt(repoRoot: string, commit: string): boolean {
+  return (
+    gitCapture(['tag', '--points-at', commit, '-l', 'stable-*'], repoRoot)
+      .split('\n')
+      .filter(Boolean).length > 0
+  )
+}
+
 export function electronViteBin(stableDir: string): string {
   return path.join(stableDir, ELECTRON_VITE_RELATIVE)
 }
@@ -233,6 +273,8 @@ export function buildStable(stableDir: string): void {
   }
 
   if (movedPrevious) fs.rmSync(backup, { recursive: true, force: true })
+
+  writeBuildCommit(stableDir, gitCapture(['rev-parse', 'HEAD'], stableDir))
 }
 
 export function currentStableTag(stableDir: string, tagsDesc: readonly string[]): string | null {
