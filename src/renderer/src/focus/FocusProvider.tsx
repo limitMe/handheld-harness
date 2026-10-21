@@ -31,6 +31,9 @@ function useScrollSpeed(): RefObject<number> {
   return speed
 }
 
+/** Input context id of the focus layer; screens can tell navigation apart from overlays. */
+export const FOCUS_CONTEXT_ID = 'focus'
+
 /**
  * Routes the semantic navigation actions (spec 10) into the focus tree. It is
  * registered on a low-priority context so an activated component or a modal can
@@ -38,7 +41,7 @@ function useScrollSpeed(): RefObject<number> {
  */
 function FocusNavigation({ tree, scroll }: { tree: FocusTree; scroll: StickController }) {
   useInputContext(
-    'focus',
+    FOCUS_CONTEXT_ID,
     {
       'nav.up': onPress(() => tree.move('up')),
       'nav.down': onPress(() => tree.move('down')),

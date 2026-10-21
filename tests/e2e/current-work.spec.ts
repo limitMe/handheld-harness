@@ -256,6 +256,9 @@ test('collapses the sticky user message when scrolled past', async () => {
       timeout: 30_000,
     })
 
+    // Leave the live tail first (the wheel is user intent); then park the view
+    // mid-transcript. A plain scrollTop assignment would look like a reflow.
+    await window.getByTestId('message-list').dispatchEvent('wheel', { deltaY: -1 })
     await window.getByTestId('message-list').evaluate((element) => {
       const rounds = Array.from(element.querySelectorAll('[data-testid^="round-"]')) as unknown as Array<{
         offsetTop: number
@@ -364,6 +367,79 @@ test('opens an agent card full screen, scrolls it, and returns with B', async ()
   }
 })
 
+test('keeps following new agent output after the latest button is pressed', async () => {
+  const { app, window } = await launch('e2e-cw-follow')
+  try {
+    await installFakePad(window)
+    await window.mouse.move(4, 4)
+    await send(window, '/fake long')
+    await expect(window.getByTestId('message-list')).toContainText('End of the long reply.', {
+      timeout: 30_000,
+    })
+    await expect(window.getByTestId('busy-indicator')).toHaveCount(0, { timeout: 30_000 })
+
+    const list = window.getByTestId('message-list')
+    const distance = (): Promise<number> =>
+      list.evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight)
+    expect(await distance()).toBeLessThanOrEqual(48)
+
+    // Scrolling up with a stick leaves the live tail and reveals the button.
+    await setAxis(window, 3, -0.9)
+    await window.waitForTimeout(400)
+    await setAxis(window, 3, 0)
+    const latest = window.getByTestId('scroll-latest')
+    await expect(latest).toBeVisible()
+
+    // The button re-arms the live tail for the *next* reply too, not just for
+    // the jump to the bottom.
+    await latest.click()
+    await expect(latest).toHaveCount(0)
+    await send(window, '/fake long')
+
+    const unlocked = await window.evaluate(async () => {
+      const scope = globalThis as unknown as {
+        document: {
+          querySelector(selector: string): unknown
+          body: unknown
+        }
+        MutationObserver: new (callback: () => void) => {
+          observe(target: unknown, options: { childList: boolean; subtree: boolean }): void
+          disconnect(): void
+        }
+      }
+      let appeared = false
+      const observer = new scope.MutationObserver(() => {
+        if (scope.document.querySelector('[data-testid="scroll-latest"]')) appeared = true
+      })
+      observer.observe(scope.document.body, { childList: true, subtree: true })
+      // Watch the whole stream: until busy showed and then cleared.
+      const started = Date.now()
+      let sawBusy = false
+      while (Date.now() - started < 10_000) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        const busy = Boolean(scope.document.querySelector('[data-testid="busy-indicator"]'))
+        if (busy) sawBusy = true
+        else if (sawBusy) break
+      }
+      observer.disconnect()
+      return { appeared, sawBusy }
+    })
+    expect(unlocked.sawBusy).toBe(true)
+    expect(unlocked.appeared).toBe(false)
+    await expect.poll(distance, { timeout: 30_000 }).toBeLessThanOrEqual(48)
+
+    // An up press on the D-pad is the user gesture that cancels following, and
+    // walking further up the transcript must not re-arm it.
+    await pressPad(window, 'DpadUp')
+    await releasePad(window, 'DpadUp')
+    await pressPad(window, 'DpadUp')
+    await releasePad(window, 'DpadUp')
+    await expect(latest).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
+
 test('reopens a task scrolled to its newest content', async () => {
   const { app, window } = await launch('e2e-cw-reopen')
   try {
@@ -374,8 +450,10 @@ test('reopens a task scrolled to its newest content', async () => {
       timeout: 30_000,
     })
 
-    // Leave the task scrolled to the very top.
+    // Leave the task scrolled to the very top (the wheel is user intent, so the
+    // live tail stops re-anchoring).
     const list = window.getByTestId('message-list')
+    await list.dispatchEvent('wheel', { deltaY: -1 })
     await list.evaluate((element) => {
       element.scrollTop = 0
     })
@@ -408,7 +486,9 @@ test('reopens a task scrolled to its newest content', async () => {
     )
     expect(distanceFromBottom).toBeLessThanOrEqual(48)
 
-    // Reopening the *current* task also lands on the newest content.
+    // Reopening the *current* task also lands on the newest content, even after
+    // a fresh manual scroll away.
+    await list.dispatchEvent('wheel', { deltaY: -1 })
     await list.evaluate((element) => {
       element.scrollTop = 0
     })

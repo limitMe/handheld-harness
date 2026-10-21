@@ -6,9 +6,9 @@ import type {
   PermissionRequest,
   QuestionRequest,
 } from '@shared/engine'
-import { CONTEXT_ORDER, onPress, useInputContext } from '../input'
+import { CONTEXT_ORDER, onPress, useInputApi, useInputContext } from '../input'
 import { useTranslation } from '../i18n'
-import { FOCUS_ORDER, useFocusTree } from '../focus'
+import { FOCUS_CONTEXT_ID, FOCUS_ORDER, useFocusTree } from '../focus'
 import type { AnsweredChoice } from '../state/types'
 import { AgentCardView } from './AgentCard'
 import { CardViewer } from './CardViewer'
@@ -81,21 +81,33 @@ export function MessageList({
 }: MessageListProps) {
   const { t } = useTranslation()
   const tree = useFocusTree()
+  const input = useInputApi()
   const container = useRef<HTMLDivElement>(null)
   const roundElements = useRef(new Map<string, HTMLDivElement>())
-  const [atBottom, setAtBottom] = useState(true)
+  // `following` means the transcript is pinned to the live tail: every new card,
+  // resize, or error re-anchors to the bottom. Only an explicit user scroll up
+  // clears it (see the input/wheel handlers below); content reflow must not.
+  const [following, setFollowing] = useState(true)
+  const followingRef = useRef(following)
+  // User gestures, not scroll direction, decide when the live tail re-arms. A
+  // near-bottom scroll only resumes following when the user explicitly moved
+  // down; programmatic scrolls (focusing a card, layout shifts) must not.
+  const userDownRef = useRef(false)
+  const pointerScrollRef = useRef(false)
+  const interactiveRef = useRef(interactive)
+  const lastScrollTop = useRef(0)
   const [scrolledView, setScrolledView] = useState(viewKey)
   // Opening a task always lands on the newest content, even if the previous
   // task was left scrolled up. Adjusting during render (not in an effect) avoids
   // a cascading render.
   if (scrolledView !== viewKey) {
     setScrolledView(viewKey)
-    setAtBottom(true)
+    setFollowing(true)
   }
   const [stuckRound, setStuckRound] = useState<string | null>(null)
-  const lastScrollTop = useRef(0)
   const [cardMax, setCardMax] = useState<number>()
   const [viewerId, setViewerId] = useState<string | null>(null)
+  const viewerOpenRef = useRef(viewerId !== null)
   const viewerScroll = useRef(0)
   const pendingRestore = useRef<number | null>(null)
   const roundRestore = useRef<string | null>(null)
@@ -126,14 +138,6 @@ export function MessageList({
     return { orders, agentCards }
   }, [blocksByRound])
 
-  // The focus order of the newest transcript card; anything below it is "the
-  // live tail" the transcript follows while the agent streams.
-  const newestOrder = useMemo(() => {
-    let max: number = FOCUS_ORDER.messages
-    for (const order of orders.values()) if (order > max) max = order
-    return max
-  }, [orders])
-
   const lastMessageId = messages[messages.length - 1]?.id
   const viewerCard = viewerId ? agentCards.get(viewerId) : undefined
 
@@ -143,40 +147,83 @@ export function MessageList({
   }, [])
 
   // Agent cards can grow after their first paint (Markdown, syntax highlight),
-  // so re-anchor the transcript while the user is at the bottom. Layout effect,
-  // not passive: a scroll handler updates the ref synchronously and must not be
-  // overwritten by a stale commit before the browser dispatches the event.
-  const atBottomRef = useRef(atBottom)
-  const ordersRef = useRef(orders)
-  const newestOrderRef = useRef(newestOrder)
-  const lastFocusedRef = useRef<string | null>(null)
+  // so re-anchor the transcript while the user is following the live tail.
+  // Layout effect, not passive: a scroll handler reads the ref synchronously and
+  // must not be overwritten by a stale commit before the browser dispatches the
+  // next event.
   useLayoutEffect(() => {
-    atBottomRef.current = atBottom
-    ordersRef.current = orders
-    newestOrderRef.current = newestOrder
+    followingRef.current = following
+    interactiveRef.current = interactive
+    viewerOpenRef.current = viewerId !== null
   })
-  const reanchorIfAtBottom = useCallback(() => {
-    if (atBottomRef.current) scrollToBottom()
+
+  const stopFollowing = useCallback(() => {
+    const element = container.current
+    // Content that fits on screen has nothing to scroll back through, so an up
+    // gesture must not surface the "latest" button.
+    if (!element || element.scrollHeight - element.clientHeight <= BOTTOM_THRESHOLD) return
+    userDownRef.current = false
+    if (!followingRef.current) return
+    followingRef.current = false
+    setFollowing(false)
+  }, [])
+
+  const resumeFollowing = useCallback(() => {
+    userDownRef.current = false
+    followingRef.current = true
+    setFollowing(true)
+    scrollToBottom()
   }, [scrollToBottom])
 
-  // Focusing any transcript card but the newest means the user is reading back
-  // through the transcript. Unpin the live tail synchronously here: a streaming
-  // card's ResizeObserver can otherwise re-anchor from a still-true atBottomRef
-  // before the focus scroll is dispatched, yanking the viewport to the bottom.
+  /** Re-arm only after the user scrolled down themselves and reached the tail. */
+  const resumeIfAtLiveTail = useCallback(() => {
+    const element = container.current
+    if (!element || !userDownRef.current) return
+    if (element.scrollHeight - element.scrollTop - element.clientHeight > BOTTOM_THRESHOLD) return
+    resumeFollowing()
+  }, [resumeFollowing])
+
+  const reanchorIfFollowing = useCallback(() => {
+    if (followingRef.current) scrollToBottom()
+  }, [scrollToBottom])
+
+  // The render-time reset above only covers state. A switched view must also
+  // clear the gesture flags and land on the newest content even when the
+  // transcript content itself did not change (reopening the same task).
+  useLayoutEffect(() => {
+    followingRef.current = true
+    userDownRef.current = false
+    lastScrollTop.current = 0
+    scrollToBottom()
+  }, [viewKey, scrollToBottom])
+
+  // Only navigation the focus layer itself handles scrolls the transcript; a
+  // card, dialog, or viewer above it consumes the action and must not unpin the
+  // live tail. Listen to dispatched actions instead of scroll events here: while
+  // the agent streams, cards remount and content reflows, which moves scrollTop
+  // without any user intent.
   useEffect(() => {
-    if (!tree) return
-    return tree.subscribe(() => {
-      const id = tree.getFocusedId()
-      if (id === lastFocusedRef.current) return
-      lastFocusedRef.current = id
-      const order = id ? ordersRef.current.get(id) : undefined
-      if (order === undefined) return
-      if (order < newestOrderRef.current) {
-        atBottomRef.current = false
-        setAtBottom(false)
+    return input.subscribeDispatch(({ event, contextId }) => {
+      if (!interactiveRef.current || viewerOpenRef.current) return
+      if (contextId !== FOCUS_CONTEXT_ID || event.phase === 'end') return
+      if (event.action === 'nav.up') {
+        stopFollowing()
+        return
       }
+      if (event.action === 'scroll') {
+        const value = event.value ?? 0
+        if (value < 0) {
+          stopFollowing()
+          return
+        }
+        if (value === 0) return
+      } else if (event.action !== 'nav.down') {
+        return
+      }
+      userDownRef.current = true
+      resumeIfAtLiveTail()
     })
-  }, [tree])
+  }, [input, stopFollowing, resumeIfAtLiveTail])
 
   const updateStuck = useCallback(() => {
     const element = container.current
@@ -191,12 +238,12 @@ export function MessageList({
   }, [])
 
   useEffect(() => {
-    if (atBottom) scrollToBottom()
+    if (following) scrollToBottom()
     updateStuck()
     // `cardMax` is measured after the first paint and re-caps the cards, which
     // changes the content height; re-anchor so the newest content stays visible.
     // `error` appends a card below the rounds, so it must re-anchor too.
-  }, [blocksByRound, atBottom, cardMax, error, scrollToBottom, updateStuck])
+  }, [blocksByRound, following, cardMax, error, scrollToBottom, updateStuck, viewKey])
 
   // One-screen cap for the agent cards: the transcript area above the composer.
   useLayoutEffect(() => {
@@ -270,26 +317,43 @@ export function MessageList({
         ref={container}
         data-testid="message-list"
         data-scroll-region
+        onWheel={(event) => {
+          if (viewerOpenRef.current) return
+          if (event.deltaY < 0) {
+            stopFollowing()
+          } else if (event.deltaY > 0) {
+            userDownRef.current = true
+            resumeIfAtLiveTail()
+          }
+        }}
+        onPointerDown={() => {
+          pointerScrollRef.current = true
+        }}
+        onPointerUp={() => {
+          pointerScrollRef.current = false
+        }}
+        onPointerCancel={() => {
+          pointerScrollRef.current = false
+        }}
+        onPointerLeave={() => {
+          pointerScrollRef.current = false
+        }}
         onScroll={() => {
           const element = container.current
           if (!element) return
           const top = element.scrollTop
           const nearBottom =
             element.scrollHeight - top - element.clientHeight <= BOTTOM_THRESHOLD
-          // An upward move means the user is leaving the latest, even if still
-          // inside the bottom threshold — otherwise the threshold plus the
-          // streaming card's re-anchor would keep pinning the view and small
-          // scrolls could never escape it. Content growing under a parked
-          // viewport leaves `top` unchanged, so it must not unpin. Update the
-          // ref synchronously too: a card's ResizeObserver can fire before the
-          // state has re-rendered and must not re-anchor from a stale value.
-          if (top < lastScrollTop.current) {
-            atBottomRef.current = false
-            setAtBottom(false)
-          } else if (nearBottom) {
-            atBottomRef.current = true
-            setAtBottom(true)
+          // Pointer drags (scrollbar or touch) are the only scroll events whose
+          // direction reveals user intent; keyboard / gamepad navigation and the
+          // wheel are handled above. Content growing or being re-capped under a
+          // parked viewport may move `top` in either direction without any user
+          // action, so it must never arm or cancel the live tail.
+          if (pointerScrollRef.current) {
+            if (top < lastScrollTop.current) stopFollowing()
+            else if (top > lastScrollTop.current) userDownRef.current = true
           }
+          if (nearBottom) resumeIfAtLiveTail()
           lastScrollTop.current = top
           updateStuck()
         }}
@@ -331,7 +395,7 @@ export function MessageList({
                   streaming={busy && block.card.messages.some((message) => message.id === lastMessageId)}
                   maxHeight={cardMax}
                   onOpen={openViewer}
-                  onResize={reanchorIfAtBottom}
+                  onResize={reanchorIfFollowing}
                 />
               ) : (
                 <ChoiceCardView
@@ -392,22 +456,16 @@ export function MessageList({
         ) : null}
       </div>
 
-      {!atBottom && !viewerCard ? (
+      {!following && !viewerCard ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-28 flex justify-center">
           <FocusableButton
             focusId="scroll-latest"
             order={FOCUS_ORDER.scrollLatest}
-            onActivate={() => {
-              setAtBottom(true)
-              scrollToBottom()
-            }}
+            onActivate={resumeFollowing}
             type="button"
             data-testid="scroll-latest"
             className="pointer-events-auto min-h-11 shadow-card"
-            onClick={() => {
-              setAtBottom(true)
-              scrollToBottom()
-            }}
+            onClick={resumeFollowing}
           >
             {t('messageList.scrollLatest')}
           </FocusableButton>

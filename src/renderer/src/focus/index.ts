@@ -1,7 +1,7 @@
 export { FocusTree } from './tree'
 export { FOCUS_ORDER, messageOrder } from './order'
 export { FocusContainer, type FocusContainerProps } from './FocusContainer'
-export { FocusProvider } from './FocusProvider'
+export { FocusProvider, FOCUS_CONTEXT_ID } from './FocusProvider'
 export { FocusDebugOverlay } from './FocusDebugOverlay'
 export { useFocusTree, useParentContainer } from './context'
 export { useDialogNavigation } from './useDialogNavigation'
