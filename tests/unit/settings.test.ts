@@ -97,15 +97,18 @@ describe('settings store', () => {
     expect(store.get().hints).toEqual({ enabled: false, delayMs: 3000 })
   })
 
-  it('keeps button sounds off by default and persists the toggle', () => {
+  it('keeps button sounds off and completion sounds on by default', () => {
     const target = makeDir()
     const store = createSettingsStore(target)
 
-    expect(store.get().sound).toEqual({ enabled: false })
+    expect(store.get().sound).toEqual({ enabled: false, completionEnabled: true })
 
-    store.update({ sound: { enabled: true } })
-    expect(store.get().sound).toEqual({ enabled: true })
-    expect(createSettingsStore(target).get().sound).toEqual({ enabled: true })
+    store.update({ sound: { enabled: true, completionEnabled: false } })
+    expect(store.get().sound).toEqual({ enabled: true, completionEnabled: false })
+    expect(createSettingsStore(target).get().sound).toEqual({
+      enabled: true,
+      completionEnabled: false,
+    })
   })
 
   it('persists the task map slice and replaces arrays wholesale', () => {

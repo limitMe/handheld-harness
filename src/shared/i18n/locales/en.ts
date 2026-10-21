@@ -250,6 +250,7 @@ export const en = {
     stickScrollSpeed: 'Stick scroll speed',
     showActionHints: 'Show action hints',
     buttonSound: 'Button sound effects',
+    completionSound: 'Completion sound',
     waitBeforeShowing: 'Wait before showing',
     reducedMotion: 'Reduced motion and power saving arrive with spec 18.',
     language: 'Language',

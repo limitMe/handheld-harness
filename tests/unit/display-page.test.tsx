@@ -135,12 +135,31 @@ describe('Display & hints', () => {
     expect(update).toHaveBeenCalledWith({ sound: { enabled: true } })
   })
 
+  it('toggles the completion sound', async () => {
+    const { update } = installBridge()
+    await openDisplayPanel()
+
+    // Text size -> theme -> scroll speed -> hints switch -> button sound -> completion sound.
+    for (let i = 0; i < 5; i += 1) {
+      if (screen.getByTestId('display-completion-sound').hasAttribute('data-focused')) break
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+    }
+    await waitFor(() =>
+      expect(screen.getByTestId('display-completion-sound').hasAttribute('data-focused')).toBe(
+        true,
+      ),
+    )
+
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(update).toHaveBeenCalledWith({ sound: { completionEnabled: false } })
+  })
+
   it('adjusts the hint delay after activation', async () => {
     const { update } = installBridge()
     await openDisplayPanel()
 
-    // Text size -> scroll speed -> hints switch -> button sound -> hint delay row.
-    for (let i = 0; i < 5; i += 1) {
+    // Text size -> ... -> completion sound -> hint delay row.
+    for (let i = 0; i < 6; i += 1) {
       if (screen.getByTestId('display-hints-delay').hasAttribute('data-focused')) break
       fireEvent.keyDown(window, { key: 'ArrowDown' })
     }
@@ -160,8 +179,9 @@ describe('Display & hints', () => {
     const { update } = installBridge()
     await openDisplayPanel()
 
-    // Text size -> theme -> scroll speed -> hints -> button sound -> delay -> language.
-    for (let i = 0; i < 6; i += 1) {
+    // Text size -> theme -> scroll speed -> hints -> button sound -> completion sound
+    // -> delay -> language.
+    for (let i = 0; i < 7; i += 1) {
       if (screen.getByTestId('display-language').hasAttribute('data-focused')) break
       fireEvent.keyDown(window, { key: 'ArrowDown' })
     }

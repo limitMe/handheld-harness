@@ -1,5 +1,5 @@
-/** The four button-feedback cues. Only the ones with a bundled clip play. */
-export type SoundName = 'delete' | 'select' | 'back' | 'scroll'
+/** Button-feedback cues plus the agent-completion notification. */
+export type SoundName = 'delete' | 'select' | 'back' | 'scroll' | 'complete'
 
 /**
  * Bundled clips under `assets/audio/<name>.ogg`. Resolved through `import.meta.glob`
@@ -33,7 +33,10 @@ const VOLUME = 0.6
  */
 export class SoundPlayer {
   private templates = new Map<SoundName, HTMLAudioElement>()
+  /** Gates the button cues. */
   enabled = false
+  /** Gates the agent-completion cue independently; it is on by default. */
+  completionEnabled = false
 
   /** Warms the clips so the first press is not silent. Safe to call repeatedly. */
   preload(): void {
@@ -49,6 +52,16 @@ export class SoundPlayer {
   /** Silently ignores a cue whose clip is not bundled yet. */
   play(name: SoundName): void {
     if (!this.enabled) return
+    this.playNow(name)
+  }
+
+  /** The agent stopped running; does not depend on the button-sound setting. */
+  playCompletion(): void {
+    if (!this.completionEnabled) return
+    this.playNow('complete')
+  }
+
+  private playNow(name: SoundName): void {
     this.preload()
     const template = this.templates.get(name)
     if (!template) return

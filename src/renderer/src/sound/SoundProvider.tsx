@@ -2,17 +2,20 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import type { Settings } from '@shared/ipc'
 import { DEFAULT_SOUND } from '@shared/sound'
 import { useInputApi } from '../input'
+import { useWorkbenchStore } from '../state/store'
 import { resolveCue } from './cues'
 import { soundPlayer } from './player'
 
 /**
- * Plays a short sound for controller-button presses when enabled (spec 15). It
- * listens to the routed action stream, so every screen gets feedback without
- * per-screen wiring; unhandled actions stay silent.
+ * Plays a short sound for controller-button presses when enabled, plus a
+ * completion cue when the agent stops running (spec 15). It listens to the
+ * routed action stream, so every screen gets feedback without per-screen
+ * wiring; unhandled actions stay silent.
  */
 export function SoundProvider({ children }: { children: ReactNode }) {
   const api = useInputApi()
   const enabled = useRef(DEFAULT_SOUND.enabled)
+  const completionEnabled = useRef(DEFAULT_SOUND.completionEnabled)
   const lastScrollAt = useRef(0)
 
   // The setting can change at runtime; hot-reload it like the hint settings.
@@ -22,8 +25,10 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     let disposed = false
     const apply = (next: Settings): void => {
       enabled.current = next.sound.enabled
+      completionEnabled.current = next.sound.completionEnabled
       soundPlayer.enabled = next.sound.enabled
-      if (next.sound.enabled) soundPlayer.preload()
+      soundPlayer.completionEnabled = next.sound.completionEnabled
+      if (next.sound.enabled || next.sound.completionEnabled) soundPlayer.preload()
     }
     bridge.settings
       .get()
@@ -48,6 +53,17 @@ export function SoundProvider({ children }: { children: ReactNode }) {
       soundPlayer.play(decision.play)
     })
   }, [api])
+
+  useEffect(() => {
+    return useWorkbenchStore.subscribe((state, previous) => {
+      if (!completionEnabled.current) return
+      const finished = Object.entries(state.sessions).some(
+        ([key, session]) =>
+          session.runState === 'idle' && previous.sessions[key]?.runState === 'busy',
+      )
+      if (finished) soundPlayer.playCompletion()
+    })
+  }, [])
 
   return <>{children}</>
 }

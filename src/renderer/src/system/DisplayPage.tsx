@@ -201,9 +201,27 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
         <span>{t('display.buttonSound')}</span>
         <Switch checked={settings.sound.enabled} />
       </MenuRow>
+      <MenuRow
+        id="system-menu.display.completionSound"
+        order={5}
+        testId="display-completion-sound"
+        onActivate={() =>
+          void update({
+            sound: { completionEnabled: !settings.sound.completionEnabled },
+          })
+        }
+        onClick={() =>
+          void update({
+            sound: { completionEnabled: !settings.sound.completionEnabled },
+          })
+        }
+      >
+        <span>{t('display.completionSound')}</span>
+        <Switch checked={settings.sound.completionEnabled} />
+      </MenuRow>
       <ValueRow
         id="system-menu.display.delay"
-        order={5}
+        order={6}
         testId="display-hints-delay"
         label={t('display.waitBeforeShowing')}
         display={`${(delayMs / 1000).toFixed(1)}s`}
@@ -224,7 +242,7 @@ export function DisplayPage({ settings, update }: DisplayPageProps) {
       <MenuGroupLabel>{t('menu.groups.language')}</MenuGroupLabel>
       <MenuRow
         id="system-menu.display.language"
-        order={6}
+        order={7}
         activatable
         testId="display-language"
         onActivate={() => setLanguageOpen(true)}

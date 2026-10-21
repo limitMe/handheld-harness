@@ -2,7 +2,8 @@ Button sound effects, all by Kenney (https://kenney.nl), released under
 CC0 1.0 (public domain): https://creativecommons.org/publicdomain/zero/1.0/
 
 Currently bundled:
-  delete.ogg  <- "Interface Sounds" pack, tick_001.ogg
+  delete.ogg    <- "Interface Sounds" pack, tick_001.ogg
+  complete.ogg  <- tick_001.ogg, doubled with a short delay for the agent-completion cue
 
 The sound layer also looks for the clip names below. Drop a matching `.ogg`
 (your own, or another CC0 file) into this folder to enable that cue, with no

@@ -248,6 +248,7 @@ export const zh = {
     stickScrollSpeed: '摇杆滚动速度',
     showActionHints: '显示操作提示',
     buttonSound: '按键音效',
+    completionSound: '完成提示音',
     waitBeforeShowing: '显示前等待',
     reducedMotion: '减少动效与省电模式将随 spec 18 提供。',
     language: '语言',

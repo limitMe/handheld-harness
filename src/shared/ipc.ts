@@ -181,9 +181,10 @@ export const HintsSettingsSchema = z.object({
 })
 export type { HintsSettings } from './hints'
 
-/** Short controller-button sound effects, off by default (spec 15). */
+/** Short controller-button and agent-completion sound effects (spec 15). */
 export const SoundSettingsSchema = z.object({
   enabled: z.boolean().default(DEFAULT_SOUND.enabled),
+  completionEnabled: z.boolean().default(DEFAULT_SOUND.completionEnabled),
 })
 export type { SoundSettings } from './sound'
 
@@ -274,6 +275,7 @@ export const SettingsPatchSchema = z.object({
   sound: z
     .object({
       enabled: z.boolean().optional(),
+      completionEnabled: z.boolean().optional(),
     })
     .optional(),
   tasks: z
