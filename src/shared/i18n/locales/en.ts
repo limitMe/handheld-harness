@@ -127,6 +127,7 @@ export const en = {
     sent: 'Sent',
     engineReconnected: 'Engine reconnected',
     messageFailed: 'Message not sent',
+    replyFailed: 'Reply not sent',
   },
   listInput: {
     noCommands: 'No commands.',

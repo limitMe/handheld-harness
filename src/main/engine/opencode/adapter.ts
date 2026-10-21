@@ -1027,24 +1027,38 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
   }
 
   async replyPermission(
-    _sessionId: string,
+    sessionId: string,
     requestId: string,
     reply: PermissionReply,
   ): Promise<void> {
     const client = this.requireClient()
-    await client.permission.reply({ requestID: requestId, reply })
+    const directory = await this.ensureSessionDirectory(sessionId)
+    await client.permission.reply({
+      requestID: requestId,
+      reply,
+      ...(directory ? { directory } : {}),
+    })
     this.pendingPermissions.delete(requestId)
   }
 
-  async replyQuestion(_sessionId: string, requestId: string, answers: string[][]): Promise<void> {
+  async replyQuestion(sessionId: string, requestId: string, answers: string[][]): Promise<void> {
     const client = this.requireClient()
-    await client.question.reply({ requestID: requestId, answers })
+    const directory = await this.ensureSessionDirectory(sessionId)
+    await client.question.reply({
+      requestID: requestId,
+      answers,
+      ...(directory ? { directory } : {}),
+    })
     this.pendingQuestions.delete(requestId)
   }
 
-  async rejectQuestion(_sessionId: string, requestId: string): Promise<void> {
+  async rejectQuestion(sessionId: string, requestId: string): Promise<void> {
     const client = this.requireClient()
-    await client.question.reject({ requestID: requestId })
+    const directory = await this.ensureSessionDirectory(sessionId)
+    await client.question.reject({
+      requestID: requestId,
+      ...(directory ? { directory } : {}),
+    })
     this.pendingQuestions.delete(requestId)
   }
 }

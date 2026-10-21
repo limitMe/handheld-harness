@@ -96,10 +96,27 @@ function withAnsweredChoice(
   choice: Omit<AnsweredChoice, 'anchor' | 'sessionId' | 'id'> & { id: string },
 ): Partial<WorkbenchStore> {
   const anchor = state.messages[key]?.length ?? 0
+  const list = state.answeredChoices[key] ?? []
+  const entry = { ...choice, sessionId, anchor }
+  // A retried request must replace its record, never add a second card with
+  // the same React key.
+  const next = list.some((item) => item.id === choice.id)
+    ? list.map((item) => (item.id === choice.id ? entry : item))
+    : [...list, entry]
+  return { answeredChoices: { ...state.answeredChoices, [key]: next } }
+}
+
+function withoutAnsweredChoice(
+  state: WorkbenchStore,
+  key: string,
+  id: string,
+): Partial<WorkbenchStore> {
+  const list = state.answeredChoices[key]
+  if (!list?.some((item) => item.id === id)) return {}
   return {
     answeredChoices: {
       ...state.answeredChoices,
-      [key]: [...(state.answeredChoices[key] ?? []), { ...choice, sessionId, anchor }],
+      [key]: list.filter((item) => item.id !== id),
     },
   }
 }
@@ -402,17 +419,24 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     const current = state.ui.current
     if (!current) return
     const key = sessionKey(current)
+    if (state.answeredChoices[key]?.some((item) => item.id === requestId)) return
     const request = (state.pendingPermissions[key] ?? []).find((item) => item.id === requestId)
-    if (request) {
-      set(
-        withAnsweredChoice(state, key, current.sessionId, {
-          id: requestId,
-          request: { kind: 'permission', title: request.title, detail: request.kind },
-          answer: { type: 'permission', reply },
-        }),
-      )
+    if (!request) return
+    set(
+      withAnsweredChoice(state, key, current.sessionId, {
+        id: requestId,
+        request: { kind: 'permission', title: request.title, detail: request.kind },
+        answer: { type: 'permission', reply },
+      }),
+    )
+    try {
+      await window.handheld.engine.replyPermission(current, requestId, reply)
+    } catch (error) {
+      // Keep the request pending for a retry, but drop the record so the
+      // transcript never shows an answer the engine rejected.
+      set((next) => withoutAnsweredChoice(next, key, requestId))
+      showToast(i18n.t('toast.replyFailed'), { description: errorMessage(error) })
     }
-    await window.handheld.engine.replyPermission(current, requestId, reply)
   },
 
   async replyQuestion(requestId, answers) {
@@ -420,18 +444,23 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     const current = state.ui.current
     if (!current) return
     const key = sessionKey(current)
+    if (state.answeredChoices[key]?.some((item) => item.id === requestId)) return
     const request = (state.pendingQuestions[key] ?? []).find((item) => item.id === requestId)
-    if (request) {
-      const title = request.questions[0]?.question ?? ''
-      set(
-        withAnsweredChoice(state, key, current.sessionId, {
-          id: requestId,
-          request: { kind: 'question', title },
-          answer: { type: 'question', answers, ignored: false },
-        }),
-      )
+    if (!request) return
+    const title = request.questions[0]?.question ?? ''
+    set(
+      withAnsweredChoice(state, key, current.sessionId, {
+        id: requestId,
+        request: { kind: 'question', title },
+        answer: { type: 'question', answers, ignored: false },
+      }),
+    )
+    try {
+      await window.handheld.engine.replyQuestion(current, requestId, answers)
+    } catch (error) {
+      set((next) => withoutAnsweredChoice(next, key, requestId))
+      showToast(i18n.t('toast.replyFailed'), { description: errorMessage(error) })
     }
-    await window.handheld.engine.replyQuestion(current, requestId, answers)
   },
 
   async rejectQuestion(requestId) {
@@ -439,18 +468,23 @@ export const useWorkbenchStore = create<WorkbenchStore>()((set, get) => ({
     const current = state.ui.current
     if (!current) return
     const key = sessionKey(current)
+    if (state.answeredChoices[key]?.some((item) => item.id === requestId)) return
     const request = (state.pendingQuestions[key] ?? []).find((item) => item.id === requestId)
-    if (request) {
-      const title = request.questions[0]?.question ?? ''
-      set(
-        withAnsweredChoice(state, key, current.sessionId, {
-          id: requestId,
-          request: { kind: 'question', title },
-          answer: { type: 'question', answers: [], ignored: true },
-        }),
-      )
+    if (!request) return
+    const title = request.questions[0]?.question ?? ''
+    set(
+      withAnsweredChoice(state, key, current.sessionId, {
+        id: requestId,
+        request: { kind: 'question', title },
+        answer: { type: 'question', answers: [], ignored: true },
+      }),
+    )
+    try {
+      await window.handheld.engine.rejectQuestion(current, requestId)
+    } catch (error) {
+      set((next) => withoutAnsweredChoice(next, key, requestId))
+      showToast(i18n.t('toast.replyFailed'), { description: errorMessage(error) })
     }
-    await window.handheld.engine.rejectQuestion(current, requestId)
   },
 
   async loadMessages(ref, force = false) {

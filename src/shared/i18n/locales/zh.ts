@@ -126,6 +126,7 @@ export const zh = {
     sent: '已发送',
     engineReconnected: '引擎已重新连接',
     messageFailed: '消息未发送',
+    replyFailed: '回复未发送',
   },
   listInput: {
     noCommands: '没有可用命令。',
