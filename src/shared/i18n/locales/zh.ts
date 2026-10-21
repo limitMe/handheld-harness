@@ -69,6 +69,9 @@ export const zh = {
   sessionInfo: {
     title: '会话信息',
     directory: '工作目录',
+    chooseDirectory: '选择文件夹',
+    useDefaultDirectory: '使用默认目录',
+    directoryDescription: '所选目录只用于这个新任务。',
     effort: '思考强度',
     effortDescription: '作用于之后的回复；可选值由当前模型提供。',
     defaultEffort: '默认',

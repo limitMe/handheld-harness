@@ -44,14 +44,19 @@ import {
 import { resolveSessionModel as resolveModel } from './model-resolution'
 import { toModelCatalog, type ProviderListData } from './model-catalog'
 import {
+  directoriesPath,
   effortsPath,
   modelsPath,
+  normalizeWorkspaceDir,
+  readDirectories,
   readEfforts,
   readModels,
   registryKey,
+  writeDirectories,
   writeEfforts,
   writeModels,
   isServerHealthy,
+  type SessionDirectoryTable,
   type SessionEffortTable,
   type SessionModelTable,
 } from '../server-registry'
@@ -162,6 +167,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
   private readonly lastAssistantEfforts = new Map<string, string>()
   private models: SessionModelTable = {}
   private efforts: SessionEffortTable = {}
+  private directories: SessionDirectoryTable = {}
   private defaultModel: ModelRef | undefined
 
   constructor(private readonly options: OpenCodeEngineOptions) {
@@ -381,7 +387,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     const controller = new AbortController()
     this.streamAbort = controller
     try {
-      const events = await client.event.subscribe({}, { signal: controller.signal })
+      const events = await client.global.event({ signal: controller.signal })
       this.reconnectAttempt = 0
       for await (const raw of events.stream) {
         if (controller.signal.aborted) return
@@ -419,7 +425,8 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
   private handleRawEvent(raw: unknown): void {
     const events = normalize(raw)
     if (events.length === 0) {
-      const type = (raw as { type?: unknown })?.type
+      const event = this.unwrapGlobalEvent(raw)
+      const type = (event as { type?: unknown })?.type
       // Known no-op traffic (heartbeat, file watcher, ...) is expected, so it is
       // not worth a log line per event. Only genuinely unknown types are logged.
       if (typeof type === 'string' && IGNORED_EVENT_TYPES.has(type)) return
@@ -427,9 +434,52 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
       return
     }
     for (const event of events) {
+      if (!this.isRelevantEvent(event)) continue
       this.applySideEffects(event)
       this.emit(event)
     }
+  }
+
+  private unwrapGlobalEvent(raw: unknown): unknown {
+    const outer = raw as { payload?: unknown } | undefined
+    const payload = outer?.payload as { type?: unknown } | undefined
+    return payload && typeof payload.type === 'string' ? payload : raw
+  }
+
+  /**
+   * The global stream carries events from every OpenCode project. Keep only
+   * sessions this engine knows about (its workspace or a pinned directory) so
+   * unrelated CLI/desktop sessions never leak into the workbench.
+   */
+  private isRelevantEvent(event: EngineEvent): boolean {
+    switch (event.type) {
+      case 'session.upserted':
+        return this.sessions.has(event.session.id) || this.isKnownDirectory(event.session.directory)
+      case 'session.deleted':
+        return this.sessions.has(event.sessionId) || this.directories[event.sessionId] !== undefined
+      case 'session.error':
+        return event.sessionId ? this.sessions.has(event.sessionId) : false
+      case 'permission.asked':
+        return this.sessions.has(event.request.sessionId)
+      case 'question.asked':
+        return this.sessions.has(event.request.sessionId)
+      case 'session.runState':
+      case 'part.upserted':
+      case 'part.delta':
+      case 'permission.replied':
+      case 'question.replied':
+        return this.sessions.has(event.sessionId)
+      case 'message.upserted':
+        return this.sessions.has(event.message.sessionId)
+      case 'engine.status':
+        return false
+    }
+  }
+
+  private isKnownDirectory(directory: string | undefined): boolean {
+    if (!directory) return false
+    const key = normalizeWorkspaceDir(directory)
+    return this.knownDirectories().some((known) => normalizeWorkspaceDir(known) === key)
   }
 
   private applySideEffects(event: EngineEvent): void {
@@ -443,6 +493,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
           effort: this.resolveSessionEffort(event.session.id, event.session.effort),
         }
         this.sessions.set(enriched.id, enriched)
+        this.rememberDirectory(enriched.id, enriched.directory)
         event.session = enriched
         break
       }
@@ -451,6 +502,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
         this.runStates.delete(event.sessionId)
         this.lastAssistantModels.delete(event.sessionId)
         this.lastAssistantEfforts.delete(event.sessionId)
+        this.forgetDirectory(event.sessionId)
         break
       case 'session.runState':
         this.runStates.set(event.sessionId, event.runState)
@@ -518,16 +570,17 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
 
   // ----- model table -----------------------------------------------------
 
-  private registryFile(kind: 'models' | 'efforts'): string {
+  private registryFile(kind: 'models' | 'efforts' | 'directories'): string {
     const key = registryKey(this.options.workspaceDir ?? '', this.options.sdkVersion)
-    return kind === 'models'
-      ? modelsPath(this.options.serversDir, 'opencode', key)
-      : effortsPath(this.options.serversDir, 'opencode', key)
+    if (kind === 'models') return modelsPath(this.options.serversDir, 'opencode', key)
+    if (kind === 'efforts') return effortsPath(this.options.serversDir, 'opencode', key)
+    return directoriesPath(this.options.serversDir, 'opencode', key)
   }
 
   private loadModelTable(): void {
     this.models = readModels(this.registryFile('models'))
     this.efforts = readEfforts(this.registryFile('efforts'))
+    this.directories = readDirectories(this.registryFile('directories'))
   }
 
   private persistModelTable(): void {
@@ -546,6 +599,26 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     }
   }
 
+  private persistDirectoryTable(): void {
+    try {
+      writeDirectories(this.registryFile('directories'), this.directories)
+    } catch (error) {
+      this.logger.warn('failed to persist session directory table', String(error))
+    }
+  }
+
+  private rememberDirectory(sessionId: string, directory: string | undefined): void {
+    if (!directory || this.directories[sessionId] === directory) return
+    this.directories[sessionId] = directory
+    this.persistDirectoryTable()
+  }
+
+  private forgetDirectory(sessionId: string): void {
+    if (this.directories[sessionId] === undefined) return
+    delete this.directories[sessionId]
+    this.persistDirectoryTable()
+  }
+
   private resolveSessionModel(sessionId: string, serverModel?: ModelRef): ModelRef | undefined {
     return resolveModel({
       fromTable: this.models[sessionId],
@@ -562,7 +635,52 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
 
   /** Working directory a session is pinned to; undefined means the engine default. */
   private sessionDirectory(sessionId: string): string | undefined {
-    return this.sessions.get(sessionId)?.directory
+    return this.sessions.get(sessionId)?.directory ?? this.directories[sessionId]
+  }
+
+  private knownDirectories(): string[] {
+    const directories = new Map<string, string>()
+    const add = (directory: string | undefined): void => {
+      if (!directory) return
+      directories.set(normalizeWorkspaceDir(directory), directory)
+    }
+    add(this.options.workspaceDir)
+    for (const directory of Object.values(this.directories)) add(directory)
+    for (const session of this.sessions.values()) add(session.directory)
+    return [...directories.values()]
+  }
+
+  /**
+   * Recovers the directory of a persisted session that predates the directory
+   * table or was created outside this engine. Uses the cross-project list once,
+   * then caches the answer.
+   */
+  private async ensureSessionDirectory(sessionId: string): Promise<string | undefined> {
+    const known = this.sessionDirectory(sessionId)
+    if (known) return known
+    try {
+      const client = this.requireClient()
+      const sessions = unwrap<OcSession[]>(await client.experimental.session.list({}))
+      const info = sessions.find((session) => session.id === sessionId)
+      if (!info) return undefined
+      const summary = toSessionSummary(info)
+      if (!summary) return undefined
+      this.rememberDirectory(sessionId, summary.directory)
+      if (!this.sessions.has(sessionId)) {
+        const enriched = {
+          ...summary,
+          runState: this.runStates.get(sessionId) ?? summary.runState,
+          model: this.resolveSessionModel(sessionId, summary.model),
+          effort: this.resolveSessionEffort(sessionId, summary.effort),
+        }
+        this.sessions.set(sessionId, enriched)
+        this.emit({ type: 'session.upserted', session: enriched })
+      }
+      return summary.directory
+    } catch (error) {
+      this.logger.warn('failed to resolve a session directory', String(error))
+      return undefined
+    }
   }
 
   // ----- reads -----------------------------------------------------------
@@ -581,24 +699,72 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
   private async refreshSessions(): Promise<void> {
     try {
       const client = this.requireClient()
-      const sessions = unwrap<OcSession[]>(await client.session.list({}))
-      const statuses = unwrap<Record<string, OcSessionStatus>>(await client.session.status({}))
+      const directories = this.knownDirectories()
       const next = new Map<string, SessionSummary>()
-      for (const info of sessions) {
-        const runState = this.runStates.get(info.id) ?? toSharedRunState(statuses[info.id])
-        const summary = toSessionSummary(info, runState)
-        if (summary) next.set(summary.id, summary)
+      const statuses: Record<string, OcSessionStatus> = {}
+      const failed = new Set<string>()
+      for (const directory of directories) {
+        try {
+          const sessions = unwrap<OcSession[]>(await client.session.list({ directory }))
+          for (const info of sessions) {
+            const summary = toSessionSummary(info)
+            if (summary) next.set(summary.id, summary)
+          }
+        } catch (error) {
+          // A directory can disappear between launches; keep the sessions we
+          // already know about instead of dropping them from the list.
+          failed.add(normalizeWorkspaceDir(directory))
+          this.logger.debug('failed to refresh sessions in directory', {
+            directory,
+            error: String(error),
+          })
+          continue
+        }
+        try {
+          const directoryStatuses = unwrap<Record<string, OcSessionStatus>>(
+            await client.session.status({ directory }),
+          )
+          Object.assign(statuses, directoryStatuses)
+        } catch (error) {
+          this.logger.debug('failed to read session status', {
+            directory,
+            error: String(error),
+          })
+        }
       }
+      for (const session of this.sessions.values()) {
+        const directory = session.directory ?? this.options.workspaceDir
+        if (!next.has(session.id) && directory && failed.has(normalizeWorkspaceDir(directory))) {
+          next.set(session.id, session)
+        }
+      }
+
+      const removed = [...this.sessions.keys()].filter((id) => !next.has(id))
       this.sessions.clear()
-      for (const [id, summary] of next) this.sessions.set(id, summary)
-      for (const summary of this.sessions.values()) {
+      let directoriesChanged = false
+      for (const [id, summary] of next) {
+        const runState = this.runStates.get(id) ?? toSharedRunState(statuses[id])
         const enriched = {
           ...summary,
-          model: this.resolveSessionModel(summary.id, summary.model),
-          effort: this.resolveSessionEffort(summary.id, summary.effort),
+          runState,
+          model: this.resolveSessionModel(id, summary.model),
+          effort: this.resolveSessionEffort(id, summary.effort),
         }
-        this.sessions.set(summary.id, enriched)
-        this.emit({ type: 'session.upserted', session: enriched })
+        this.sessions.set(id, enriched)
+        if (summary.directory && this.directories[id] !== summary.directory) {
+          this.directories[id] = summary.directory
+          directoriesChanged = true
+        }
+      }
+      if (directoriesChanged) this.persistDirectoryTable()
+      for (const id of removed) {
+        this.runStates.delete(id)
+        this.lastAssistantModels.delete(id)
+        this.lastAssistantEfforts.delete(id)
+        this.emit({ type: 'session.deleted', sessionId: id })
+      }
+      for (const summary of this.sessions.values()) {
+        this.emit({ type: 'session.upserted', session: summary })
       }
     } catch (error) {
       this.logger.warn('failed to refresh sessions', String(error))
@@ -608,18 +774,45 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
   private async refreshPending(): Promise<void> {
     try {
       const client = this.requireClient()
-      const permissions = unwrap<unknown[]>(await client.permission.list({}))
-      const questions = unwrap<unknown[]>(await client.question.list({}))
+      const permissions = new Map<string, PermissionRequest>()
+      const questions = new Map<string, QuestionRequest>()
+      const failed = new Set<string>()
+      for (const directory of this.knownDirectories()) {
+        try {
+          const rawPermissions = unwrap<unknown[]>(await client.permission.list({ directory }))
+          for (const raw of rawPermissions) {
+            const request = toPermissionRequestFromList(raw, this.now())
+            if (request) permissions.set(request.id, request)
+          }
+          const rawQuestions = unwrap<unknown[]>(await client.question.list({ directory }))
+          for (const raw of rawQuestions) {
+            const request = toQuestionRequestFromList(raw)
+            if (request) questions.set(request.id, request)
+          }
+        } catch (error) {
+          failed.add(normalizeWorkspaceDir(directory))
+          this.logger.warn('failed to refresh pending requests in directory', {
+            directory,
+            error: String(error),
+          })
+        }
+      }
+      for (const request of this.pendingPermissions.values()) {
+        const directory = this.sessionDirectory(request.sessionId)
+        if (directory && failed.has(normalizeWorkspaceDir(directory))) {
+          permissions.set(request.id, request)
+        }
+      }
+      for (const request of this.pendingQuestions.values()) {
+        const directory = this.sessionDirectory(request.sessionId)
+        if (directory && failed.has(normalizeWorkspaceDir(directory))) {
+          questions.set(request.id, request)
+        }
+      }
       this.pendingPermissions.clear()
       this.pendingQuestions.clear()
-      for (const raw of permissions) {
-        const request = toPermissionRequestFromList(raw, this.now())
-        if (request) this.pendingPermissions.set(request.id, request)
-      }
-      for (const raw of questions) {
-        const request = toQuestionRequestFromList(raw)
-        if (request) this.pendingQuestions.set(request.id, request)
-      }
+      for (const [id, request] of permissions) this.pendingPermissions.set(id, request)
+      for (const [id, request] of questions) this.pendingQuestions.set(id, request)
     } catch (error) {
       this.logger.warn('failed to refresh pending requests', String(error))
     }
@@ -660,7 +853,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
 
   async getMessages(sessionId: string): Promise<ChatMessage[]> {
     const client = this.requireClient()
-    const directory = this.sessionDirectory(sessionId)
+    const directory = await this.ensureSessionDirectory(sessionId)
     const raw = unwrap<Array<{ info: unknown; parts: unknown[] }>>(
       await client.session.messages({
         sessionID: sessionId,
@@ -706,7 +899,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     const client = this.requireClient()
     const name = command.replace(/^\//, '')
     const effort = this.resolveSessionEffort(sessionId)
-    const directory = this.sessionDirectory(sessionId)
+    const directory = await this.ensureSessionDirectory(sessionId)
     try {
       unwrap<unknown>(
         await client.session.command({
@@ -761,6 +954,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     }
     const summary = toSessionSummary(info, 'idle')
     if (!summary) throw new Error('OpenCode returned an invalid session')
+    this.rememberDirectory(summary.id, summary.directory ?? opts?.directory)
     const enriched = {
       ...summary,
       model: this.resolveSessionModel(summary.id, summary.model),
@@ -773,7 +967,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
 
   async deleteSession(sessionId: string): Promise<void> {
     const client = this.requireClient()
-    const directory = this.sessionDirectory(sessionId)
+    const directory = await this.ensureSessionDirectory(sessionId)
     await client.session.delete({
       sessionID: sessionId,
       ...(directory ? { directory } : {}),
@@ -782,6 +976,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     this.runStates.delete(sessionId)
     this.lastAssistantModels.delete(sessionId)
     this.lastAssistantEfforts.delete(sessionId)
+    this.forgetDirectory(sessionId)
   }
 
   async setSessionModel(sessionId: string, model: ModelRef): Promise<void> {
@@ -810,7 +1005,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
     const client = this.requireClient()
     const model = this.resolveSessionModel(sessionId)
     const effort = this.resolveSessionEffort(sessionId)
-    const directory = this.sessionDirectory(sessionId)
+    const directory = await this.ensureSessionDirectory(sessionId)
     unwrap<unknown>(
       await client.session.promptAsync({
         sessionID: sessionId,
@@ -824,7 +1019,7 @@ export class OpenCodeEngine implements AgentEngine, RestartableEngine {
 
   async abort(sessionId: string): Promise<void> {
     const client = this.requireClient()
-    const directory = this.sessionDirectory(sessionId)
+    const directory = await this.ensureSessionDirectory(sessionId)
     await client.session.abort({
       sessionID: sessionId,
       ...(directory ? { directory } : {}),

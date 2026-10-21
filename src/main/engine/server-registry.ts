@@ -52,6 +52,11 @@ export function effortsPath(serversDir: string, engineKind: string, key: string)
   return path.join(engineRegistryDir(serversDir, engineKind), `${key}.efforts.json`)
 }
 
+/** Session -> working directory table (spec 21), stored next to the model table. */
+export function directoriesPath(serversDir: string, engineKind: string, key: string): string {
+  return path.join(engineRegistryDir(serversDir, engineKind), `${key}.directories.json`)
+}
+
 function isEntry(value: unknown): value is ServerRegistryEntry {
   if (!value || typeof value !== 'object') return false
   const entry = value as Record<string, unknown>
@@ -117,7 +122,8 @@ export function listRegistries(
       if (
         !name.endsWith('.json') ||
         name.endsWith('.models.json') ||
-        name.endsWith('.efforts.json')
+        name.endsWith('.efforts.json') ||
+        name.endsWith('.directories.json')
       )
         continue
       const file = path.join(dir, name)
@@ -303,6 +309,28 @@ export function readEfforts(file: string): SessionEffortTable {
 }
 
 export function writeEfforts(file: string, table: SessionEffortTable): void {
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, `${JSON.stringify(table, null, 2)}\n`, 'utf8')
+}
+
+/** Session -> working directory (spec 21). */
+export type SessionDirectoryTable = Record<string, string>
+
+export function readDirectories(file: string): SessionDirectoryTable {
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf8'))
+    if (!parsed || typeof parsed !== 'object') return {}
+    const table: SessionDirectoryTable = {}
+    for (const [sessionId, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof value === 'string' && value.length > 0) table[sessionId] = value
+    }
+    return table
+  } catch {
+    return {}
+  }
+}
+
+export function writeDirectories(file: string, table: SessionDirectoryTable): void {
   fs.mkdirSync(path.dirname(file), { recursive: true })
   fs.writeFileSync(file, `${JSON.stringify(table, null, 2)}\n`, 'utf8')
 }

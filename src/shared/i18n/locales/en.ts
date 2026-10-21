@@ -69,6 +69,9 @@ export const en = {
   sessionInfo: {
     title: 'Session info',
     directory: 'Working directory',
+    chooseDirectory: 'Choose folder',
+    useDefaultDirectory: 'Use default directory',
+    directoryDescription: 'The chosen folder is used for this new task only.',
     effort: 'Effort',
     effortDescription: 'Applies to subsequent replies; the options come from the current model.',
     defaultEffort: 'Default',

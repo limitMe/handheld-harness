@@ -94,6 +94,25 @@ describe('normalize (recorded fixture)', () => {
     expect(IGNORED_EVENT_TYPES.has('server.heartbeat')).toBe(true)
     expect(IGNORED_EVENT_TYPES.has('server.connected')).toBe(true)
   })
+
+  it('unwraps global event payloads from other working directories', () => {
+    expect(
+      normalize({
+        directory: 'C:\\Apps\\group-theory-music',
+        payload: { type: 'session.idle', properties: { sessionID: 'ses_1' } },
+      }),
+    ).toEqual([{ type: 'session.runState', sessionId: 'ses_1', runState: 'idle' }])
+  })
+
+  it('ignores the durable sync mirror on the global stream', () => {
+    expect(
+      normalize({
+        directory: 'C:\\Apps',
+        payload: { type: 'sync', syncEvent: { id: 'evt_1' } },
+      }),
+    ).toEqual([])
+    expect(IGNORED_EVENT_TYPES.has('sync')).toBe(true)
+  })
 })
 
 describe('normalize (fields)', () => {

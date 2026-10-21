@@ -238,7 +238,12 @@ function toQuestionRequest(properties: Dict): QuestionRequest | undefined {
 }
 
 export function normalize(raw: unknown): EngineEvent[] {
-  const event = asDict(raw)
+  // `/global/event` wraps every payload with the emitting directory; `/event`
+  // sends the payload directly. Accept both so the adapter can subscribe once
+  // and still see sessions pinned to other working directories (spec 21).
+  const outer = asDict(raw)
+  const wrapped = asDict(outer?.payload)
+  const event = wrapped && asString(wrapped.type) ? wrapped : outer
   const type = asString(event?.type)
   const properties = asDict(event?.properties) ?? {}
   if (!type) return []
@@ -348,4 +353,6 @@ export const IGNORED_EVENT_TYPES = new Set([
   'project.directories.updated',
   'file.watcher.updated',
   'command.executed',
+  // The global stream mirrors durable sync notifications next to legacy events.
+  'sync',
 ])

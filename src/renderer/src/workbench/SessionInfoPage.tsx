@@ -104,6 +104,7 @@ function SessionInfoBody({ onClose }: { onClose: () => void }) {
 
   const [catalog, setCatalog] = useState<ModelGroup[]>(() => cachedModels()?.groups ?? [])
   const [effortOpen, setEffortOpen] = useState(false)
+  const [directoryOpen, setDirectoryOpen] = useState(false)
 
   useEffect(() => {
     if (cachedModels()) return undefined
@@ -170,6 +171,23 @@ function SessionInfoBody({ onClose }: { onClose: () => void }) {
       .catch(() => undefined)
   }
 
+  const activateDirectory = (): void => {
+    if (!directoryEditable) return
+    // Once a folder is pending there must be a way back to the engine default.
+    if (pendingDirectory) setDirectoryOpen(true)
+    else chooseDirectory()
+  }
+
+  const directoryOptions: ChoiceOption[] = [
+    { id: 'choose', label: t('sessionInfo.chooseDirectory') },
+    { id: 'default', label: t('sessionInfo.useDefaultDirectory') },
+  ]
+
+  const chooseDirectoryAction = (id: string): void => {
+    if (id === 'default') setPendingDirectory(undefined)
+    else chooseDirectory()
+  }
+
   const effortOptions: ChoiceOption[] = info.effortOptions.map((effort) => ({
     id: effort,
     label: effort,
@@ -192,8 +210,8 @@ function SessionInfoBody({ onClose }: { onClose: () => void }) {
                 id={DIRECTORY_ID}
                 order={0}
                 testId="session-info-directory"
-                onActivate={chooseDirectory}
-                onClick={chooseDirectory}
+                onActivate={activateDirectory}
+                onClick={activateDirectory}
               >
                 <span className="shrink-0 text-text-muted">{t('sessionInfo.directory')}</span>
                 <span className="flex min-w-0 items-center gap-2">
@@ -258,6 +276,16 @@ function SessionInfoBody({ onClose }: { onClose: () => void }) {
         options={effortOptions}
         {...(info.effort ? { initialId: info.effort } : {})}
         onChoose={chooseEffort}
+      />
+
+      <ChoiceDialog
+        open={directoryOpen}
+        onOpenChange={setDirectoryOpen}
+        title={t('sessionInfo.directory')}
+        description={t('sessionInfo.directoryDescription')}
+        options={directoryOptions}
+        initialId="choose"
+        onChoose={chooseDirectoryAction}
       />
     </div>
   )

@@ -103,7 +103,7 @@
 
 ### 未完成 / 需要人工验证（掌机 + 真实 OpenCode）
 
-- **每会话目录的端到端行为**：`session.list({})` 是否返回跨 project 的会话（SDK 文档称返回全部会话，但需在真实 server 上核实）。若不返回，刷新后自定义目录的会话可能从列表消失，需要在 `refreshSessions` 里按已知目录分别 list 并合并。**这是本 spec 最需要人工确认的一点。**
+- **每会话目录的端到端行为**：`session.list({})` 是否返回跨 project 的会话（SDK 文档称返回全部会话，但需在真实 server 上核实）。若不返回，刷新后自定义目录的会话可能从列表消失，需要在 `refreshSessions` 里按已知目录分别 list 并合并。**这是本 spec 最需要人工确认的一点。**（2026-10-21 已确认：`session.list({})` 只返回默认 project，已按下方补充修复。）
 - 真实 OpenCode 上 `directory` / `variant` 的接受情况与 `variants` 元数据是否非空。
 - 1080p 7 英寸屏上信息页的排版（长路径换行、指标可读性）。
 - `listModels` 返回的 `limit.context` 是否正确填入（依赖 `provider.list` 的运行时返回）。
@@ -118,3 +118,9 @@
 - **根因**：OpenCode 正在流式输出的那条 assistant 消息已经带 `tokens`（值为 0），`aggregate`（`workbench/sessionInfo.ts`）按 `createdAt` 取最新一条 assistant 的 `usage.total`，于是取到了这条未完成的 0。
 - **决策**：聚合时跳过"未完成且 `usage.total === 0`"的回合（`completedAt === undefined && usage.total === 0`），这样回复期间仍显示上一次已完成回合的用量与上下文比例；`completedAt` 已写入但总量为 0 的真实回合仍照常计入。对 spec 第 41 行"取最近一条 assistant 消息"是有意细化。
 - **已自动验证**：`npm run check` 通过（477 用例）。`tests/unit/session-info.test.ts` 新增「回复中保留上一回合」用例。
+
+### 自定义工作目录的回复与刷新（2026-10-21，用户反馈）
+
+- **现象**：新任务把工作目录改到其他目录并确认后，向 Agent 发消息没有任何回复；刷新后该会话还可能从列表消失。
+- **根因**：`client.event.subscribe` 只订阅 server 默认目录实例的事件，钉在其他目录的会话事件不会到达渲染层；`session.list({})` 也只返回默认 project，`refreshSessions` 于是把自定义目录的会话清掉了。
+- **修复**：改用 `client.global.event` 并解包 `payload`，再按已知会话过滤，避免其他 OpenCode 项目串入。`refreshSessions` / `refreshPending` 按已知目录分别 list；目录写入 `<key>.directories.json`；旧会话首次使用时从跨 project 列表补回目录。新任务已选目录时，信息页再次按 A 可在「选择文件夹 / 使用默认目录」间选择。

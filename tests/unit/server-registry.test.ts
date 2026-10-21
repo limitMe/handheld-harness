@@ -5,15 +5,18 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   decideServerReuse,
+  directoriesPath,
   isPidListeningOnPort,
   listRegistries,
   modelsPath,
   normalizeWorkspaceDir,
   portFromUrl,
+  readDirectories,
   readModels,
   readRegistry,
   registryKey,
   registryPath,
+  writeDirectories,
   writeModels,
   writeRegistry,
   type ServerRegistryEntry,
@@ -83,6 +86,18 @@ describe('registry files', () => {
     mkdirSync(path.dirname(file), { recursive: true })
     writeFileSync(file, 'garbage')
     expect(readModels(file)).toEqual({})
+  })
+
+  it('round-trips the session directory table and skips it when listing registries', () => {
+    const base = makeDir()
+    writeRegistry(registryPath(base, 'opencode', 'key1'), ENTRY)
+    const file = directoriesPath(base, 'opencode', 'key1')
+    writeDirectories(file, { ses_1: 'C:\\Apps\\group-theory-music' })
+    expect(readDirectories(file)).toEqual({ ses_1: 'C:\\Apps\\group-theory-music' })
+    expect(listRegistries(base)).toHaveLength(1)
+
+    writeFileSync(file, 'garbage')
+    expect(readDirectories(file)).toEqual({})
   })
 })
 
